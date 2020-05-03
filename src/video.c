@@ -452,7 +452,7 @@ const char Video_fileid[] = "Hatari video.c : " __DATE__ " " __TIME__;
 #include "ikbd.h"
 #include "floppy_ipf.h"
 #include "statusbar.h"
-
+#include "debugui.h"
 
 /* The border's mask allows to keep track of all the border tricks		*/
 /* applied to one video line. The masks for all lines are stored in the array	*/
@@ -4446,6 +4446,13 @@ void Video_InterruptHandler_VBL ( void )
 
 	/* Process shortcut keys */
 	ShortCut_ActKey();
+
+	/* Check if remote debug requested a break.
+	 * Ideally it would be good to move this check somewhere else. Living here means
+	 * that single-stepping after break immediately jumps into the VBL routine
+	 * which can be very confusing, but it needs to be somewhere near here in
+	 * the emulation loop. But for the moment it mimics the keyboard shortcut. */
+	DebugUI_CheckRemoteBreak();
 
 	/* Update the IKBD's internal clock */
 	IKBD_UpdateClockOnVBL ();

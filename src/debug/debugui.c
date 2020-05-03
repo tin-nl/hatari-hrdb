@@ -61,6 +61,14 @@ static const char *parseFileName;
 /* to which directory to change after (potentially recursed) scripts parsing finishes */
 static char *finalDir;
 
+/* Remote debugging break command was sent from debugger */
+static bool bRemoteBreakRequest = false;
+
+/* Processing is stopped and the remote debug loop is active */
+static bool bRemoteBreakIsActive = false;
+
+/* Function to read incoming remote debugger commands (set when a socket is attached) */
+static DebugUI_ProcessRemoteCommands remoteDebugcmdCallback = NULL;
 
 /**
  * Save/Restore snapshot of debugging session variables
@@ -1141,39 +1149,67 @@ void DebugUI(debug_reason_t reason)
 	DebugCpu_InitSession();
 	DebugDsp_InitSession();
 	Symbols_LoadCurrentProgram();
-	DebugInfo_ShowSessionInfo();
-
-	/* override paused message so that user knows to look into console
-	 * on how to continue in case he invoked the debugger by accident.
-	 */
-	Statusbar_AddMessage("Console Debugger", 100);
-	Statusbar_Update(sdlscrn, true);
 
 	/* disable normal GUI alerts while on console */
 	alertLevel = Log_SetAlertLevel(LOG_FATAL);
 
-	cmdret = DEBUGGER_CMDDONE;
-	do
+	if (remoteDebugcmdCallback)
 	{
-		/* Read command from the keyboard and give previous
-		 * command for freeing / adding to history
+		/* Replacement loop for the console debugger,
+		 * for when single-stepping or breakpointing has occurred.
 		 */
-		psCmd = DebugUI_GetCommand(psCmd);
-		if (!psCmd)
-			break;
 
-		/* returns new expression expanded string */
-		if (!(expCmd = DebugUI_EvaluateExpressions(psCmd)))
-			continue;
+		/* override paused message so that user knows to look at debugger
+		 * on how to continue in case he invoked the debugger by accident.
+		 */
+		Statusbar_AddMessage("Remote Debugging", 100);
+		Statusbar_Update(sdlscrn, true);
 
-		/* Parse and execute the command string */
-		cmdret = DebugUI_ParseCommand(expCmd);
-		free(expCmd);
+		/* output response to flag successful break request */
+		fprintf(debugOutput, "#break PC:%x\n", M68000_GetPC());
+		fflush(debugOutput);
+		bRemoteBreakRequest = false;
+		bRemoteBreakIsActive = true;
+		while (bRemoteBreakIsActive)
+		{
+			(void) remoteDebugcmdCallback();
+			/* allow wakeup on a thread here? Run any other SDL update requirements? */
+			usleep(100);
+		}
 	}
-	while (cmdret != DEBUGGER_END);
+	else
+	{
+		DebugInfo_ShowSessionInfo();
 
-	/* free exit command */
-	DebugUI_FreeCommand(psCmd);
+		/* override paused message so that user knows to look into console
+		* on how to continue in case he invoked the debugger by accident.
+		*/
+		Statusbar_AddMessage("Console Debugger", 100);
+		Statusbar_Update(sdlscrn, true);
+
+		cmdret = DEBUGGER_CMDDONE;
+		do
+		{
+			/* Read command from the keyboard and give previous
+			* command for freeing / adding to history
+			*/
+			psCmd = DebugUI_GetCommand(psCmd);
+			if (!psCmd)
+				break;
+
+			/* returns new expression expanded string */
+			if (!(expCmd = DebugUI_EvaluateExpressions(psCmd)))
+				continue;
+
+			/* Parse and execute the command string */
+			cmdret = DebugUI_ParseCommand(expCmd);
+			free(expCmd);
+		}
+		while (cmdret != DEBUGGER_END);
+
+		/* free exit command */
+		DebugUI_FreeCommand(psCmd);
+	}
 
 	Log_SetAlertLevel(alertLevel);
 
@@ -1347,4 +1383,208 @@ void DebugUI_Exceptions(int nr, long pc)
 		return;
 	fprintf(stderr,"%s exception at 0x%lx!\n", ex[nr].name, pc);
 	DebugUI(REASON_CPU_EXCEPTION);
+}
+
+// NO CHECK
+/* Put in a break request which is serviced elsewhere in the main loop */
+static int RemoteDebug_Break(int nArgc, char *psArgs[])
+{
+	bRemoteBreakRequest = true;
+	return DEBUGGER_CMDDONE;
+}
+
+static int RemoteDebug_Unbreak(int nArgc, char *psArgs[])
+{
+	bRemoteBreakIsActive = false;
+	return DEBUGGER_CMDDONE;
+}
+
+/* Return short status info in a useful format, mainly whether it's running */
+static int RemoteDebug_Status(int nArgc, char *psArgs[])
+{
+	fprintf(debugOutput, "#status running:%x PC:%x\n", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
+	return DEBUGGER_CMDDONE;
+}
+
+/* Bounce the argument messages back. This can be used for sync between debugger and Hatari,
+   to know when all previous commands are completed */
+static int RemoteDebug_Echo(int nArgc, char *psArgs[])
+{
+	for (int i = 1; i < nArgc; ++i)
+		fprintf(debugOutput, "#echo %s\n", psArgs[i]);
+	return DEBUGGER_CMDDONE;
+}
+
+/* Step next instruction. This is currently a passthrough to the normal debugui code. */
+static int RemoteDebug_Step(int nArgc, char *psArgs[])
+{
+	DebugUI_ParseCommand("s");
+	fprintf(debugOutput, "#step ok\n");
+	bRemoteBreakIsActive = false;
+	return DEBUGGER_CMDDONE;
+}
+
+/* Step next instruction. This is currently a passthrough to the normal debugui code. */
+static int RemoteDebug_Next(int nArgc, char *psArgs[])
+{
+	DebugUI_ParseCommand("n");
+	fprintf(debugOutput, "#next ok\n");
+	bRemoteBreakIsActive = false;
+	return DEBUGGER_CMDDONE;
+}
+
+/* Step next instruction. This is currently a passthrough to the normal debugui code. */
+static int RemoteDebug_Cmd(int nArgc, char *psArgs[])
+{
+	fprintf(debugOutput, "#cmd ok\n");
+	bRemoteBreakIsActive = false;
+	return DEBUGGER_CMDDONE;
+}
+
+/* Array of all remote debug command descriptors */
+static const dbgcommand_t remoteDebugCommand[] = {
+	{ RemoteDebug_Break, NULL,
+	  "break", "break",
+	  "break execution",
+	  NULL,
+	  true	},
+	{ RemoteDebug_Unbreak, NULL,
+	  "unbreak", "unbreak",
+	  "resume execution",
+	  NULL,
+	  true	},
+	{ RemoteDebug_Status, NULL,
+	  "status", "status",
+	  "show execution status",
+	  NULL,
+	  true	},
+	{ RemoteDebug_Echo, NULL,
+	  "echo", "echo",
+	  "echo arguments back to command output",
+	  NULL,
+	  true	},
+	{ RemoteDebug_Next, NULL,
+	  "next", "next",
+	  "step next instruction",
+	  NULL,
+	  true	},
+	{ RemoteDebug_Step, NULL,		// NO CHECK use the matching debugcpu names
+	  "step", "step",
+	  "step next instruction",
+	  NULL,
+	  true	},
+};
+
+static int remoteDebugCommands = ARRAY_SIZE(remoteDebugCommand);
+
+/**
+ * Parse remote debug command and execute it.
+ * Returns -1 if command not parsed (use a different code?)
+ */
+static int DebugUI_ParseRemoteDebugCommand(const char *input_orig)
+{
+	char *psArgs[64], *input;
+	const char *delim;
+	int nArgc, cmd = -1;
+	int i, retval;
+
+	input = strdup(input_orig);
+	psArgs[0] = strtok(input, " \t");
+
+	/* Search the command ... */
+	for (i = 0; i < remoteDebugCommands; i++)
+	{
+		if (!remoteDebugCommand[i].pFunction)
+			continue;
+		
+		if (!strcmp(psArgs[0], remoteDebugCommand[i].sShortName) ||
+		    !strcmp(psArgs[0], remoteDebugCommand[i].sLongName))
+		{
+			cmd = i;
+			break;
+		}
+	}
+	if (cmd == -1)
+	{
+		free(input);
+		return -1;		// NO CHECK
+	}
+
+	if (debugCommand[cmd].bNoParsing)
+		delim = "";
+	else
+		delim = " \t";
+
+	/* Separate arguments and put the pointers into psArgs */
+	for (nArgc = 1; nArgc < ARRAY_SIZE(psArgs); nArgc++)
+	{
+		psArgs[nArgc] = strtok(NULL, delim);
+		if (psArgs[nArgc] == NULL)
+			break;
+	}
+	if (nArgc >= ARRAY_SIZE(psArgs))
+	{
+		retval = -1;
+	}
+	else
+	{
+		/* ... and execute the function */
+		retval = remoteDebugCommand[i].pFunction(nArgc, psArgs);
+	}
+	free(input);
+	return retval;
+}
+
+/**
+ * Debugger invocation if requested by remote debugger
+ */
+void DebugUI_CheckRemoteBreak(void)
+{
+	if (bRemoteBreakRequest)
+	{
+		bRemoteBreakRequest = false;
+		// Stop and wait for inputs from the control socket
+		DebugUI(REASON_USER);
+	}
+}
+
+/* Register the callback to process remote command input */
+void DebugUI_RegisterRemoteDebug(DebugUI_ProcessRemoteCommands cmdCallback)
+{
+	remoteDebugcmdCallback = cmdCallback;
+}
+
+/* Process a single Remote Debug command.
+   Command data is null-terminated.
+   Commands write output to debugOutput stream.
+*/
+int DebugUI_ProcessRemoteDebug(const char *input)
+{
+	int ret = DebugUI_ParseRemoteDebugCommand(input);
+	if (ret != -1)
+	{
+		fflush(debugOutput);
+		return DEBUGGER_CMDDONE;
+	}
+
+	ret = DEBUGGER_CMDDONE;
+	// SPECIAL CASE: things relying on debugui commands.
+	char *cmd = strdup(input);
+
+	// Split off starting command and generate argument start
+	char* arg = strchr(cmd, ' ');
+	if (arg) {
+		*arg = '\0';
+		arg = Str_Trim(arg+1);
+	}
+	if (strcmp(cmd, "cmd") == 0) {
+		/* This is a wrapper for typing on the commmand line, with a response for confirmation.
+		   Mainly for debug/testing purposes */
+		ret = DebugUI_ParseCommand(arg);
+		fprintf(debugOutput, "#cmd ok\n");
+	}
+
+	fflush(debugOutput);
+	free(cmd);
+	return ret;
 }

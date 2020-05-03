@@ -16,18 +16,22 @@
 
 import os
 import gi
+import time
+
 # use correct version of gtk
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import Pango
+from gi.repository import GObject
+from gi.repository import GLib  # NO CHECK
 
 from config import ConfigStore
 from uihelpers import UInfo, create_button, create_toggle, \
      create_table_dialog, table_add_entry_row, table_add_widget_row, \
      get_save_filename, FselEntry
 from dialogs import TodoDialog, ErrorDialog, AskDialog, KillDialog
-
+import threading # NO CHECK
 
 def dialog_apply_cb(widget, dialog):
     dialog.response(Gtk.ResponseType.APPLY)
@@ -192,6 +196,8 @@ class MemoryAddress:
             self.first = None
         self.second = None
         self.last  = None
+        # Clear text in dump
+        self.memory.set_label("Running...")
 
     def create_widgets(self):
         entry = Gtk.Entry(max_length=6, width_chars=6)
@@ -239,48 +245,51 @@ class MemoryAddress:
         self.dump()
 
     def dump(self, address = None, move_idx = 0):
+        self._update_status()
+
+        #self.memory.set_label("".join(output))
+
+        if not address:
+            address = self.first       # will be available from _update_status
+
+        # Do the UI requests
+        # Here we should put in all the requests at once, then parse
         if self.dumpmode == Constants.REGISTERS:
-            output = self._get_registers()
-            self.memory.set_label("".join(output))
-            return
-
-        if not address:
-            if not self.first:
-                self._get_registers()
-            address = self.first
-
-        if not address:
-            print("ERROR: address needed")
-            return
-
-        if self.dumpmode == Constants.MEMDUMP:
-            output = self._get_memdump(address, move_idx)
+            self._get_registers()
+        elif self.dumpmode == Constants.MEMDUMP:
+            self._get_memdump(address, move_idx)
         elif self.dumpmode == Constants.DISASM:
-            output = self._get_disasm(address, move_idx)
-        else:
-            print("ERROR: unknown dumpmode:", self.dumpmode)
-            return
+            self._get_disasm(address, move_idx)
+
+        # Get all the results together
+        self.hatari.echo("sync")
+        success, output = self.hatari.collect_response(self.debug_output, "#echo sync")
+
         self.memory.set_label("".join(output))
         if move_idx:
             self.reset_entry()
 
+    def _update_status(self):
+        self.hatari.get_status()
+        self.hatari.echo("sync")
+        # Poll until we get sync
+        # i.e. pump messages
+        success, output = self.hatari.collect_response(self.debug_output, "#echo sync")
+
+        if success:
+            # Find the relevant value
+            for f in output:
+                if f.startswith("#status"):
+                    vals = f.split(" ")
+                    for v in vals:
+                        pair = v.split(":")
+                        if pair[0] == 'PC':
+                            self.first = int(pair[1], 16)
+
     def _get_registers(self):
-        self.hatari.debug_command("r")
-        output = self.hatari.get_lines(self.debug_output)
-        if not self.first:
-            # 2nd last line has first PC in 1st column, last line next PC in 2nd column
-            self.second = int(output[-1][output[-1].find(":")+2:], 16)
-            # OldUAE CPU core has ':' in both
-            offset = output[-2].find(":")
-            if offset < 0:
-                # WinUAE CPU core only in one
-                offset = output[-2].find(" ")
-            if offset < 0:
-                print("ERROR: unable to parse register dump line:\n\t'%s'", output[-2])
-                return output
-            self.first = int(output[-2][:offset], 16)
-            self.reset_entry()
-        return output
+        self.hatari.send_rdb_cmd("cmd r")
+        #regs_output = self.hatari.get_lines(self.debug_output)
+        #return regs_output
 
     def _get_memdump(self, address, move_idx):
         linewidth = 16
@@ -293,11 +302,10 @@ class MemoryAddress:
         else:
             address += offset
         self._set_clamped(address, address+screenful)
-        self.hatari.debug_command("m $%06x-$%06x" % (self.first, self.last))
+        self.hatari.send_rdb_cmd("cmd m $%06x-$%06x" % (self.first, self.last))
         # get & set debugger command results
-        output = self.hatari.get_lines(self.debug_output)
+        #output = self.hatari.get_lines(self.debug_output)
         self.second = address + linewidth
-        return output
 
     def _get_disasm(self, address, move_idx):
         # TODO: uses brute force i.e. ask for more lines that user has
@@ -323,20 +331,7 @@ class MemoryAddress:
             else:
                 address += offset
         self._set_clamped(address, address+screenful)
-        self.hatari.debug_command("d $%06x-$%06x" % (self.first, self.last))
-        # get & set debugger command results
-        output = self.hatari.get_lines(self.debug_output)
-        # cut output to desired length and check new addresses
-        if len(output) > self.lines:
-            if move_idx < 0:
-                output = output[-self.lines:]
-            else:
-                output = output[:self.lines]
-        # with disasm need to re-get the addresses from the output
-        self.first  = int(output[0][1:output[0].find(":")], 16)
-        self.second = int(output[1][1:output[1].find(":")], 16)
-        self.last   = int(output[-1][1:output[-1].find(":")], 16)
-        return output
+        self.hatari.send_rdb_cmd("cmd d $%06x-$%06x" % (self.first, self.last))
 
     def _set_clamped(self, first, last):
         "set_clamped(first,last), clamp addresses to valid address range and set them"
@@ -369,6 +364,8 @@ class HatariDebugUI:
         self.load_options()
         # UI initialization/creation
         self.window = self.create_ui("Hatari Debug UI", do_destroy)
+        self.stopped = False
+        self.thread = None
 
     def create_ui(self, title, do_destroy):
         # buttons at top
@@ -428,6 +425,12 @@ class HatariDebugUI:
         box.pack_start(address_entry, False, True, 0)
         box.reorder_child(address_entry, 5)
 
+        step_into = create_button("Into", self.step_into_cb)
+        box.add(step_into)
+
+        step_over = create_button("Over", self.step_over_cb)
+        box.add(step_over)
+
     def create_bottom_buttons(self, box):
         radios = (
             ("Registers", Constants.REGISTERS),
@@ -452,13 +455,50 @@ class HatariDebugUI:
             button = create_button(label, cb)
             box.add(button)
 
+        cmd_entry = Gtk.Entry(max_length=16, width_chars=16)
+        cmd_entry.connect("activate", self._cmd_entry_cb)
+        box.add(cmd_entry)
+
     def stop_cb(self, widget):
-        if widget.get_active():
-            self.hatari.pause()
-            self.address.clear()
-            self.address.dump()
-        else:
+        # This is start/stop
+        if self.stopped:
+            # Start up again
             self.hatari.unpause()
+            self.start_timer()      # await the stop
+            self.address.clear()    # show it's running
+        else:
+            # Still running -- we want to stop
+            self.hatari.pause(self.address.debug_output)
+            self.start_timer()      # await the stop
+            # The timer will detect stop and refresh the display
+
+    def step_into_cb(self, fileobj):
+        self.hatari.send_rdb_cmd("step")
+        # Wait until break is confirmed
+        success, output = self.hatari.collect_response(self.address.debug_output, "#break")
+        if not success:
+            return
+
+        # Refresh what's onscreen
+        # This will vary depending on the views...
+        self.address.clear()
+        self.address.dump()
+
+    def step_over_cb(self, widget):
+        self.hatari.send_rdb_cmd("next")
+        # Wait until break is confirmed
+        success, output = self.hatari.collect_response(self.address.debug_output, "#break")
+        if not success:
+            return
+
+        # Refresh what's onscreen
+        self.address.clear()
+        self.address.dump()
+
+    def _cmd_entry_cb(self, widget):
+        text = widget.get_text()
+        self.hatari.debug_command(text)
+        output = self.hatari.get_lines(self.address.debug_output)
 
     def dumpmode_cb(self, widget, mode):
         if widget.get_active():
@@ -528,13 +568,11 @@ class HatariDebugUI:
         self.config.save()
 
     def show(self):
-        self.stop_button.set_active(True)
         self.window.show_all()
         self.window.deiconify()
 
     def hide(self, widget, arg):
         self.window.hide()
-        self.stop_button.set_active(False)
         self.save_options()
         return True
 
@@ -542,6 +580,32 @@ class HatariDebugUI:
         KillDialog(self.window).run(self.hatari)
         Gtk.main_quit()
 
+    def start_timer(self):
+        # Need some mechanism to stop the existing thread here
+        #if self.thread != None:
+        #    self.thread.exit()
+
+        print("started break check")
+        self.stopped = False
+        self.thread = threading.Thread(target=self.timer_thread)
+        self.thread.daemon = False
+        self.thread.start()
+
+    def timer_thread(self):
+        while not self.stopped:
+            GLib.idle_add(self.timeout_check, 0)
+            time.sleep(0.2)
+
+    def timeout_check(self, i):
+        print("break check")
+        output = self.hatari.get_lines(self.address.debug_output)
+        for l in output:
+            if l.startswith("#break"):
+                print("seen break")
+                # TODO
+                self.stopped = True
+                self.address.clear()
+                self.address.dump()
 
 def main():
     import sys

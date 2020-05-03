@@ -29,6 +29,8 @@ if str is bytes:
     def bytes(s, encoding):
         return s
 
+def debugout(str):
+    pass #print(str)
 
 # Running Hatari instance
 class Hatari:
@@ -94,6 +96,7 @@ class Hatari:
 
     def _send_message(self, msg):
         if self.control:
+            debugout(">>>" + msg)
             self.control.send(bytes(msg, "ASCII"))
             return True
         else:
@@ -126,15 +129,49 @@ class Hatari:
 
     def debug_command(self, cmd):
         "debug_command(command), runs given Hatari debugger command"
-        return self._send_message("hatari-debug %s\n" % cmd)
+        return self._send_message("hatari-rdb cmd %s\n" % cmd)
 
-    def pause(self):
+    def collect_response(self, fileobj, endtag):
+        # Poll for output until a particular code is seen.
+        # Used for break response
+        select.select([fileobj], [], [])
+        output = []
+        timeout = 1.0
+        waited_time = 0.0
+        while waited_time < timeout:
+            lines = fileobj.readlines()
+            if len(lines) > 0:
+                #print(lines)
+                output += lines
+                for f in lines:
+                    if f.startswith(endtag):
+                        return True, output
+            time.sleep(0.02)
+            waited_time += 0.02 # approximate but enough
+        print("Timeout? %s" % endtag)
+        return False, output
+
+    def pause(self, fileobj):
         "pause(), pauses Hatari emulation"
-        return self._send_message("hatari-stop\n")
+        ret = self._send_message("hatari-rdb break\n")
+        if not ret:
+            return False
 
     def unpause(self):
         "unpause(), continues Hatari emulation"
-        return self._send_message("hatari-cont\n")
+        self._send_message("hatari-rdb unbreak\n")
+
+    def get_status(self):
+        "status(), request CPU status"
+        return self._send_message("hatari-rdb status\n")
+
+    def send_rdb_cmd(self, cmd):
+        "send a hatari-rdb command"
+        return self._send_message("hatari-rdb %s\n" % cmd)
+
+    def echo(self, arg):
+        "echo(arg) bounce back message for sync"
+        return self._send_message("hatari-rdb echo %s\n" % arg)
 
     def _open_output_file(self, hataricommand, option, path):
         if os.path.exists(path):
@@ -171,12 +208,12 @@ class Hatari:
         "get_lines(file) -> list of lines readable from given Hatari output file"
         # wait until data is available, then wait for some more
         # and only then the data can be read, otherwise its old
-        print("Request&wait data from Hatari...")
+        debugout("Request&wait data from Hatari...")
         select.select([fileobj], [], [])
         time.sleep(0.1)
-        print("...read the data lines")
+        debugout("...read the data lines")
         lines = fileobj.readlines()
-        print("".join(lines))
+        #debugout("".join(lines))
         return lines
 
     def enable_embed_info(self):

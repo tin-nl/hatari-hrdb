@@ -333,6 +333,10 @@ void Control_ProcessBuffer(const char *orig)
 				ok = Change_ApplyCommandline(arg);
 			} else if (strcmp(cmd, "hatari-debug") == 0) {
 				ok = DebugUI_ParseLine(arg);
+			} else if (strcmp(cmd, "hatari-rdb") == 0) {
+				// Handle remote debugger commands
+				DebugUI_ProcessRemoteDebug(arg);
+				ok = true;	// rdb always carry on processing until nothing exists.
 			} else if (strcmp(cmd, "hatari-shortcut") == 0) {
 				ok = Shortcut_Invoke(arg);
 			} else if (strcmp(cmd, "hatari-event") == 0) {
@@ -468,6 +472,7 @@ bool Control_CheckUpdates(void)
 			fprintf(stderr, "ready control socket with 0 bytes available -> close socket\n");
 			close(ControlSocket);
 			ControlSocket = 0;
+			DebugUI_RegisterRemoteDebug(NULL);
 			return false;
 		}
 		buffer[bytes] = '\0';
@@ -488,6 +493,7 @@ void Control_RemoveFifo(void)
 	if (ControlFifo) {
 		close(ControlFifo);
 		ControlFifo = 0;
+		DebugUI_RegisterRemoteDebug(NULL);
 	}
 	if (FifoPath) {
 		Log_Printf(LOG_DEBUG, "removing command FIFO: %s\n", FifoPath);
@@ -529,6 +535,8 @@ const char *Control_SetFifo(const char *path)
 		return "opening non-blocking read-only FIFO failed";
 	}
 	ControlFifo = fifo;
+
+	DebugUI_RegisterRemoteDebug(Control_CheckUpdates);
 	return NULL;
 }
 
@@ -565,8 +573,10 @@ const char *Control_SetSocket(const char *socketpath)
 				
 	if (ControlSocket) {
 		close(ControlSocket);
+		DebugUI_RegisterRemoteDebug(NULL);
 	}
 	ControlSocket = newsock;
+	DebugUI_RegisterRemoteDebug(Control_CheckUpdates);
 	Log_Printf(LOG_INFO, "new control socket is '%s'\n", socketpath);
 	return NULL;
 }
