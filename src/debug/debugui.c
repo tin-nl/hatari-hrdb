@@ -1166,7 +1166,7 @@ void DebugUI(debug_reason_t reason)
 		Statusbar_Update(sdlscrn, true);
 
 		/* output response to flag successful break request */
-		fprintf(debugOutput, "#break PC:%x\n", M68000_GetPC());
+		fprintf(debugOutput, "!break PC:%x\n", M68000_GetPC());
 		fflush(debugOutput);
 		bRemoteBreakRequest = false;
 		bRemoteBreakIsActive = true;
@@ -1385,7 +1385,6 @@ void DebugUI_Exceptions(int nr, long pc)
 	DebugUI(REASON_CPU_EXCEPTION);
 }
 
-// NO CHECK
 /* Put in a break request which is serviced elsewhere in the main loop */
 static int RemoteDebug_Break(int nArgc, char *psArgs[])
 {
@@ -1393,6 +1392,7 @@ static int RemoteDebug_Break(int nArgc, char *psArgs[])
 	return DEBUGGER_CMDDONE;
 }
 
+/* Release from the loops*/
 static int RemoteDebug_Unbreak(int nArgc, char *psArgs[])
 {
 	bRemoteBreakIsActive = false;
@@ -1433,49 +1433,183 @@ static int RemoteDebug_Next(int nArgc, char *psArgs[])
 	return DEBUGGER_CMDDONE;
 }
 
-/* Step next instruction. This is currently a passthrough to the normal debugui code. */
-static int RemoteDebug_Cmd(int nArgc, char *psArgs[])
+#include <ctype.h>
+#include "stMemory.h"		// NO CHECK
+/**
+ * Do a memory dump, 
+ * Input: "mem <start addr> <size in bytes>\n"
+ * 
+ * Output: "#mem ok <address>, <size>, <memory as base16 string>\n"
+ */
+static int RemoteDebug_MemDump(int nArgc, char *psArgs[])
 {
-	fprintf(debugOutput, "#cmd ok\n");
-	bRemoteBreakIsActive = false;
+	int arg;
+	Uint32 value, memdump_upper = 0;
+	Uint32 memdump_addr = 0;
+	Uint32 memdump_count = 0;
+
+	/* For remote debug, only "address" "count" is supported */
+	arg = 1;
+	if (nArgc >= arg + 2)
+	{
+		if (!Eval_Number(psArgs[arg], &memdump_addr))
+			return DEBUGGER_CMDDONE;		// NO CHECK
+
+		++arg;
+		if (!Eval_Number(psArgs[arg], &memdump_count))
+			return DEBUGGER_CMDDONE;
+		++arg;
+	}
+	else
+	{
+		// Not enough args
+		return DEBUGGER_CMDDONE;
+	}
+
+	fprintf(debugOutput, "#mem ok %08X %08X ", memdump_addr, memdump_count);
+	memdump_upper = memdump_addr + memdump_count;
+	while (memdump_addr != memdump_upper)
+	{
+		value = STMemory_ReadByte(memdump_addr);
+		fprintf(debugOutput, "%02X", value);
+		++memdump_addr;
+	}
+	fprintf(debugOutput, "\n");
 	return DEBUGGER_CMDDONE;
 }
 
+/**
+ * Disassemble
+ * Input: disasm <addr> <instruction count>\n"
+ * 
+ * Output: "#disasm <address>\n<disassembly strings>\n#disasm ok\n"
+ */
+static int RemoteDebug_DisAsm(int nArgc, char *psArgs[])
+{
+	Uint32 disasm_addr = 0;
+	Uint32 disasm_upper = 0;
+	Uint32 disasm_count = 0;
+	uaecptr nextpc;
+	const char *symbol;
+	int arg;
+	Uint32 shown;
+
+	/* For remote debug, only "address" "count" is supported */
+	arg = 1;
+	if (nArgc >= arg + 2)
+	{
+		if (!Eval_Number(psArgs[arg], &disasm_addr))
+			return DEBUGGER_CMDDONE;		// NO CHECK
+
+		++arg;
+		if (!Eval_Number(psArgs[arg], &disasm_count))
+			return DEBUGGER_CMDDONE;
+		++arg;
+	}
+	else
+	{
+		// Not enough args
+		return DEBUGGER_CMDDONE;
+	}
+
+	/* limit is topmost address or instruction count */
+	disasm_upper = 0xFFFFFFFF;
+	fprintf(debugOutput, "#disasm %06X\n", disasm_addr);
+
+	/* output a range */
+	for (shown = 0; shown < disasm_count && disasm_addr < disasm_upper; shown++)
+	{
+		// Add a "-" if no label is given
+		symbol = Symbols_GetByCpuAddress(disasm_addr, SYMTYPE_ALL);
+		if (!symbol)
+			symbol = "-";
+		fprintf(debugOutput, "%s ", symbol);
+		Disasm(debugOutput, (uaecptr)disasm_addr, &nextpc, 1);
+		disasm_addr = nextpc;
+	}
+	return DEBUGGER_CMDCONT;
+}
+
+/**
+ * Dump register contents. 
+ * Input: "registers\n"
+ * 
+ * Output: "#registers <reg:value>*N\n"
+ */
+static int RemoteDebug_Registers(int nArgc, char *psArgs[])
+{
+	static const int regIds[] = {
+		REG_D0, REG_D1, REG_D2, REG_D3, REG_D4, REG_D5, REG_D6, REG_D7,
+		REG_A0, REG_A1, REG_A2, REG_A3, REG_A4, REG_A5, REG_A6, REG_A7 };
+	static const char *regNames[] = {
+		"D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7",
+		"A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7" };
+	int regIdx;
+
+	fprintf(debugOutput, "#registers ");
+	for (regIdx = 0; regIdx < ARRAY_SIZE(regIds); ++regIdx)
+		fprintf(debugOutput, "%s:%08x ", regNames[regIdx], Regs[regIds[regIdx]]);
+	// Special regs
+	fprintf(debugOutput, "PC:%08x ", M68000_GetPC());
+	fprintf(debugOutput, "USP:%08x ", regs.usp);
+	fprintf(debugOutput, "ISP:%08x ", regs.isp);
+	fprintf(debugOutput, "SR:%04x ", M68000_GetSR());
+	fprintf(debugOutput, "ex:%04x ", regs.exception);
+
+	fprintf(debugOutput, "\n");
+	return DEBUGGER_CMDDONE;
+}
+
+/* DebugUI command structure */
+typedef struct
+{
+	int (*pFunction)(int argc, char *argv[]);
+	const char *sName;
+	const char *sDesc;
+	bool bNoParsing;
+} rdbcommand_t;
+
 /* Array of all remote debug command descriptors */
-static const dbgcommand_t remoteDebugCommand[] = {
-	{ RemoteDebug_Break, NULL,
-	  "break", "break",
+static const rdbcommand_t remoteDebugCommand[] = {
+	{ RemoteDebug_Break,
+	  "break",
 	  "break execution",
-	  NULL,
 	  true	},
-	{ RemoteDebug_Unbreak, NULL,
-	  "unbreak", "unbreak",
+	{ RemoteDebug_Unbreak,
+	  "unbreak",
 	  "resume execution",
-	  NULL,
 	  true	},
-	{ RemoteDebug_Status, NULL,
-	  "status", "status",
-	  "show execution status",
-	  NULL,
+	{ RemoteDebug_Status,
+	  "status",
+	  "show Hatai execution status",
 	  true	},
-	{ RemoteDebug_Echo, NULL,
-	  "echo", "echo",
+	{ RemoteDebug_Echo,
+	  "echo",
 	  "echo arguments back to command output",
-	  NULL,
 	  true	},
-	{ RemoteDebug_Next, NULL,
-	  "next", "next",
+	{ RemoteDebug_Next,
+	  "next",
 	  "step next instruction",
-	  NULL,
 	  true	},
-	{ RemoteDebug_Step, NULL,		// NO CHECK use the matching debugcpu names
-	  "step", "step",
+	{ RemoteDebug_Step,
+	  "step",
 	  "step next instruction",
-	  NULL,
+	  true	},
+	{ RemoteDebug_MemDump,
+	  "memory",
+	  "dump memory contents",
+	  true	},
+	{ RemoteDebug_DisAsm,
+	  "disasm",
+	  "disassemble memory",
+	  true	},
+	{ RemoteDebug_Registers,
+	  "registers",
+	  "read/write registers",
 	  true	},
 };
 
-static int remoteDebugCommands = ARRAY_SIZE(remoteDebugCommand);
+static int remoteDebugCommandCount = ARRAY_SIZE(remoteDebugCommand);
 
 /**
  * Parse remote debug command and execute it.
@@ -1492,13 +1626,12 @@ static int DebugUI_ParseRemoteDebugCommand(const char *input_orig)
 	psArgs[0] = strtok(input, " \t");
 
 	/* Search the command ... */
-	for (i = 0; i < remoteDebugCommands; i++)
+	for (i = 0; i < remoteDebugCommandCount; i++)
 	{
 		if (!remoteDebugCommand[i].pFunction)
 			continue;
 		
-		if (!strcmp(psArgs[0], remoteDebugCommand[i].sShortName) ||
-		    !strcmp(psArgs[0], remoteDebugCommand[i].sLongName))
+		if (!strcmp(psArgs[0], remoteDebugCommand[i].sName))
 		{
 			cmd = i;
 			break;
@@ -1521,6 +1654,7 @@ static int DebugUI_ParseRemoteDebugCommand(const char *input_orig)
 		psArgs[nArgc] = strtok(NULL, delim);
 		if (psArgs[nArgc] == NULL)
 			break;
+		//printf("*ARGS**** %s ***\n", psArgs[nArgc]); 	// NO CHECK
 	}
 	if (nArgc >= ARRAY_SIZE(psArgs))
 	{
@@ -1556,13 +1690,15 @@ void DebugUI_RegisterRemoteDebug(DebugUI_ProcessRemoteCommands cmdCallback)
 
 /* Process a single Remote Debug command.
    Command data is null-terminated.
-   Commands write output to debugOutput stream.
+   Commands write response output to debugOutput stream and are terminated with a line containing "##\n"
 */
 int DebugUI_ProcessRemoteDebug(const char *input)
 {
 	int ret = DebugUI_ParseRemoteDebugCommand(input);
 	if (ret != -1)
 	{
+		// Flag response end which is always "##\n"
+		fprintf(debugOutput, "##\n");
 		fflush(debugOutput);
 		return DEBUGGER_CMDDONE;
 	}
@@ -1580,11 +1716,12 @@ int DebugUI_ProcessRemoteDebug(const char *input)
 	if (strcmp(cmd, "cmd") == 0) {
 		/* This is a wrapper for typing on the commmand line, with a response for confirmation.
 		   Mainly for debug/testing purposes */
+		fprintf(debugOutput, "#cmd\n");
 		ret = DebugUI_ParseCommand(arg);
-		fprintf(debugOutput, "#cmd ok\n");
 	}
-
-	fflush(debugOutput);
 	free(cmd);
+	// Flag response end which is always "##\n"
+	fprintf(debugOutput, "##\n");
+	fflush(debugOutput);
 	return ret;
 }

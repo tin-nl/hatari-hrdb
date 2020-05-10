@@ -27,7 +27,7 @@ from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GObject
 
-from debugui import HatariDebugUI
+from debugui import HatariDebugUI, TargetState
 from hatari import Hatari, HatariConfigMapping
 from uihelpers import UInfo, UIHelp, create_button, create_toolbutton, \
      create_toggle, HatariTextInsert, get_open_filename, get_save_filename
@@ -70,6 +70,8 @@ class UICallbacks:
         self.mainwin = None
         self.hatariwin = None
         self.debugui = None
+        self.disasm = None
+        self.debug_disasm = None
         self.panels = {}
 
         # dialogs are created when needed
@@ -300,8 +302,10 @@ class UICallbacks:
     # ------- debug callback -----------
     def debugger(self, widget):
         if not self.debugui:
-            self.debugui = HatariDebugUI(self.hatari)
-        self.debugui.show()
+            # NO CHECK
+            self.target_state = TargetState(self.hatari)
+            self.debugui = HatariDebugUI(self.hatari, self.target_state)
+        self.debugui.show()     # NO CHECK hide
 
     # ------- trace callback -----------
     def trace(self, widget):
