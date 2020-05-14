@@ -312,17 +312,6 @@ class MemoryWindow:
             final_text.append(line)
         self.main_label.set_label("\n*".join(final_text))
 
-# constants for the other classes
-class Constants:
-    # dump modes
-    DISASM = 1
-    MEMDUMP = 2
-    REGISTERS = 3
-    # move IDs
-    MOVE_MIN = 1
-    MOVE_MED = 2
-    MOVE_MAX = 3
-
 # Show registers and control
 class RegisterWindow:
     # class variables
@@ -335,8 +324,6 @@ class RegisterWindow:
 
         # widgets
         self.entry, self.memory = self.create_widgets()
-        # settings
-        self.dumpmode = Constants.REGISTERS
         self.follow_pc = True
         self.lines = 12
         # addresses
@@ -392,12 +379,8 @@ class RegisterWindow:
     def set_lines(self, lines):
         self.lines = lines
 
-    def set_dumpmode(self, mode):
-        self.dumpmode = mode
-
     def request_data(self):
-        if self.dumpmode == Constants.REGISTERS:
-            self.hatari.send_rdb_cmd("registers")
+        self.hatari.send_rdb_cmd("registers")
 
     def process_response(self, command):
         fields = command[0].split()
@@ -407,7 +390,6 @@ class RegisterWindow:
         changed_regs = {}
         self.regs = {}
         for reg in fields[1:]:
-            print(reg)
             (regname, value) = reg.split(":")
             value = int(value, 16)
             if not regname in old_regs or old_regs[regname] != value:
@@ -526,26 +508,6 @@ class HatariDebugUI:
         monitor = create_button("Monitor...", self.monitor_cb)
         box.add(monitor)
 
-        buttons = (
-            ("<<<", "Page_Up",  -Constants.MOVE_MAX),
-            ("<<",  "Up",       -Constants.MOVE_MED),
-            ("<",   "Left",     -Constants.MOVE_MIN),
-            (">",   "Right",     Constants.MOVE_MIN),
-            (">>",  "Down",      Constants.MOVE_MED),
-            (">>>", "Page_Down", Constants.MOVE_MAX)
-        )
-        self.keys = {}
-        for label, keyname, offset in buttons:
-            button = create_button(label, self.set_address_offset, offset)
-            keyval = Gdk.keyval_from_name(keyname)
-            self.keys[keyval] =  offset
-            box.add(button)
-
-        # to middle of <<>> buttons
-        address_entry = self.registers.get_address_entry()
-        box.pack_start(address_entry, False, True, 0)
-        box.reorder_child(address_entry, 5)
-
         step_into = create_button("Into", self.step_into_cb)
         box.add(step_into)
 
@@ -553,20 +515,6 @@ class HatariDebugUI:
         box.add(step_over)
 
     def create_bottom_buttons(self, box):
-        radios = (
-            ("Registers", Constants.REGISTERS),
-            ("Memdump", Constants.MEMDUMP),
-            ("Disasm", Constants.DISASM)
-        )
-        group = None
-        for label, mode in radios:
-            button = Gtk.RadioButton(label=label, group=group, can_focus=False)
-            if not group:
-                group = button
-            button.connect("toggled", self.dumpmode_cb, mode)
-            box.add(button)
-        group.set_active(True)
-
         dialogs = (
             ("Memload...", self.memload_cb),
             ("Memsave...", self.memsave_cb),
@@ -688,9 +636,6 @@ class HatariDebugUI:
     def key_event_cb(self, widget, event):
         if event.keyval in self.keys:
             self.registers.dump(None, self.keys[event.keyval])
-
-    def set_address_offset(self, widget, move_idx):
-        self.registers.dump(None, move_idx)
 
     def monitor_cb(self, widget):
         TodoDialog(self.window).run("add register / memory address range monitor window.")

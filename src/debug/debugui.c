@@ -1581,7 +1581,7 @@ static const rdbcommand_t remoteDebugCommand[] = {
 	  true	},
 	{ RemoteDebug_Status,
 	  "status",
-	  "show Hatai execution status",
+	  "show Hatari execution status",
 	  true	},
 	{ RemoteDebug_Echo,
 	  "echo",
