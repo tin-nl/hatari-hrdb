@@ -594,6 +594,8 @@ class HatariDebugUI:
             # The timer will detect stop and refresh the display
 
     def step_into_cb(self, fileobj):
+        if not self.target_state.stopped:
+            return
         self.hatari.send_rdb_cmd("step")
         # Wait until break is confirmed
         success, output = self.hatari.collect_response(self.target_state.debug_output, "!break")
@@ -605,6 +607,8 @@ class HatariDebugUI:
         self.update_windows()
 
     def step_over_cb(self, widget):
+        if not self.target_state.stopped:
+            return
         self.hatari.send_rdb_cmd("next")
         # Wait until break is confirmed
         success, output = self.hatari.collect_response(self.target_state.debug_output, "!break")
@@ -686,8 +690,13 @@ class HatariDebugUI:
                 self.registers.process_response(c)
 
     def key_event_cb(self, widget, event):
-        if event.keyval in self.keys:
-            self.registers.dump(None, self.keys[event.keyval])
+        keyname = Gdk.keyval_name(event.keyval)
+        if keyname == "F5":
+            self.stop_cb(None)        
+        elif keyname == "F10":
+            self.step_over_cb(None)
+        elif keyname == "F11":
+            self.step_into_cb(None)
 
     def set_address_offset(self, widget, move_idx):
         self.registers.dump(None, move_idx)
