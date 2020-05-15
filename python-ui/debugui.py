@@ -395,7 +395,7 @@ class MemoryWindow:
                 curr += 1;
                 count += 1
             final_text.append(line)
-        self.main_label.set_label("\n*".join(final_text))
+        self.main_label.set_label("\n".join(final_text))
 
 # Show registers and control
 class RegisterWindow:
