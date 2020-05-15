@@ -1490,7 +1490,6 @@ static int RemoteDebug_DisAsm(int nArgc, char *psArgs[])
 	Uint32 disasm_upper = 0;
 	Uint32 disasm_count = 0;
 	uaecptr nextpc;
-	const char *symbol;
 	int arg;
 	Uint32 shown;
 
@@ -1519,11 +1518,6 @@ static int RemoteDebug_DisAsm(int nArgc, char *psArgs[])
 	/* output a range */
 	for (shown = 0; shown < disasm_count && disasm_addr < disasm_upper; shown++)
 	{
-		// Add a "-" if no label is given
-		symbol = Symbols_GetByCpuAddress(disasm_addr, SYMTYPE_ALL);
-		if (!symbol)
-			symbol = "-";
-		fprintf(debugOutput, "%s ", symbol);
 		Disasm(debugOutput, (uaecptr)disasm_addr, &nextpc, 1);
 		disasm_addr = nextpc;
 	}
@@ -1557,6 +1551,14 @@ static int RemoteDebug_Registers(int nArgc, char *psArgs[])
 	fprintf(debugOutput, "ex:%04x ", regs.exception);
 
 	fprintf(debugOutput, "\n");
+	return DEBUGGER_CMDDONE;
+}
+
+/* Step next instruction. This is currently a passthrough to the normal debugui code. */
+static int RemoteDebug_Symbols(int nArgc, char *psArgs[])
+{
+	fprintf(debugOutput, "#symbols\n");
+	Symbols_ShowRemoteDebug();
 	return DEBUGGER_CMDDONE;
 }
 
@@ -1606,6 +1608,10 @@ static const rdbcommand_t remoteDebugCommand[] = {
 	{ RemoteDebug_Registers,
 	  "registers",
 	  "read/write registers",
+	  true	},
+	{ RemoteDebug_Symbols,
+	  "symbols",
+	  "list all symbols",
 	  true	},
 };
 

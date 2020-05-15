@@ -153,7 +153,13 @@ class OptionsDialog:
         self.dialog.hide()
         return (lines, follow_pc)
 
-
+# ----------------------------------------------------
+class Symbol:
+    def __init__(self, space, address, type, name):
+        self.space = space
+        self.address = address
+        self.type = type
+        self.name = name
 # ----------------------------------------------------
 class TargetState:
     def __init__(self, hatariobj):
@@ -162,6 +168,17 @@ class TargetState:
         self.last = None
         self.stopped = False
         self.debug_output = hatariobj.open_debug_output()
+        self.symbols_by_address = {}       # keyed by address
+
+    def process_symbols_response(self, command):
+        self.symbols_by_address = {}
+        for l in command[1:]:
+            l = l.strip("\n")
+            (tag, address, type, name) = l.split(" ")
+            address = int(address, 16)
+            symbol = Symbol(tag, address, type, name)
+            print(address, name)
+            self.symbols_by_address[address] = symbol
 
 class DisasmWindow:
     def __init__(self, hatariobj, target_state, do_destroy = False):
@@ -223,20 +240,26 @@ class DisasmWindow:
         for l in command[1:]:
             data = l.strip()
             fields = data.split(" ")
-            symbol = fields[0]
-            d_address = fields[1]
+            symbol = ""
+            d_address = fields[0]
+            # TODO we need to cope with random different disassembly formats here,
+            # or disassemble ourselves :(
+            d_address = d_address.lstrip("$")
+            d_address = int(d_address, 16)
+            if d_address in self.target_state.symbols_by_address:
+                symbol = self.target_state.symbols_by_address[d_address].name + ": "
 
-            rest = ' '.join(fields[2:])
+            rest = ' '.join(fields[1:])
 
-            hex_bytes = rest[:20]
-            disasm = rest[20:]
+            hex_bytes = rest[:24]
+            disasm = rest[24:]
             disasm = disasm.strip()
 
-            if int(d_address, 16) == self.target_state.first:
+            if d_address == self.target_state.first:
                 colour = "blue"
             else:
                 colour = "black"
-            final_text.append("<span fgcolor=\"%s\">%10s %10s |%s</span>" % (colour, symbol, d_address, disasm))
+            final_text.append("<span fgcolor=\"{}\">{:<20}{:06x}|{}</span>".format(colour, symbol, d_address, disasm))
         self.main_label.set_markup('\n'.join(final_text))
         self.entry.set_text("%x" % address)
 
@@ -534,7 +557,7 @@ class HatariDebugUI:
             button = create_button(label, cb)
             box.add(button)
 
-        cmd_entry = Gtk.Entry(max_length=16, width_chars=16)
+        cmd_entry = Gtk.Entry(max_length=50, width_chars=16)
         cmd_entry.connect("activate", self._cmd_entry_cb)
         box.add(cmd_entry)
 
@@ -612,6 +635,11 @@ class HatariDebugUI:
         # Do the UI requests
         # Here we should put in all the requests at once, then parse
         self.registers.request_data()
+
+        # Load symbols on demand (hack)
+        if len(self.target_state.symbols_by_address) == 0:
+            self.hatari.send_rdb_cmd("symbols")
+
         self.memory.request_data()
         self.disasm.request_data()
 
@@ -646,6 +674,8 @@ class HatariDebugUI:
                 self.disasm.process_response(c)
             elif c[0].startswith("#registers"):
                 self.registers.process_response(c)
+            elif c[0].startswith("#symbols"):
+                self.target_state.process_symbols_response(c)
 
     def key_event_cb(self, widget, event):
         keyname = Gdk.keyval_name(event.keyval)

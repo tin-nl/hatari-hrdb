@@ -48,5 +48,6 @@ extern void Symbols_LoadCurrentProgram(void);
 /* symbols/dspsymbols command parsing */
 extern char *Symbols_MatchCommand(const char *text, int state);
 extern int Symbols_Command(int nArgc, char *psArgs[]);
+extern void Symbols_ShowRemoteDebug(void);
 
 #endif

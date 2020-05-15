@@ -1690,3 +1690,35 @@ int Symbols_Command(int nArgc, char *psArgs[])
 	}
 	return DEBUGGER_CMDDONE;
 }
+
+/**
+ * Show symbols from given list in Remote Debug format.
+ */
+static void Symbols_ShowListRemoteDebug(const char *tag, symbol_list_t* list)
+{
+	symbol_t *entry, *entries;
+	int i, count;
+	char symchar;
+	
+	if (!list) {
+		return;
+	}
+
+	entries = list->names;
+	count = list->namecount;
+
+	for (entry = entries, i = 0; i < count; i++, entry++) {
+		symchar = symbol_char(entry->type);
+		fprintf(debugOutput, "%s %08x %c %s\n",
+			tag, entry->address, symchar, entry->name);
+	}
+}
+
+/**
+ * Show symbols from CPU and DSP lists in Remote Debug format.
+ */
+void Symbols_ShowRemoteDebug(void)
+{
+	Symbols_ShowListRemoteDebug("cpu", CpuSymbolsList);
+	Symbols_ShowListRemoteDebug("dsp", DspSymbolsList);
+}
