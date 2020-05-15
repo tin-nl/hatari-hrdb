@@ -168,17 +168,39 @@ class TargetState:
         self.last = None
         self.stopped = False
         self.debug_output = hatariobj.open_debug_output()
-        self.symbols_by_address = {}       # keyed by address
+        self.symbols = []
 
     def process_symbols_response(self, command):
-        self.symbols_by_address = {}
+        self.symbols = []
         for l in command[1:]:
             l = l.strip("\n")
             (tag, address, type, name) = l.split(" ")
             address = int(address, 16)
             symbol = Symbol(tag, address, type, name)
-            print(address, name)
-            self.symbols_by_address[address] = symbol
+            self.symbols.append(symbol)
+
+    def find_lower_symbol(self, address):
+        """ Find symbol with closest lower address """
+        best_address = None
+        best_sym = None
+        for s in self.symbols:
+            s_address = s.address
+            if s_address > address:
+                continue
+            if best_address == None or s_address > best_address:
+                best_address = s_address
+                best_sym = s
+        if best_address != None:
+            return best_sym
+        return None
+
+    def get_address_symbol_text(self, address):
+        sym = self.find_lower_symbol(address)
+        if sym == None:
+            return ''
+        if sym.address == address:
+            return sym.name
+        return "%s+$%x" % (sym.name, address - sym.address)
 
 class DisasmWindow:
     def __init__(self, hatariobj, target_state, do_destroy = False):
@@ -246,8 +268,9 @@ class DisasmWindow:
             # or disassemble ourselves :(
             d_address = d_address.lstrip("$")
             d_address = int(d_address, 16)
-            if d_address in self.target_state.symbols_by_address:
-                symbol = self.target_state.symbols_by_address[d_address].name + ": "
+            sym = self.target_state.find_lower_symbol(d_address)
+            if sym != None and sym.address == d_address:
+                symbol = sym.name + ":"
 
             rest = ' '.join(fields[1:])
 
@@ -449,7 +472,11 @@ class RegisterWindow:
                 if item in changed_regs:
                     colour = "red" 
                 row_text += "%s <span fgcolor=\"%s\">%08x</span> " % (item, colour, v)
-            text.append(row_text)
+
+            # Look up address registers
+            last_add = self.regs[row[-1]]
+            sym_text = self.target_state.get_address_symbol_text(last_add)
+            text.append(row_text + "  " + sym_text)
 
         sr = self.regs["SR"]
         row_text = "SR %04x " % sr
@@ -637,7 +664,7 @@ class HatariDebugUI:
         self.registers.request_data()
 
         # Load symbols on demand (hack)
-        if len(self.target_state.symbols_by_address) == 0:
+        if len(self.target_state.symbols) == 0:
             self.hatari.send_rdb_cmd("symbols")
 
         self.memory.request_data()
