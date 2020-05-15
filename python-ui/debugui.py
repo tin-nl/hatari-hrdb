@@ -225,9 +225,19 @@ class DisasmWindow:
             fields = data.split(" ")
             symbol = fields[0]
             d_address = fields[1]
+
             rest = ' '.join(fields[2:])
-            final_text.append("%10s/$%s/%s" % (symbol, d_address, rest))
-        self.set_text(final_text)
+
+            hex_bytes = rest[:20]
+            disasm = rest[20:]
+            disasm = disasm.strip()
+
+            if int(d_address, 16) == self.target_state.first:
+                colour = "blue"
+            else:
+                colour = "black"
+            final_text.append("<span fgcolor=\"%s\">%10s %10s |%s</span>" % (colour, symbol, d_address, disasm))
+        self.main_label.set_markup('\n'.join(final_text))
         self.entry.set_text("%x" % address)
 
     def set_text(self, text_lines):
