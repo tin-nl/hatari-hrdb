@@ -225,9 +225,19 @@ class DisasmWindow:
             fields = data.split(" ")
             symbol = fields[0]
             d_address = fields[1]
+
             rest = ' '.join(fields[2:])
-            final_text.append("%10s/$%s/%s" % (symbol, d_address, rest))
-        self.set_text(final_text)
+
+            hex_bytes = rest[:20]
+            disasm = rest[20:]
+            disasm = disasm.strip()
+
+            if int(d_address, 16) == self.target_state.first:
+                colour = "blue"
+            else:
+                colour = "black"
+            final_text.append("<span fgcolor=\"%s\">%10s %10s |%s</span>" % (colour, symbol, d_address, disasm))
+        self.main_label.set_markup('\n'.join(final_text))
         self.entry.set_text("%x" % address)
 
     def set_text(self, text_lines):
@@ -542,6 +552,8 @@ class HatariDebugUI:
             # The timer will detect stop and refresh the display
 
     def step_into_cb(self, fileobj):
+        if not self.target_state.stopped:
+            return
         self.hatari.send_rdb_cmd("step")
         # Wait until break is confirmed
         success, output = self.hatari.collect_response(self.target_state.debug_output, "!break")
@@ -553,6 +565,8 @@ class HatariDebugUI:
         self.update_windows()
 
     def step_over_cb(self, widget):
+        if not self.target_state.stopped:
+            return
         self.hatari.send_rdb_cmd("next")
         # Wait until break is confirmed
         success, output = self.hatari.collect_response(self.target_state.debug_output, "!break")
@@ -634,8 +648,13 @@ class HatariDebugUI:
                 self.registers.process_response(c)
 
     def key_event_cb(self, widget, event):
-        if event.keyval in self.keys:
-            self.registers.dump(None, self.keys[event.keyval])
+        keyname = Gdk.keyval_name(event.keyval)
+        if keyname == "F5":
+            self.stop_cb(None)        
+        elif keyname == "F10":
+            self.step_over_cb(None)
+        elif keyname == "F11":
+            self.step_into_cb(None)
 
     def monitor_cb(self, widget):
         TodoDialog(self.window).run("add register / memory address range monitor window.")
