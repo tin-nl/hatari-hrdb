@@ -166,9 +166,13 @@ class TargetState:
         self.first = None
         self.second = None
         self.last = None
-        self.stopped = False
         self.debug_output = hatariobj.open_debug_output()
+
+        # This is the state that's come back from the responses, and the view query
+        self.stopped = False
         self.symbols = []
+        self.regs = {}
+        self.changed_regs = {}
 
     def process_symbols_response(self, command):
         self.symbols = []
@@ -178,6 +182,20 @@ class TargetState:
             address = int(address, 16)
             symbol = Symbol(tag, address, type, name)
             self.symbols.append(symbol)
+
+    def process_regs_response(self, command):
+        fields = command[0].split()
+        text = []
+
+        old_regs = self.regs.copy()
+        self.changed_regs = {}
+        self.regs = {}
+        for reg in fields[1:]:
+            (regname, value) = reg.split(":")
+            value = int(value, 16)
+            if not regname in old_regs or old_regs[regname] != value:
+                self.changed_regs[regname] = True
+            self.regs[regname] = value
 
     def find_lower_symbol(self, address):
         """ Find symbol with closest lower address """
@@ -213,6 +231,7 @@ class DisasmWindow:
         self.window = self.create_ui("Disassembly", do_destroy)
         self.target_state = target_state
         self.lines = 10
+        self.response = None
 
     def create_ui(self, title, do_destroy):
         # their container
@@ -256,6 +275,10 @@ class DisasmWindow:
         self.hatari.send_rdb_cmd("disasm $%06x $%06x" % (address, self.lines))
 
     def process_response(self, command):
+        self.response = command
+
+    def update_view(self):
+        command = self.response
         final_text = []
         (tag, address) = command[0].split(" ")
         address = int(address, 16)
@@ -299,7 +322,9 @@ class MemoryWindow:
         # UI initialization/creation
         self.window = self.create_ui("Memory", do_destroy)
         self.target_state = target_state
-        self.lines = 10
+        self.bdata = None
+        self.address = 0
+        self.lines = 10     # height of requested data
 
     def create_ui(self, title, do_destroy):
         # their container
@@ -339,7 +364,7 @@ class MemoryWindow:
         pass
 
     def request_data(self):
-        address = self.target_state.first       # NO CHECK conditional
+        address = self.target_state.first       # NO CHECK conditional: could be fixed address
         linewidth = 16
         screenful = self.lines*linewidth        # NO CHECK bug with 200K?
         self.hatari.send_rdb_cmd("memory $%06x $%06x" % (address, screenful))
@@ -351,17 +376,21 @@ class MemoryWindow:
         data = data.strip()
 
         # Python3 returns a bytes object, Python2 a string...?
-        bdata = bytearray(base64.b16decode(data, casefold=True))
-        curr = int(curr, 16)
-        size = len(bdata) #  int(size, 16)
-        end = curr + size
+        self.bdata = bytearray(base64.b16decode(data, casefold=True))
+        self.address = int(curr, 16)
+
+    def update_view(self):
+        size = len(self.bdata) #  int(size, 16)
+        end = self.address + size
+
         count = 0
         final_text = []
+        curr = self.address
         while curr < end:
             line = "%06x | " % curr
             line_end = min(curr + 16, end)
             while curr < line_end:
-                v = bdata[count]
+                v = self.bdata[count]
                 line += "%02x " % v
                 curr += 1;
                 count += 1
@@ -384,7 +413,7 @@ class RegisterWindow:
         self.lines = 12
         # addresses
         self.target_state = target_state
-        self.regs = {}  # NO CHECK move to target state
+
     def clear(self):
         if self.follow_pc:
             # get first address from PC when next stopped
@@ -438,20 +467,7 @@ class RegisterWindow:
     def request_data(self):
         self.hatari.send_rdb_cmd("registers")
 
-    def process_response(self, command):
-        fields = command[0].split()
-        text = []
-
-        old_regs = self.regs.copy()
-        changed_regs = {}
-        self.regs = {}
-        for reg in fields[1:]:
-            (regname, value) = reg.split(":")
-            value = int(value, 16)
-            if not regname in old_regs or old_regs[regname] != value:
-                changed_regs[regname] = True
-            self.regs[regname] = value
-
+    def update_view(self):
         names = [
             [ "D0", "A0" ],
             [ "D1", "A1" ],
@@ -464,21 +480,22 @@ class RegisterWindow:
             [ "PC" ]
         ]
         text = []
+        regs = self.target_state.regs
         for row in names:
             row_text = ""
             for item in row:
-                v = self.regs[item]
+                v = regs[item]
                 colour = "black"
-                if item in changed_regs:
+                if item in self.target_state.changed_regs:
                     colour = "red" 
                 row_text += "%s <span fgcolor=\"%s\">%08x</span> " % (item, colour, v)
 
             # Look up address registers
-            last_add = self.regs[row[-1]]
+            last_add = regs[row[-1]]
             sym_text = self.target_state.get_address_symbol_text(last_add)
             text.append(row_text + "  " + sym_text)
 
-        sr = self.regs["SR"]
+        sr = regs["SR"]
         row_text = "SR %04x " % sr
         bits_y = "SM 210   XNZVC"
         bits_n = "-- ---   -----"
@@ -700,9 +717,14 @@ class HatariDebugUI:
             elif c[0].startswith("#disasm "):
                 self.disasm.process_response(c)
             elif c[0].startswith("#registers"):
-                self.registers.process_response(c)
+                self.target_state.process_regs_response(c)
             elif c[0].startswith("#symbols"):
                 self.target_state.process_symbols_response(c)
+
+        # Now update the views
+        self.memory.update_view()
+        self.disasm.update_view()
+        self.registers.update_view()
 
     def key_event_cb(self, widget, event):
         keyname = Gdk.keyval_name(event.keyval)
