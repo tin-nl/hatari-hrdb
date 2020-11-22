@@ -56,6 +56,7 @@ const char Main_fileid[] = "Hatari main.c : " __DATE__ " " __TIME__;
 #include "video.h"
 #include "avi_record.h"
 #include "debugui.h"
+#include "remote.h"
 #include "clocks_timings.h"
 
 #include "hatari-glue.h"
@@ -818,6 +819,7 @@ static void Main_Init(void)
 	
 	/* done as last, needs CPU & DSP running... */
 	DebugUI_Init();
+    Remote_Init();
 }
 
 
