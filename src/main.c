@@ -56,7 +56,7 @@ const char Main_fileid[] = "Hatari main.c : " __DATE__ " " __TIME__;
 #include "video.h"
 #include "avi_record.h"
 #include "debugui.h"
-#include "remote.h"
+#include "remotedebug.h"
 #include "clocks_timings.h"
 
 #include "hatari-glue.h"
@@ -522,6 +522,7 @@ void Main_EventHandler(void)
 
 		/* check remote process control */
 		remotepause = Control_CheckUpdates();
+		(void) RemoteDebug_Update();
 
 		if ( bEmulationActive || remotepause )
 		{
@@ -819,7 +820,7 @@ static void Main_Init(void)
 	
 	/* done as last, needs CPU & DSP running... */
 	DebugUI_Init();
-    Remote_Init();
+    RemoteDebug_Init();
 }
 
 

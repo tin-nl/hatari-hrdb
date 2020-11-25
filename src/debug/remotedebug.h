@@ -8,6 +8,7 @@
 #ifndef HATARI_REMOTE_H
 #define HATARI_REMOTE_H
 
-extern void Remote_Init(void);
+extern void RemoteDebug_Init(void);
+extern void RemoteDebug_Update(void);
 
 #endif /* HATARI_REMOTE_H */

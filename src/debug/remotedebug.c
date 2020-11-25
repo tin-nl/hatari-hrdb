@@ -15,16 +15,29 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
 #define REMOTE_DEBUG_PORT       (1667)
+int SocketFD = -1;
+int AcceptedFD = -1;
 
-static int Remote_InitServer(void)
+/*
+static void set_nonblock(int socket)
+{
+    int flags;
+    flags = fcntl(socket,F_GETFL,0);
+    assert(flags != -1);
+    fcntl(socket, F_SETFL, flags | O_NONBLOCK);
+}
+*/
+
+static int RemoteDebug_InitServer(void)
 {
 	// Create listening socket on port
 	struct sockaddr_in sa;
-	int SocketFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	SocketFD = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
 	if (SocketFD == -1) {
 		perror("cannot create socket");
 		return 1;
@@ -47,13 +60,39 @@ static int Remote_InitServer(void)
 	  return 1;
 	}
 
+	// Socket is now in a listening state and could accept 
 	printf("Listening...\n");
 	return 0;
 }
 
 
-void Remote_Init(void)
+void RemoteDebug_Init(void)
 {
 	printf("Starting remote debug\n");
-	Remote_InitServer();
+	RemoteDebug_InitServer();
+}
+
+void RemoteDebug_Update(void)
+{
+	char buf[101];
+	if (AcceptedFD != -1)
+	{
+		printf("*\n");
+		// Read input
+		int bytes = recv(AcceptedFD, buf, 100, MSG_DONTWAIT);
+		if (bytes > 0)
+		{
+			buf[bytes] = 0;
+			printf("Rec **%s**\n", buf);
+		}
+	}
+	else
+	{
+		// Active accepted socket
+		AcceptedFD = accept(SocketFD, NULL, NULL);
+		if (AcceptedFD == -1) {
+			return;
+		}
+		printf("Accepted:%d\n", AcceptedFD);
+	}
 }
