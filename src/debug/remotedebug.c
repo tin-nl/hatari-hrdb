@@ -19,27 +19,37 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define REMOTE_DEBUG_PORT       (1667)
-int SocketFD = -1;
-int AcceptedFD = -1;
+#define REMOTE_DEBUG_PORT          (1667)
+#define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
+
+typedef struct RemoteDebugState
+{
+	int SocketFD;								/* handle for the port/socket */
+	int AcceptedFD;								/* handle for the accepted connection from client, or -1 */
+	char cmd_buf[REMOTE_DEBUG_CMD_MAX_SIZE+1];	/* accumulated command string */
+	int cmd_pos;								/* offset in cmd_buf for new data */
+} RemoteDebugState;
+
+static RemoteDebugState g_rdbState;
+
+static void RemoteDebugState_Init(RemoteDebugState* state)
+{
+	state->SocketFD = -1;
+	state->AcceptedFD = -1;
+	memset(state->cmd_buf, 0, sizeof(state->cmd_buf));
+	state->cmd_pos = 0;
+}
 
 /*
-static void set_nonblock(int socket)
-{
-    int flags;
-    flags = fcntl(socket,F_GETFL,0);
-    assert(flags != -1);
-    fcntl(socket, F_SETFL, flags | O_NONBLOCK);
-}
+	Create a socket for the port and start to listen over TCP
 */
-
-static int RemoteDebug_InitServer(void)
+static int RemoteDebugState_InitServer(RemoteDebugState* state)
 {
 	// Create listening socket on port
 	struct sockaddr_in sa;
-	SocketFD = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
-	if (SocketFD == -1) {
-		perror("cannot create socket");
+	state->SocketFD = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+	if (state->SocketFD == -1) {
+		fprintf(stderr, "Failed to open socket\n");
 		return 1;
 	}
   
@@ -48,51 +58,94 @@ static int RemoteDebug_InitServer(void)
 	sa.sin_port = htons(REMOTE_DEBUG_PORT);
 	sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-	if (bind(SocketFD,(struct sockaddr *)&sa, sizeof sa) == -1) {
-	  perror("bind failed");
-	  close(SocketFD);
-	  return 1;
+	if (bind(state->SocketFD,(struct sockaddr *)&sa, sizeof sa) == -1) {
+		fprintf(stderr, "Failed to bind socket\n");
+		close(state->SocketFD);
+		state->SocketFD =-1;
+		return 1;
 	}
   
-	if (listen(SocketFD, 10) == -1) {
-	  perror("listen failed");
-	  close(SocketFD);
-	  return 1;
+	if (listen(state->SocketFD, 1) == -1) {
+		fprintf(stderr, "Failed to listen() on socket\n");
+		close(state->SocketFD);
+		state->SocketFD =-1;
+		return 1;
 	}
 
 	// Socket is now in a listening state and could accept 
-	printf("Listening...\n");
+	printf("Remote Debug Listening on port %d\n", REMOTE_DEBUG_PORT);
 	return 0;
 }
 
-
-void RemoteDebug_Init(void)
+static void RemoteDebugState_Update(RemoteDebugState* state)
 {
-	printf("Starting remote debug\n");
-	RemoteDebug_InitServer();
-}
+	if (state->SocketFD == -1)
+		return;
 
-void RemoteDebug_Update(void)
-{
-	char buf[101];
-	if (AcceptedFD != -1)
+	int remaining;
+
+	if (state->AcceptedFD != -1)
 	{
-		printf("*\n");
-		// Read input
-		int bytes = recv(AcceptedFD, buf, 100, MSG_DONTWAIT);
+		// Connection is active
+		// Read input and accumulate a command
+		remaining = REMOTE_DEBUG_CMD_MAX_SIZE - state->cmd_pos;
+		int bytes = recv(state->AcceptedFD, 
+			&state->cmd_buf[state->cmd_pos],
+			remaining,
+			MSG_DONTWAIT);
+
 		if (bytes > 0)
 		{
-			buf[bytes] = 0;
-			printf("Rec **%s**\n", buf);
+			// New data. Is there a command in there (null-terminated string)
+			state->cmd_pos += bytes;
+			while (1)
+			{
+				// Scan for a complete command
+				char* endptr = memchr(state->cmd_buf, 0, state->cmd_pos);
+				if (!endptr)
+					break;
+				int length = endptr - state->cmd_buf;
+
+				// Process this command
+				// Post it back
+				const char* response = "OK";
+				send(state->AcceptedFD, response, strlen(response) + 1, 0);
+
+				// Copy extra bytes to the start
+				// -1 here is for the terminator
+				int extra_length = state->cmd_pos - length - 1;
+				memcpy(state->cmd_buf, endptr + 1, extra_length);
+				state->cmd_pos = extra_length;
+			}
+		}
+		else if (bytes == 0)
+		{
+			// This represents an orderly EOF
+			printf("Remote Debug connection closed\n");
+			close(state->AcceptedFD);
+			state->AcceptedFD = -1;
 		}
 	}
 	else
 	{
 		// Active accepted socket
-		AcceptedFD = accept(SocketFD, NULL, NULL);
-		if (AcceptedFD == -1) {
-			return;
+		state->AcceptedFD = accept(state->SocketFD, NULL, NULL);
+		if (state->AcceptedFD != -1)
+		{
+			printf("Remote Debug connection accepted\n");
 		}
-		printf("Accepted:%d\n", AcceptedFD);
 	}
+}
+
+void RemoteDebug_Init(void)
+{
+	printf("Starting remote debug\n");
+	RemoteDebugState_Init(&g_rdbState);
+
+	RemoteDebugState_InitServer(&g_rdbState);
+}
+
+void RemoteDebug_Update(void)
+{
+	RemoteDebugState_Update(&g_rdbState);
 }
