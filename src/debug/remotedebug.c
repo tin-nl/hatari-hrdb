@@ -19,6 +19,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "m68000.h"
+
 #define REMOTE_DEBUG_PORT          (1667)
 #define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
 
@@ -106,10 +108,16 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 					break;
 				int length = endptr - state->cmd_buf;
 
+				const char* pCmd = state->cmd_buf;
+				//printf("Hatari received command: %s\n", pCmd);
+
 				// Process this command
+				//usleep(200);
+
 				// Post it back
-				const char* response = "OK";
-				send(state->AcceptedFD, response, strlen(response) + 1, 0);
+				char tmp[200];
+				sprintf(tmp, "OK:%.10s:%x", pCmd, regs.pc);
+				send(state->AcceptedFD, tmp, strlen(tmp) + 1, 0);
 
 				// Copy extra bytes to the start
 				// -1 here is for the terminator
