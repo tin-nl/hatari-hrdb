@@ -39,9 +39,6 @@ extern bool DebugUI_ParseLine(const char *input);
 extern bool DebugUI_SetParseFile(const char *input);
 extern void DebugUI_MemorySnapShot_Capture(const char *path, bool bSave);
 
-// Read the flag to see if remote break was requested
-extern void DebugUI_CheckRemoteBreak(void);
-
 // Register the callback to process remote command input
 extern void DebugUI_RegisterRemoteDebug(DebugUI_ProcessRemoteCommands cmdCallback);
 

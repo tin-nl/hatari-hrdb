@@ -61,12 +61,6 @@ static const char *parseFileName;
 /* to which directory to change after (potentially recursed) scripts parsing finishes */
 static char *finalDir;
 
-/* Remote debugging break command was sent from debugger */
-static bool bRemoteBreakRequest = false;
-
-/* Processing is stopped and the remote debug loop is active */
-static bool bRemoteBreakIsActive = false;
-
 /* Function to read incoming remote debugger commands (set when a socket is attached) */
 static DebugUI_ProcessRemoteCommands remoteDebugcmdCallback = NULL;
 
@@ -1165,17 +1159,8 @@ void DebugUI(debug_reason_t reason)
 		Statusbar_AddMessage("Remote Debugging", 100);
 		Statusbar_Update(sdlscrn, true);
 
-		/* output response to flag successful break request */
-		fprintf(debugOutput, "!break PC:%x\n", M68000_GetPC());
-		fflush(debugOutput);
-		bRemoteBreakRequest = false;
-		bRemoteBreakIsActive = true;
-		while (bRemoteBreakIsActive)
-		{
-			(void) remoteDebugcmdCallback();
-			/* allow wakeup on a thread here? Run any other SDL update requirements? */
-			usleep(100);
-		}
+		/* Pass control to remote debugging */
+		(void) remoteDebugcmdCallback();
 	}
 	else
 	{
@@ -1385,24 +1370,10 @@ void DebugUI_Exceptions(int nr, long pc)
 	DebugUI(REASON_CPU_EXCEPTION);
 }
 
-/* Put in a break request which is serviced elsewhere in the main loop */
-static int RemoteDebug_Break(int nArgc, char *psArgs[])
-{
-	bRemoteBreakRequest = true;
-	return DEBUGGER_CMDDONE;
-}
-
-/* Release from the loops*/
-static int RemoteDebug_Unbreak(int nArgc, char *psArgs[])
-{
-	bRemoteBreakIsActive = false;
-	return DEBUGGER_CMDDONE;
-}
-
 /* Return short status info in a useful format, mainly whether it's running */
 static int RemoteDebug_Status(int nArgc, char *psArgs[])
 {
-	fprintf(debugOutput, "#status running:%x PC:%x\n", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
+	fprintf(debugOutput, "#status running:%x PC:%x\n", 0, M68000_GetPC());
 	return DEBUGGER_CMDDONE;
 }
 
@@ -1415,23 +1386,6 @@ static int RemoteDebug_Echo(int nArgc, char *psArgs[])
 	return DEBUGGER_CMDDONE;
 }
 
-/* Step next instruction. This is currently a passthrough to the normal debugui code. */
-static int RemoteDebug_Step(int nArgc, char *psArgs[])
-{
-	DebugUI_ParseCommand("s");
-	fprintf(debugOutput, "#step ok\n");
-	bRemoteBreakIsActive = false;
-	return DEBUGGER_CMDDONE;
-}
-
-/* Step next instruction. This is currently a passthrough to the normal debugui code. */
-static int RemoteDebug_Next(int nArgc, char *psArgs[])
-{
-	DebugUI_ParseCommand("n");
-	fprintf(debugOutput, "#next ok\n");
-	bRemoteBreakIsActive = false;
-	return DEBUGGER_CMDDONE;
-}
 
 #include <ctype.h>
 #include "stMemory.h"		// NO CHECK
@@ -1573,14 +1527,6 @@ typedef struct
 
 /* Array of all remote debug command descriptors */
 static const rdbcommand_t remoteDebugCommand[] = {
-	{ RemoteDebug_Break,
-	  "break",
-	  "break execution",
-	  true	},
-	{ RemoteDebug_Unbreak,
-	  "unbreak",
-	  "resume execution",
-	  true	},
 	{ RemoteDebug_Status,
 	  "status",
 	  "show Hatari execution status",
@@ -1588,14 +1534,6 @@ static const rdbcommand_t remoteDebugCommand[] = {
 	{ RemoteDebug_Echo,
 	  "echo",
 	  "echo arguments back to command output",
-	  true	},
-	{ RemoteDebug_Next,
-	  "next",
-	  "step next instruction",
-	  true	},
-	{ RemoteDebug_Step,
-	  "step",
-	  "step next instruction",
 	  true	},
 	{ RemoteDebug_MemDump,
 	  "memory",
@@ -1673,19 +1611,6 @@ static int DebugUI_ParseRemoteDebugCommand(const char *input_orig)
 	}
 	free(input);
 	return retval;
-}
-
-/**
- * Debugger invocation if requested by remote debugger
- */
-void DebugUI_CheckRemoteBreak(void)
-{
-	if (bRemoteBreakRequest)
-	{
-		bRemoteBreakRequest = false;
-		// Stop and wait for inputs from the control socket
-		DebugUI(REASON_USER);
-	}
 }
 
 /* Register the callback to process remote command input */

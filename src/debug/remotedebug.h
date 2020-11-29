@@ -10,5 +10,7 @@
 
 extern void RemoteDebug_Init(void);
 extern void RemoteDebug_Update(void);
+// Read the flag to see if remote break was requested
+extern void RemoteDebug_CheckRemoteBreak(void);
 
 #endif /* HATARI_REMOTE_H */

@@ -4452,7 +4452,7 @@ void Video_InterruptHandler_VBL ( void )
 	 * that single-stepping after break immediately jumps into the VBL routine
 	 * which can be very confusing, but it needs to be somewhere near here in
 	 * the emulation loop. But for the moment it mimics the keyboard shortcut. */
-	DebugUI_CheckRemoteBreak();
+	RemoteDebug_CheckRemoteBreak();
 
 	/* Update the IKBD's internal clock */
 	IKBD_UpdateClockOnVBL ();
