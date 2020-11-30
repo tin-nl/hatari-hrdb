@@ -1037,3 +1037,8 @@ void DebugCpu_InitSession(void)
 	disasm_addr = M68000_GetPC();
 	Profile_CpuStop();
 }
+
+void DebugCpu_SetSteps(int steps)
+{
+	nCpuSteps = steps;
+}

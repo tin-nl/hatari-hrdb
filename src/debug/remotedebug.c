@@ -22,6 +22,7 @@
 #include "m68000.h"
 #include "main.h"		/* For ARRAY_SIZE */
 #include "debugui.h"	/* For DebugUI_RegisterRemoteDebug */
+#include "debugcpu.h"	/* For stepping */
 
 #define REMOTE_DEBUG_PORT          (1667)
 #define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
@@ -81,7 +82,10 @@ static int RemoteDebug_Break(int nArgc, char *psArgs[], int fd)
 /* Step next instruction. This is currently a passthrough to the normal debugui code. */
 static int RemoteDebug_Step(int nArgc, char *psArgs[], int fd)
 {
+	DebugCpu_SetSteps(1);
 	send_string(fd, "OK");
+
+	// Restart
 	bRemoteBreakIsActive = false;
 	return 0;
 }
