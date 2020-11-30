@@ -80,7 +80,6 @@ static int RemoteDebug_Run(int nArgc, char *psArgs[], int fd)
 {
 	send_string(fd, "OK");
 	bRemoteBreakIsActive = false;
-	send_string(fd, "OK");
 	return 0;
 }
 
@@ -150,6 +149,7 @@ static int RemoteDebug_Parse(const char *input_orig, int fd)
 	else
 	{
 		/* ... and execute the function */
+		printf("Execute: %s\n", pCommand->sName);
 		retval = pCommand->pFunction(nArgc, psArgs, fd);
 	}
 	free(input);
