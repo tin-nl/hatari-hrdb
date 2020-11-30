@@ -43,7 +43,7 @@ static void send_string(int fd, const char* pStr)
 static int RemoteDebug_NotifyState(int fd)
 {
 	char tmp[100];
-	int len = sprintf(tmp, "!status running:%x PC:%x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
+	int len = sprintf(tmp, "!status %x %x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
 	// +1 for the terminator
 	send(fd, tmp, len + 1, 0);
 	return 0;
@@ -54,7 +54,7 @@ static int RemoteDebug_NotifyState(int fd)
 static int RemoteDebug_Status(int nArgc, char *psArgs[], int fd)
 {
 	char tmp[100];
-	int len = sprintf(tmp, "status running:%x PC:%x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
+	int len = sprintf(tmp, "status %x %x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
 	send(fd, tmp, len, 0);
 	return 0;
 }
@@ -248,8 +248,10 @@ static bool RemoteDebug_BreakLoop(void)
 
 	// NO CHECK cope with no connection!
 
-	RemoteDebug_NotifyState(state->AcceptedFD);
 	bRemoteBreakIsActive = true;
+	// Notify after state change happens
+	RemoteDebug_NotifyState(state->AcceptedFD);
+
 	// NO CHECK handle no connection
 
 	while (bRemoteBreakIsActive)
