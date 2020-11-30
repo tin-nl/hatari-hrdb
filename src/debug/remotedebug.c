@@ -52,8 +52,17 @@ static int RemoteDebug_Status(int nArgc, char *psArgs[], int fd)
 /* Put in a break request which is serviced elsewhere in the main loop */
 static int RemoteDebug_Break(int nArgc, char *psArgs[], int fd)
 {
-	bRemoteBreakRequest = true;
-	send_string(fd, "OK");
+	// Only set a break request if we are running
+	if (!bRemoteBreakIsActive)
+	{
+		bRemoteBreakRequest = true;
+		send_string(fd, "OK");
+	}
+	else
+	{
+		send_string(fd, "NG");
+	}
+	
 	return 0;
 }
 
@@ -231,6 +240,12 @@ static bool RemoteDebug_BreakLoop(void)
 
 	while (bRemoteBreakIsActive)
 	{
+		if (state->AcceptedFD == -1 || 
+			state->SocketFD == -1)
+		{
+			break;
+		}
+
 		// Read input and accumulate a command (blocking)
 		remaining = REMOTE_DEBUG_CMD_MAX_SIZE - state->cmd_pos;
 		int bytes = recv(state->AcceptedFD, 
@@ -250,9 +265,15 @@ static bool RemoteDebug_BreakLoop(void)
 			DebugUI_RegisterRemoteDebug(NULL);
 			close(state->AcceptedFD);
 			state->AcceptedFD = -1;
+
+			// Bail out of the loop here so we don't just spin
+			break;
 		}
 	}
-	printf("RemoteDebug_CheckUpdates complete\n");
+	bRemoteBreakIsActive = false;
+	// Clear any break request that might have been set
+	bRemoteBreakRequest = false;
+	printf("RemoteDebug_CheckUpdates complete, restarting\n");
 	return true;
 }
 
@@ -301,7 +322,6 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 	int remaining;
 	if (state->AcceptedFD != -1)
 	{
-
 		// Connection is active
 		// Read input and accumulate a command
 		remaining = REMOTE_DEBUG_CMD_MAX_SIZE - state->cmd_pos;
@@ -323,6 +343,7 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 			DebugUI_RegisterRemoteDebug(NULL);
 			close(state->AcceptedFD);
 			state->AcceptedFD = -1;
+			return;
 		}
 	}
 	else
