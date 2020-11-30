@@ -39,6 +39,17 @@ static void send_string(int fd, const char* pStr)
 }
 
 // -----------------------------------------------------------------------------
+// Send the out-of-band status to flag start/stop
+static int RemoteDebug_NotifyState(int fd)
+{
+	char tmp[100];
+	int len = sprintf(tmp, "!status running:%x PC:%x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
+	// +1 for the terminator
+	send(fd, tmp, len + 1, 0);
+	return 0;
+}
+
+// -----------------------------------------------------------------------------
 /* Return short status info in a useful format, mainly whether it's running */
 static int RemoteDebug_Status(int nArgc, char *psArgs[], int fd)
 {
@@ -232,9 +243,12 @@ static bool RemoteDebug_BreakLoop(void)
 	RemoteDebugState* state;
 
 	// TODO set socket as blocking
-	printf("RemoteDebug_CheckUpdates\n");
+	printf("RemoteDebug_BreakLoop\n");
 	state = &g_rdbState;
 
+	// NO CHECK cope with no connection!
+
+	RemoteDebug_NotifyState(state->AcceptedFD);
 	bRemoteBreakIsActive = true;
 	// NO CHECK handle no connection
 
@@ -269,11 +283,17 @@ static bool RemoteDebug_BreakLoop(void)
 			// Bail out of the loop here so we don't just spin
 			break;
 		}
+		else
+		{
+			printf("Unknown cmd\n");
+		}
 	}
 	bRemoteBreakIsActive = false;
 	// Clear any break request that might have been set
 	bRemoteBreakRequest = false;
+
 	printf("RemoteDebug_CheckUpdates complete, restarting\n");
+	RemoteDebug_NotifyState(state->AcceptedFD);
 	return true;
 }
 
@@ -317,7 +337,10 @@ static int RemoteDebugState_InitServer(RemoteDebugState* state)
 static void RemoteDebugState_Update(RemoteDebugState* state)
 {
 	if (state->SocketFD == -1)
+	{
+		// TODO: we should try to re-init periodically
 		return;
+	}
 
 	int remaining;
 	if (state->AcceptedFD != -1)
