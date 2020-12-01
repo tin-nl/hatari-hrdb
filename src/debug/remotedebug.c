@@ -24,7 +24,7 @@
 #include "debugui.h"	/* For DebugUI_RegisterRemoteDebug */
 #include "debugcpu.h"	/* For stepping */
 
-#define REMOTE_DEBUG_PORT          (1667)
+#define REMOTE_DEBUG_PORT          (56001)
 #define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
 
 /* Remote debugging break command was sent from debugger */
