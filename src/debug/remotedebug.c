@@ -33,10 +33,28 @@ static bool bRemoteBreakRequest = false;
 /* Processing is stopped and the remote debug loop is active */
 static bool bRemoteBreakIsActive = false;
 
+// Transmission functions (wrapped for platform portability)
 // -----------------------------------------------------------------------------
-static void send_string(int fd, const char* pStr)
+static void send_str(int fd, const char* pStr)
 {
 	send(fd, pStr, strlen(pStr), 0);
+}
+
+// -----------------------------------------------------------------------------
+static void send_hex(int fd, uint32_t val)
+{
+	char str[9];
+	sprintf(str, "%x", val);
+	send(fd, str, strlen(str), 0);
+}
+
+// -----------------------------------------------------------------------------
+static void send_key_value(int fd, const char* pStr, uint32_t val)
+{
+	send_str(fd, " ");
+	send_str(fd, pStr);
+	send_str(fd, ":");
+	send_hex(fd, val);
 }
 
 // -----------------------------------------------------------------------------
@@ -68,11 +86,11 @@ static int RemoteDebug_Break(int nArgc, char *psArgs[], int fd)
 	if (!bRemoteBreakIsActive)
 	{
 		bRemoteBreakRequest = true;
-		send_string(fd, "OK");
+		send_str(fd, "OK");
 	}
 	else
 	{
-		send_string(fd, "NG");
+		send_str(fd, "NG");
 	}
 	
 	return 0;
@@ -83,7 +101,7 @@ static int RemoteDebug_Break(int nArgc, char *psArgs[], int fd)
 static int RemoteDebug_Step(int nArgc, char *psArgs[], int fd)
 {
 	DebugCpu_SetSteps(1);
-	send_string(fd, "OK");
+	send_str(fd, "OK");
 
 	// Restart
 	bRemoteBreakIsActive = false;
@@ -94,7 +112,7 @@ static int RemoteDebug_Step(int nArgc, char *psArgs[], int fd)
 /* Step next instruction. This is currently a passthrough to the normal debugui code. */
 static int RemoteDebug_Next(int nArgc, char *psArgs[], int fd)
 {
-	send_string(fd, "OK");
+	send_str(fd, "OK");
 	bRemoteBreakIsActive = false;
 	return 0;
 }
@@ -102,8 +120,37 @@ static int RemoteDebug_Next(int nArgc, char *psArgs[], int fd)
 // -----------------------------------------------------------------------------
 static int RemoteDebug_Run(int nArgc, char *psArgs[], int fd)
 {
-	send_string(fd, "OK");
+	send_str(fd, "OK");
 	bRemoteBreakIsActive = false;
+	return 0;
+}
+
+/**
+ * Dump register contents. 
+ * Input: "regs\n"
+ * 
+ * Output: "regs <reg:value>*N\n"
+ */
+static int RemoteDebug_Regs(int nArgc, char *psArgs[], int fd)
+{
+	static const int regIds[] = {
+		REG_D0, REG_D1, REG_D2, REG_D3, REG_D4, REG_D5, REG_D6, REG_D7,
+		REG_A0, REG_A1, REG_A2, REG_A3, REG_A4, REG_A5, REG_A6, REG_A7 };
+	static const char *regNames[] = {
+		"D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7",
+		"A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7" };
+	int regIdx;
+
+	send_str(fd, "regs ");
+	for (regIdx = 0; regIdx < ARRAY_SIZE(regIds); ++regIdx)
+		send_key_value(fd, regNames[regIdx], Regs[regIds[regIdx]]);
+		
+	// Special regs
+	send_key_value(fd, "PC", M68000_GetPC());
+	send_key_value(fd, "USP", regs.usp);
+	send_key_value(fd, "ISP", regs.isp);
+	send_key_value(fd, "SR", M68000_GetSR());
+	send_key_value(fd, "EX", regs.exception);
 	return 0;
 }
 
@@ -119,9 +166,10 @@ typedef struct
 static const rdbcommand_t remoteDebugCommandList[] = {
 	{ RemoteDebug_Status,   "status"	},
 	{ RemoteDebug_Break,    "break"		},
-	{ RemoteDebug_Run, 		"run"		},
 	{ RemoteDebug_Step,     "step"		},
 	{ RemoteDebug_Next,     "next"		},
+	{ RemoteDebug_Run, 		"run"		},
+	{ RemoteDebug_Regs,     "regs"		},
 
 	/* Terminator */
 	{ NULL, NULL }
