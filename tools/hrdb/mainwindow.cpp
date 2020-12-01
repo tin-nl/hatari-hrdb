@@ -70,6 +70,10 @@ void MainWindow::startStopChangedSlot()
 	{
 		// TODO this is where all windows should put in requests for data
 		m_pDispatcher->SendCommandPacket("regs");
+
+		uint32_t pc = m_pTargetModel->GetPC();
+		std::string cmd = std::string("mem ") + std::to_string(pc) + std::string(" 100");
+		m_pDispatcher->SendCommandPacket(cmd.c_str());
 		m_pStartStopButton->setText("START");	
 	}
 }

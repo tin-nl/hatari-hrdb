@@ -23,6 +23,8 @@
 #include "main.h"		/* For ARRAY_SIZE */
 #include "debugui.h"	/* For DebugUI_RegisterRemoteDebug */
 #include "debugcpu.h"	/* For stepping */
+#include "evaluate.h"
+#include "stMemory.h"
 
 #define REMOTE_DEBUG_PORT          (56001)
 #define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
@@ -44,7 +46,15 @@ static void send_str(int fd, const char* pStr)
 static void send_hex(int fd, uint32_t val)
 {
 	char str[9];
-	sprintf(str, "%x", val);
+	sprintf(str, "%08X", val);
+	send(fd, str, strlen(str), 0);
+}
+
+// -----------------------------------------------------------------------------
+static void send_hexchar(int fd, uint32_t val)
+{
+	char str[3];
+	sprintf(str, "%02X", val);
 	send(fd, str, strlen(str), 0);
 }
 
@@ -154,6 +164,55 @@ static int RemoteDebug_Regs(int nArgc, char *psArgs[], int fd)
 	return 0;
 }
 
+/**
+ * Dump the requested area of ST memory.
+ *
+ * Input: "mem <start addr> <size in bytes>\n"
+ *
+ * Output: "mem <hexaddress> <hexsize> <memory as base16 string>\n"
+ */
+static int RemoteDebug_Mem(int nArgc, char *psArgs[], int fd)
+{
+	int arg;
+	Uint32 value, memdump_upper = 0;
+	Uint32 memdump_addr = 0;
+	Uint32 memdump_count = 0;
+
+	/* For remote debug, only "address" "count" is supported */
+	arg = 1;
+	if (nArgc >= arg + 2)
+	{
+		if (!Eval_Number(psArgs[arg], &memdump_addr))
+			return 1;
+
+		++arg;
+		if (!Eval_Number(psArgs[arg], &memdump_count))
+			return 1;
+		++arg;
+	}
+	else
+	{
+		// Not enough args
+		return 1;
+	}
+
+	send_str(fd, "mem ");
+	send_hex(fd, memdump_addr);
+	send_str(fd, " ");
+	send_hex(fd, memdump_count);
+	send_str(fd, " ");
+
+	memdump_upper = memdump_addr + memdump_count;
+	while (memdump_addr != memdump_upper)
+	{
+		value = STMemory_ReadByte(memdump_addr);
+		send_hexchar(fd, value);
+		++memdump_addr;
+	}
+	return 0;
+}
+
+
 // -----------------------------------------------------------------------------
 /* DebugUI command structure */
 typedef struct
@@ -170,6 +229,7 @@ static const rdbcommand_t remoteDebugCommandList[] = {
 	{ RemoteDebug_Next,     "next"		},
 	{ RemoteDebug_Run, 		"run"		},
 	{ RemoteDebug_Regs,     "regs"		},
+	{ RemoteDebug_Mem,      "mem"		},
 
 	/* Terminator */
 	{ NULL, NULL }
@@ -212,7 +272,6 @@ static int RemoteDebug_Parse(const char *input_orig, int fd)
 		psArgs[nArgc] = strtok(NULL, delim);
 		if (psArgs[nArgc] == NULL)
 			break;
-		//printf("*ARGS**** %s ***\n", psArgs[nArgc]); 	// NO CHECK
 	}
 	if (nArgc >= ARRAY_SIZE(psArgs))
 	{
@@ -221,7 +280,6 @@ static int RemoteDebug_Parse(const char *input_orig, int fd)
 	else
 	{
 		/* ... and execute the function */
-		printf("Execute: %s\n", pCommand->sName);
 		retval = pCommand->pFunction(nArgc, psArgs, fd);
 	}
 	free(input);
