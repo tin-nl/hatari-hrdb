@@ -6,6 +6,8 @@
 
 #include "targetmodel.h"
 
+//#define DISPATCHER_DEBUG
+
 //-----------------------------------------------------------------------------
 int RegNameToEnum(const char* name)
 {
@@ -174,20 +176,11 @@ void Dispatcher::readyRead()
 	delete[] data;
 }
 
-/*
- * stringstream ss( "1,1,1,1, or something else ,1,1,1,0" );
-vector<string> result;
-
-while( ss.good() )
-{
-    string substr;
-    getline( ss, substr, ',' );
-    result.push_back( substr );
-}*/
-
 void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 {
+#ifdef DISPATCHER_DEBUG
 	std::cout << "REPONSE:" << cmd.m_cmd << "//" << cmd.m_response << std::endl;
+#endif
 
 	// Our handling depends on the original command type
 	// e.g. "break"
@@ -243,7 +236,9 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 
 void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
 {
+#ifdef DISPATCHER_DEBUG
 	std::cout << "NOTIFICATION:" << cmd.m_payload << std::endl;
+#endif
 	StringSplitter s(cmd.m_payload);
 
 	std::string type = s.Split(' ');
