@@ -9,15 +9,24 @@
  */
 
 #include "remotedebug.h"
+
+#include "config.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
+
+#if HAVE_UNIX_DOMAIN_SOCKETS
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif
+
+#if HAVE_WINSOCK_SOCKETS
+#include <winsock.h>
+#endif
 
 #include "m68000.h"
 #include "main.h"		/* For ARRAY_SIZE */
@@ -34,6 +43,15 @@ static bool bRemoteBreakRequest = false;
 
 /* Processing is stopped and the remote debug loop is active */
 static bool bRemoteBreakIsActive = false;
+
+#if HAVE_WINSOCK_SOCKETS
+static void SetNonBlocking(SOCKET socket, u_long nonblock)
+{
+	// Set socket to blocking
+	u_long mode = nonblock;  // 0 to enable blocking socket
+	ioctlsocket(socket, FIONBIO, &mode);
+}
+#endif
 
 // Transmission functions (wrapped for platform portability)
 // -----------------------------------------------------------------------------
@@ -329,6 +347,7 @@ static void RemoteDebug_ProcessBuffer(RemoteDebugState* state)
 		cmd_ret = RemoteDebug_Parse(pCmd, state->AcceptedFD);
 
 		// TODO return an error over the network
+		(void)cmd_ret;
 
 		// Write packet terminator
 		char terminator;
@@ -363,6 +382,9 @@ static bool RemoteDebug_BreakLoop(void)
 	RemoteDebug_NotifyState(state->AcceptedFD);
 
 	// NO CHECK handle no connection
+#if HAVE_WINSOCK_SOCKETS
+	SetNonBlocking(state->SocketFD, 0);
+#endif
 
 	while (bRemoteBreakIsActive)
 	{
@@ -397,6 +419,7 @@ static bool RemoteDebug_BreakLoop(void)
 		}
 		else
 		{
+			// On Windows -1 simply means
 			printf("Unknown cmd\n");
 		}
 	}
@@ -406,6 +429,11 @@ static bool RemoteDebug_BreakLoop(void)
 
 	printf("RemoteDebug_CheckUpdates complete, restarting\n");
 	RemoteDebug_NotifyState(state->AcceptedFD);
+
+#if HAVE_WINSOCK_SOCKETS
+	SetNonBlocking(state->SocketFD, 1);
+#endif
+
 	return true;
 }
 
@@ -416,12 +444,24 @@ static int RemoteDebugState_InitServer(RemoteDebugState* state)
 {
 	// Create listening socket on port
 	struct sockaddr_in sa;
+
+#if HAVE_UNIX_DOMAIN_SOCKETS
 	state->SocketFD = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
 	if (state->SocketFD == -1) {
 		fprintf(stderr, "Failed to open socket\n");
 		return 1;
 	}
-  
+#endif
+
+#if HAVE_WINSOCK_SOCKETS
+	state->SocketFD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (state->SocketFD == -1) {
+		fprintf(stderr, "Failed to open socket %d\n", WSAGetLastError());
+		return 1;
+	}
+	SetNonBlocking(state->SocketFD, 1);
+#endif
+
 	memset(&sa, 0, sizeof sa);
 	sa.sin_family = AF_INET;
 	sa.sin_port = htons(REMOTE_DEBUG_PORT);
@@ -460,10 +500,19 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 		// Connection is active
 		// Read input and accumulate a command
 		remaining = REMOTE_DEBUG_CMD_MAX_SIZE - state->cmd_pos;
+        
+#if HAVE_UNIX_DOMAIN_SOCKETS
 		int bytes = recv(state->AcceptedFD, 
 			&state->cmd_buf[state->cmd_pos],
 			remaining,
 			MSG_DONTWAIT);
+#endif
+#if HAVE_WINSOCK_SOCKETS
+		int bytes = recv(state->AcceptedFD, 
+			&state->cmd_buf[state->cmd_pos],
+			remaining,
+			0);
+#endif
 
 		if (bytes > 0)
 		{
@@ -496,8 +545,27 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 void RemoteDebug_Init(void)
 {
 	printf("Starting remote debug\n");
-	RemoteDebugState_Init(&g_rdbState);
+	
+#if HAVE_WINSOCK_SOCKETS
 
+    WORD wVersionRequested;
+    WSADATA wsaData;
+    int err;
+
+    wVersionRequested = MAKEWORD(1, 0);
+
+    err = WSAStartup(wVersionRequested, &wsaData);
+    if (err != 0) {
+        /* Tell the user that we could not find a usable */
+        /* Winsock DLL.                                  */
+        printf("WSAStartup failed with error: %d\n", err);
+		
+		// NO CHECK clean up state
+        return;
+    }
+#endif
+
+	RemoteDebugState_Init(&g_rdbState);
 	RemoteDebugState_InitServer(&g_rdbState);
 }
 
