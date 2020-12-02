@@ -28,6 +28,7 @@ public:
 public slots:
 	void startStopChangedSlot();
 	void registersChangedSlot();
+	void memoryChangedSlot();
 
     void startStopClicked();
     void singleStepClicked();
@@ -35,10 +36,12 @@ private:
 
 	// Populaters
 	void PopulateRegisters();
+	void PopulateMemory();
 
     QPushButton*	m_pStartStopButton;
     QPushButton*	m_pSingleStepButton;
 	QTextEdit*		m_pRegistersTextEdit;
+	QTextEdit*		m_pMemoryTextEdit;
 
 	QTcpSocket* 	tcpSocket;
     Dispatcher*		m_pDispatcher;

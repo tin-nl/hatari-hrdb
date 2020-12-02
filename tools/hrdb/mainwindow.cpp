@@ -20,11 +20,16 @@ MainWindow::MainWindow(QWidget *parent)
     m_pStartStopButton = new QPushButton("STOP", pGroupBox);
     m_pSingleStepButton = new QPushButton("Step", pGroupBox);
     m_pRegistersTextEdit = new QTextEdit("", pGroupBox);
+    m_pMemoryTextEdit = new QTextEdit("", pGroupBox);
 	m_pRegistersTextEdit->setReadOnly(true);
+	m_pMemoryTextEdit->setReadOnly(true);
+	m_pRegistersTextEdit->setAcceptRichText(false);
+	m_pMemoryTextEdit->setAcceptRichText(false);
 
     layout->addWidget(m_pStartStopButton);
     layout->addWidget(m_pSingleStepButton);
     layout->addWidget(m_pRegistersTextEdit);
+    layout->addWidget(m_pMemoryTextEdit);
     pGroupBox->setLayout(layout);
 	setCentralWidget(pGroupBox);
 
@@ -40,6 +45,7 @@ MainWindow::MainWindow(QWidget *parent)
 	// Listen for target changes
     connect(m_pTargetModel, &TargetModel::startStopChangedSlot, this, &MainWindow::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::registersChangedSlot, this, &MainWindow::registersChangedSlot);
+    connect(m_pTargetModel, &TargetModel::memoryChangedSlot,    this, &MainWindow::memoryChangedSlot);
 
 	// Wire up buttons to actions
     connect(m_pStartStopButton, &QAbstractButton::clicked, this, &MainWindow::startStopClicked);
@@ -84,6 +90,12 @@ void MainWindow::registersChangedSlot()
 	PopulateRegisters();
 }
 
+void MainWindow::memoryChangedSlot()
+{
+	// Update text here
+	PopulateMemory();
+}
+
 void MainWindow::startStopClicked()
 {
 	if (m_pTargetModel->IsRunning())
@@ -96,7 +108,6 @@ void MainWindow::singleStepClicked()
 {
 	m_pDispatcher->SendCommandPacket("step");
 }
-
 
 void MainWindow::PopulateRegisters()
 {
@@ -114,7 +125,29 @@ void MainWindow::PopulateRegisters()
 		pc_text = QString::asprintf("%s: %08x\n", Registers::s_names[i], regs.m_value[i]);
 		regsText += pc_text;
 	}
-
-	m_pRegistersTextEdit->setAcceptRichText(false);
 	m_pRegistersTextEdit->setPlainText(regsText);
 }
+
+void MainWindow::PopulateMemory()
+{
+	if (m_pTargetModel->IsRunning())
+	{
+		return;
+	}
+
+	// Build up the text area
+	QString regsText;
+	const Memory* pMem = m_pTargetModel->GetMemory();
+
+	for (uint32_t i = 0; i < pMem->GetSize(); ++i)
+	{
+		QString pc_text;
+		pc_text = QString::asprintf("%02x ", pMem->Get(i));
+		regsText += pc_text;
+
+		if ((i % 16) == 15)
+			regsText += "\n";
+	}
+	m_pMemoryTextEdit->setPlainText(regsText);
+}
+

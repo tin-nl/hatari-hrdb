@@ -20,14 +20,15 @@ Registers::Registers()
 
 TargetModel::TargetModel() :
 	QObject(),
-	m_bRunning(true)
+	m_bRunning(true),
+	m_pTestMemory(NULL)
 {
 
 }
 
 TargetModel::~TargetModel()
 {
-
+	delete m_pTestMemory;
 }
 
 void TargetModel::SetStatus(int running, uint32_t pc)
@@ -41,4 +42,13 @@ void TargetModel::SetRegisters(const Registers& regs)
 {
 	m_regs = regs;
 	emit registersChangedSlot();
+}
+
+void TargetModel::SetMemory(const Memory* pMem)
+{
+	if (m_pTestMemory)
+		delete m_pTestMemory;
+
+	m_pTestMemory = pMem;
+	emit memoryChangedSlot();
 }

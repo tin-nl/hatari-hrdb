@@ -22,6 +22,16 @@ int RegNameToEnum(const char* name)
 }
 
 //-----------------------------------------------------------------------------
+uint8_t charToHexNybble(char c)
+{
+	if (c >= '0' && c <= '9')
+		return (uint8_t)(c - '0');
+	if (c >= 'A' && c <= 'F')
+		return (uint8_t)(c - 'A');
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
 class StringSplitter
 {
 public:
@@ -59,6 +69,8 @@ public:
 
 		return m_str.substr(start, endpos - start);
 	}
+
+	int GetPos() const { return m_pos; }
 
 private:
 	const std::string&	m_str;
@@ -183,7 +195,6 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 	std::string type = splitCmd.Split(' ');
 
 	StringSplitter splitResp(cmd.m_response);
-
 	if (type == "regs")
 	{
 		Registers regs;
@@ -202,6 +213,31 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 				regs.m_value[reg_id] = value;
 		}
 		m_pTargetModel->SetRegisters(regs);
+	}
+	else if (type == "mem")
+	{
+		std::string cmdName = splitResp.Split(' '); // "mem"
+		std::string addrStr = splitResp.Split(' ');
+		std::string sizeStr = splitResp.Split(' ');
+		char* endpr;
+		uint32_t addr = std::strtol(addrStr.c_str(), &endpr, 16);
+		uint32_t size = std::strtol(sizeStr.c_str(), &endpr, 16);
+		
+		// Create a new memory block to pass to the data model
+		Memory* pMem = new Memory(addr, size);
+
+		// Now parse the hex data
+		int readPos = splitResp.GetPos();
+		for (uint32_t off = 0; off < size; ++off)
+		{
+			uint8_t nybbleHigh = charToHexNybble(cmd.m_response[readPos++]);
+			uint8_t nybbleLow = charToHexNybble(cmd.m_response[readPos++]);
+
+			uint8_t byte = (nybbleHigh << 4) | nybbleLow;
+			pMem->Set(off, byte);
+		}
+
+		m_pTargetModel->SetMemory(pMem);
 	}
 }
 
