@@ -337,7 +337,7 @@ void Disassembler::print(const instruction& inst, /*const symbols& symbols, */ u
 {
     if (inst.opcode == Opcode::NONE)
     {
-        ref << "dc.w $%x" << inst.header;
+        ref << "? " << to_hex32(inst.header);
         return;
     }
     ref << instruction_names[inst.opcode];
