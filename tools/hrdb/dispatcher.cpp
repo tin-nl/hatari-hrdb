@@ -29,7 +29,7 @@ uint8_t charToHexNybble(char c)
 	if (c >= '0' && c <= '9')
 		return (uint8_t)(c - '0');
 	if (c >= 'A' && c <= 'F')
-		return (uint8_t)(c - 'A');
+        return (uint8_t)(10 + c - 'A');
 	return 0;
 }
 
