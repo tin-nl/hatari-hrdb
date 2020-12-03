@@ -54,9 +54,10 @@ MainWindow::MainWindow(QWidget *parent)
 	m_pDispatcher = new Dispatcher(tcpSocket, m_pTargetModel);
 
 	// Listen for target changes
-    connect(m_pTargetModel, &TargetModel::startStopChangedSlot, this, &MainWindow::startStopChangedSlot);
-    connect(m_pTargetModel, &TargetModel::registersChangedSlot, this, &MainWindow::registersChangedSlot);
-    connect(m_pTargetModel, &TargetModel::memoryChangedSlot,    this, &MainWindow::memoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
+    connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &MainWindow::registersChangedSlot);
+    connect(m_pTargetModel, &TargetModel::memoryChangedSignal,    this, &MainWindow::memoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::connectChangedSignal,   this, &MainWindow::connectChangedSlot);
 
 	// Wire up buttons to actions
     connect(m_pStartStopButton, &QAbstractButton::clicked, this, &MainWindow::startStopClicked);
@@ -70,12 +71,28 @@ MainWindow::MainWindow(QWidget *parent)
 	new QShortcut(QKeySequence(tr("F10", "Step")),
 					this,
 					SLOT(singleStepClicked()));
+
+    // Update everything
+    connectChangedSlot();
+    startStopChangedSlot();
 }
 
 MainWindow::~MainWindow()
 {
 	delete m_pDispatcher;
-	delete m_pTargetModel;
+    delete m_pTargetModel;
+}
+
+void MainWindow::connectChangedSlot()
+{
+    bool isConnect = m_pTargetModel->IsConnected() ? true : false;
+    m_pStartStopButton->setEnabled(isConnect);
+    m_pSingleStepButton->setEnabled(isConnect);
+    m_pRegistersTextEdit->setEnabled(isConnect);
+    m_pMemoryTextEdit->setEnabled(isConnect);
+
+    PopulateMemory();
+    PopulateRegisters();
 }
 
 void MainWindow::startStopChangedSlot()
@@ -97,6 +114,8 @@ void MainWindow::startStopChangedSlot()
 		m_pStartStopButton->setText("START");
 		m_pSingleStepButton->setEnabled(true);	
 	}
+    PopulateMemory();
+    PopulateRegisters();
 }
 
 void MainWindow::registersChangedSlot()
@@ -148,7 +167,13 @@ QString DispSR(const Registers& prevRegs, const Registers& regs, uint32_t bit, c
 
 void MainWindow::PopulateRegisters()
 {
-	if (m_pTargetModel->IsRunning())
+    if (!m_pTargetModel->IsConnected())
+    {
+        m_pRegistersTextEdit->clear();
+        return;
+    }
+
+    if (m_pTargetModel->IsRunning())
 		return;
 
 	// Build up the text area
@@ -202,12 +227,20 @@ void MainWindow::PopulateRegisters()
 
 void MainWindow::PopulateMemory()
 {
-	if (m_pTargetModel->IsRunning())
+    if (!m_pTargetModel->IsConnected())
+    {
+        m_pMemoryTextEdit->clear();
+        return;
+    }
+
+    if (m_pTargetModel->IsRunning())
 		return;
 
 	// Build up the text area
 	QString regsText;
 	const Memory* pMem = m_pTargetModel->GetMemory();
+    if (!pMem)
+        return;
 
     /*
 	for (uint32_t i = 0; i < pMem->GetSize(); ++i)

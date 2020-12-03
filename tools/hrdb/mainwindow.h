@@ -27,6 +27,7 @@ public:
     ~MainWindow();
 
 public slots:
+    void connectChangedSlot();
 	void startStopChangedSlot();
 	void registersChangedSlot();
 	void memoryChangedSlot();

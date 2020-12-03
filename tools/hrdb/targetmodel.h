@@ -104,12 +104,14 @@ public:
 	TargetModel();
 	virtual ~TargetModel();
 
-	void SetStatus(int running, uint32_t pc);
+    void SetConnected(int running);
+    void SetStatus(int running, uint32_t pc);
 	void SetRegisters(const Registers& regs);
 	void SetMemory(const Memory* pMem);
 
 	// NOTE: all these return copies to avoid data contention
-	int IsRunning() const { return m_bRunning; }
+    int IsConnected() const { return m_bConnected; }
+    int IsRunning() const { return m_bRunning; }
 	uint32_t GetPC() const { return m_pc; }
 	Registers GetRegs() const { return m_regs; }
 	// NO CHECK unsafe
@@ -118,17 +120,21 @@ public:
 public slots:
 
 signals:
-	// When start/stop status is changed
-    void startStopChangedSlot();
+    // connect/disconnect change
+    void connectChangedSignal();
+
+    // When start/stop status is changed
+    void startStopChangedSignal();
 	// When new CPU registers are changed
-    void registersChangedSlot();
+    void registersChangedSignal();
 
 	// When a block of fetched memory is changed
 	// TODO: don't have every view listening to the same slot?
-    void memoryChangedSlot();
+    void memoryChangedSignal();
 
 private:
 
+    int         m_bConnected;   // 0 == disconnected, 1 == connected
 	int			m_bRunning;		// 0 == stopped, 1 == running
 	uint32_t	m_pc;			// PC register (for next instruction)
 

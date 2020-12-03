@@ -72,7 +72,7 @@ public:
 		return m_str.substr(start, endpos - start);
 	}
 
-	int GetPos() const { return m_pos; }
+    uint32_t GetPos() const { return (uint32_t) m_pos; }
 
 private:
 	const std::string&	m_str;
@@ -85,7 +85,8 @@ Dispatcher::Dispatcher(QTcpSocket* tcpSocket, TargetModel* pTargetModel) :
 	m_pTargetModel(pTargetModel)
 {
 	connect(m_pTcpSocket, &QAbstractSocket::connected, this, &Dispatcher::connected);
-	connect(m_pTcpSocket, &QAbstractSocket::readyRead, this, &Dispatcher::readyRead);
+    connect(m_pTcpSocket, &QAbstractSocket::disconnected, this, &Dispatcher::disconnected);
+    connect(m_pTcpSocket, &QAbstractSocket::readyRead, this, &Dispatcher::readyRead);
 }
 
 Dispatcher::~Dispatcher()
@@ -146,9 +147,18 @@ void Dispatcher::ReceivePacket(const char* response)
 
 void Dispatcher::connected()
 {
+    // Do this before the UI gets to do its requests
+    this->SendCommandPacket("status");
+    m_pTargetModel->SetConnected(1);
 	// THIS HAPPENS ON THE EVENT LOOP
 	printf("Host connected\n");
-	this->SendCommandPacket("status");
+}
+
+void Dispatcher::disconnected()
+{
+    m_pTargetModel->SetConnected(0);
+    // THIS HAPPENS ON THE EVENT LOOP
+    printf("Host disconnected\n");
 }
 
 void Dispatcher::readyRead()
