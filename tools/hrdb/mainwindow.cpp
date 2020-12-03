@@ -8,6 +8,11 @@
 #include "dispatcher.h"
 #include "targetmodel.h"
 
+#include "disassembler.h"
+#include "hopper/buffer.h"
+#include "hopper/instruction.h"
+#include "hopper/decode.h"
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , tcpSocket(new QTcpSocket(this))
@@ -128,6 +133,7 @@ void MainWindow::PopulateRegisters()
 	m_pRegistersTextEdit->setPlainText(regsText);
 }
 
+
 void MainWindow::PopulateMemory()
 {
 	if (m_pTargetModel->IsRunning())
@@ -136,6 +142,7 @@ void MainWindow::PopulateMemory()
 	}
 
 	// Build up the text area
+
 	QString regsText;
 	const Memory* pMem = m_pTargetModel->GetMemory();
 
@@ -148,6 +155,23 @@ void MainWindow::PopulateMemory()
 		if ((i % 16) == 15)
 			regsText += "\n";
 	}
-	m_pMemoryTextEdit->setPlainText(regsText);
+
+    // Disassemble the given code
+    buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize());
+    Disassembler::disassembly disasm;
+    Disassembler::decode_buf(disasmBuf, disasm);
+
+    QString disasmStr;
+    QTextStream ref(&disasmStr);
+    for (size_t i = 0; i < disasm.lines.size(); ++i)
+    {
+        QString line_text;
+        const Disassembler::line& line = disasm.lines[i];
+        line_text = QString::asprintf("%04x %04x ", line.address + pMem->GetAddress(), line.inst.header);
+        ref << line_text;
+        Disassembler::print(line.inst, pMem->GetAddress(), ref);
+        ref << "\n";
+    }
+    m_pMemoryTextEdit->setPlainText(disasmStr);
 }
 

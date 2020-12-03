@@ -70,7 +70,8 @@ public:
 
 	uint8_t Get(uint32_t offset) const
 	{
-		return m_pData[offset];
+        assert(offset < m_size);
+        return m_pData[offset];
 	}
 
 	uint32_t GetAddress() const
@@ -82,6 +83,11 @@ public:
 	{
 		return m_size;
 	}
+
+    const uint8_t* GetData() const
+    {
+        return m_pData;
+    }
 
 private:
 	Memory(const Memory& other);	// hide to prevent accidental use
