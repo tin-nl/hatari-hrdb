@@ -82,7 +82,10 @@ void MainWindow::startStopChangedSlot()
 {
 	// Update text here
 	if (m_pTargetModel->IsRunning())
+	{
 		m_pStartStopButton->setText("STOP");
+		m_pSingleStepButton->setEnabled(false);	
+	}
 	else
 	{
 		// TODO this is where all windows should put in requests for data
@@ -91,7 +94,8 @@ void MainWindow::startStopChangedSlot()
 		uint32_t pc = m_pTargetModel->GetPC();
 		std::string cmd = std::string("mem ") + std::to_string(pc) + std::string(" 100");
 		m_pDispatcher->SendCommandPacket(cmd.c_str());
-		m_pStartStopButton->setText("START");	
+		m_pStartStopButton->setText("START");
+		m_pSingleStepButton->setEnabled(true);	
 	}
 }
 
@@ -131,6 +135,17 @@ QString DispReg32(int regIndex, const Registers& prevRegs, const Registers& regs
     return QString::asprintf("%s: <span style=\"color:%s\">%08x</span>", Registers::s_names[regIndex], col, regs.m_value[regIndex]);
 }
 
+QString DispSR(const Registers& prevRegs, const Registers& regs, uint32_t bit, const char* pName)
+{
+	uint32_t mask = 1U << bit;
+	uint32_t valNew = regs.m_value[Registers::SR] & mask;
+	uint32_t valOld = prevRegs.m_value[Registers::SR] & mask;
+
+    const char* col = valNew != valOld ? "red" : "black";
+	const char* text = valNew != 0 ? pName : ".";
+    return QString::asprintf("<span style=\"color:%s\">%s</span>", col, text);
+}
+
 void MainWindow::PopulateRegisters()
 {
 	if (m_pTargetModel->IsRunning())
@@ -144,7 +159,21 @@ void MainWindow::PopulateRegisters()
 
     ref << "<font face=\"Courier\">";
     ref << DispReg32(Registers::PC, m_prevRegs, regs) << "<br>";
-    ref << DispReg16(Registers::SR, m_prevRegs, regs) << "<br>";
+    ref << DispReg16(Registers::SR, m_prevRegs, regs) << "   ";
+	ref << DispSR(m_prevRegs, regs, 15, "T");
+	ref << DispSR(m_prevRegs, regs, 14, "T");
+	ref << " ";
+	ref << DispSR(m_prevRegs, regs, 13, "S");
+	ref << " ";
+	ref << DispSR(m_prevRegs, regs, 10, "2");
+	ref << DispSR(m_prevRegs, regs, 9, "1");
+	ref << DispSR(m_prevRegs, regs, 8, "0");
+	ref << " ";
+	ref << DispSR(m_prevRegs, regs, 4, "X");
+	ref << DispSR(m_prevRegs, regs, 3, "N");
+	ref << DispSR(m_prevRegs, regs, 2, "Z");
+	ref << DispSR(m_prevRegs, regs, 1, "V");
+	ref << DispSR(m_prevRegs, regs, 0, "C");
     ref << "<br>";
     ref << DispReg32(Registers::D0, m_prevRegs, regs) << " " << DispReg32(Registers::A0, m_prevRegs, regs) << "<br>";
     ref << DispReg32(Registers::D1, m_prevRegs, regs) << " " << DispReg32(Registers::A1, m_prevRegs, regs) << "<br>";
@@ -154,6 +183,7 @@ void MainWindow::PopulateRegisters()
     ref << DispReg32(Registers::D5, m_prevRegs, regs) << " " << DispReg32(Registers::A5, m_prevRegs, regs) << "<br>";
     ref << DispReg32(Registers::D6, m_prevRegs, regs) << " " << DispReg32(Registers::A6, m_prevRegs, regs) << "<br>";
     ref << DispReg32(Registers::D7, m_prevRegs, regs) << " " << DispReg32(Registers::A7, m_prevRegs, regs) << "<br>";
+
 
     ref << "</font>";
     /*
@@ -165,9 +195,6 @@ void MainWindow::PopulateRegisters()
 	}
     */
 
-    std::cout << regsText.toStdString();
-    //m_pRegistersTextEdit->setCurrentFont(monoFont);
-    m_pRegistersTextEdit->setFontFamily("courier");
     m_pRegistersTextEdit->setHtml(regsText);
     // Update our previous values
     m_prevRegs = regs;
