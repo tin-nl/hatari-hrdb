@@ -120,39 +120,42 @@ void MainWindow::singleStepClicked()
 	m_pDispatcher->SendCommandPacket("step");
 }
 
-QString DispReg16(int regIndex, const Registers& regs, QTextStream& ref)
+QString DispReg16(int regIndex, const Registers& prevRegs, const Registers& regs)
 {
-    return QString::asprintf("%s: %04x", Registers::s_names[regIndex], regs.m_value[regIndex]);
+    const char* col = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]) ? "red" : "black";
+    return QString::asprintf("%s: <span style=\"color:%s\">%04x</span>", Registers::s_names[regIndex], col, regs.m_value[regIndex]);
 }
-QString DispReg32(int regIndex, const Registers& regs, QTextStream& ref)
+QString DispReg32(int regIndex, const Registers& prevRegs, const Registers& regs)
 {
-    return QString::asprintf("%s: %08x", Registers::s_names[regIndex], regs.m_value[regIndex]);
+    const char* col = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]) ? "red" : "black";
+    return QString::asprintf("%s: <span style=\"color:%s\">%08x</span>", Registers::s_names[regIndex], col, regs.m_value[regIndex]);
 }
 
 void MainWindow::PopulateRegisters()
 {
 	if (m_pTargetModel->IsRunning())
-	{
 		return;
-	}
 
 	// Build up the text area
 	QString regsText;
     QTextStream ref(&regsText);
+
 	Registers regs = m_pTargetModel->GetRegs();
 
-    ref << DispReg32(Registers::PC, regs, ref) << "\n";
-    ref << DispReg16(Registers::SR, regs, ref) << "\n";
-    ref << "\n";
-    ref << DispReg32(Registers::D0, regs, ref) << " " << DispReg32(Registers::A0, regs, ref) << "\n";
-    ref << DispReg32(Registers::D1, regs, ref) << " " << DispReg32(Registers::A1, regs, ref) << "\n";
-    ref << DispReg32(Registers::D2, regs, ref) << " " << DispReg32(Registers::A2, regs, ref) << "\n";
-    ref << DispReg32(Registers::D3, regs, ref) << " " << DispReg32(Registers::A3, regs, ref) << "\n";
-    ref << DispReg32(Registers::D4, regs, ref) << " " << DispReg32(Registers::A4, regs, ref) << "\n";
-    ref << DispReg32(Registers::D5, regs, ref) << " " << DispReg32(Registers::A5, regs, ref) << "\n";
-    ref << DispReg32(Registers::D6, regs, ref) << " " << DispReg32(Registers::A6, regs, ref) << "\n";
-    ref << DispReg32(Registers::D7, regs, ref) << " " << DispReg32(Registers::A7, regs, ref) << "\n";
+    ref << "<font face=\"Courier\">";
+    ref << DispReg32(Registers::PC, m_prevRegs, regs) << "<br>";
+    ref << DispReg16(Registers::SR, m_prevRegs, regs) << "<br>";
+    ref << "<br>";
+    ref << DispReg32(Registers::D0, m_prevRegs, regs) << " " << DispReg32(Registers::A0, m_prevRegs, regs) << "<br>";
+    ref << DispReg32(Registers::D1, m_prevRegs, regs) << " " << DispReg32(Registers::A1, m_prevRegs, regs) << "<br>";
+    ref << DispReg32(Registers::D2, m_prevRegs, regs) << " " << DispReg32(Registers::A2, m_prevRegs, regs) << "<br>";
+    ref << DispReg32(Registers::D3, m_prevRegs, regs) << " " << DispReg32(Registers::A3, m_prevRegs, regs) << "<br>";
+    ref << DispReg32(Registers::D4, m_prevRegs, regs) << " " << DispReg32(Registers::A4, m_prevRegs, regs) << "<br>";
+    ref << DispReg32(Registers::D5, m_prevRegs, regs) << " " << DispReg32(Registers::A5, m_prevRegs, regs) << "<br>";
+    ref << DispReg32(Registers::D6, m_prevRegs, regs) << " " << DispReg32(Registers::A6, m_prevRegs, regs) << "<br>";
+    ref << DispReg32(Registers::D7, m_prevRegs, regs) << " " << DispReg32(Registers::A7, m_prevRegs, regs) << "<br>";
 
+    ref << "</font>";
     /*
 	for (int i = 0; i < Registers::REG_COUNT; ++i)
 	{
@@ -161,20 +164,25 @@ void MainWindow::PopulateRegisters()
 		regsText += pc_text;
 	}
     */
-	m_pRegistersTextEdit->setPlainText(regsText);
+
+    std::cout << regsText.toStdString();
+    //m_pRegistersTextEdit->setCurrentFont(monoFont);
+    m_pRegistersTextEdit->setFontFamily("courier");
+    m_pRegistersTextEdit->setHtml(regsText);
+    // Update our previous values
+    m_prevRegs = regs;
 }
 
 void MainWindow::PopulateMemory()
 {
 	if (m_pTargetModel->IsRunning())
-	{
 		return;
-	}
 
 	// Build up the text area
 	QString regsText;
 	const Memory* pMem = m_pTargetModel->GetMemory();
 
+    /*
 	for (uint32_t i = 0; i < pMem->GetSize(); ++i)
 	{
 		QString pc_text;
@@ -184,6 +192,7 @@ void MainWindow::PopulateMemory()
 		if ((i % 16) == 15)
 			regsText += "\n";
 	}
+    */
 
     // Disassemble the given code
     buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize());
@@ -196,7 +205,7 @@ void MainWindow::PopulateMemory()
     {
         QString line_text;
         const Disassembler::line& line = disasm.lines[i];
-        line_text = QString::asprintf("%04x %04x ", line.address, line.inst.header);
+        line_text = QString::asprintf("%08x %04x ", line.address, line.inst.header);
         ref << line_text;
         Disassembler::print(line.inst, line.address, ref);
         ref << "\n";

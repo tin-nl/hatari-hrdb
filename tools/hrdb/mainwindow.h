@@ -8,6 +8,7 @@
 */
 
 #include <QMainWindow>
+#include "targetmodel.h"
 
 class QPushButton;
 class QLabel;
@@ -46,5 +47,7 @@ private:
 	QTcpSocket* 	tcpSocket;
     Dispatcher*		m_pDispatcher;
 	TargetModel*	m_pTargetModel;
+
+    Registers       m_prevRegs;
 };
 #endif // MAINWINDOW_H
