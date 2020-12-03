@@ -126,17 +126,16 @@ const char* instruction_names[Opcode::COUNT] =
     "unlk"
 };
 
-int Disassembler::decode_buf(buffer_reader& buf, disassembly& disasm)
+int Disassembler::decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t address)
 {
     while (buf.get_remain() >= 2)
     {
         line line;
-        line.address = buf.get_pos();
+        line.address = buf.get_pos() + address;
 
         // decode uses a copy of the buffer state
         buffer_reader buf_copy(buf);
-        if (decode(buf_copy, line.inst))
-            break;
+        decode(buf_copy, line.inst);
 
         // Handle failure
         disasm.lines.push_back(line);

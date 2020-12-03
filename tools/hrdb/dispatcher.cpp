@@ -190,10 +190,12 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 	StringSplitter splitResp(cmd.m_response);
 	if (type == "regs")
 	{
-		Registers regs;
+        /*std::string cmd*/ splitResp.Split(' ');    // skip "regs"
+        Registers regs;
 		while (true)
-		{
-			std::string reg = splitResp.Split(':');
+        {
+
+            std::string reg = splitResp.Split(':');
 			if (reg.size() == 0)
 				break;
 			std::string valueStr = splitResp.Split(' ');
