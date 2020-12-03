@@ -22,7 +22,8 @@ SOURCES += \
     hopper/decode.cpp \
     main.cpp \
     mainwindow.cpp \
-	targetmodel.cpp
+	targetmodel.cpp \
+    disasmwidget.cpp
 
 HEADERS += \
     disassembler.h \
@@ -31,7 +32,8 @@ HEADERS += \
     hopper/decode.h \
     hopper/instruction.h \
     mainwindow.h \
-	targetmodel.h
+	targetmodel.h \
+    disasmwidget.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

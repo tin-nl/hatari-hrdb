@@ -5,6 +5,7 @@
 #include <QtNetwork>
 #include <QShortcut>
 
+#include "disasmwidget.h"
 #include "dispatcher.h"
 #include "targetmodel.h"
 
@@ -30,6 +31,7 @@ MainWindow::MainWindow(QWidget *parent)
 	m_pMemoryTextEdit->setReadOnly(true);
 	m_pRegistersTextEdit->setAcceptRichText(false);
 	m_pMemoryTextEdit->setAcceptRichText(false);
+    m_pDisasmWindow = new DisasmWidget(this);
 
     QFont monoFont("Monospace");
     monoFont.setStyleHint(QFont::TypeWriter);
@@ -43,6 +45,8 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(m_pMemoryTextEdit);
     pGroupBox->setLayout(layout);
 	setCentralWidget(pGroupBox);
+
+    this->addDockWidget(Qt::LeftDockWidgetArea, m_pDisasmWindow);
 
 	// Create the core data model
 	m_pTargetModel = new TargetModel();

@@ -15,6 +15,7 @@ class QLabel;
 class QTcpSocket;
 class QTextEdit;
 
+class DisasmWidget;
 class Dispatcher;
 class TargetModel;
 
@@ -44,6 +45,7 @@ private:
     QPushButton*	m_pSingleStepButton;
 	QTextEdit*		m_pRegistersTextEdit;
 	QTextEdit*		m_pMemoryTextEdit;
+    DisasmWidget*   m_pDisasmWindow;
 
 	QTcpSocket* 	tcpSocket;
     Dispatcher*		m_pDispatcher;
