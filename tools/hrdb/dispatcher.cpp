@@ -29,7 +29,7 @@ uint8_t charToHexNybble(char c)
 	if (c >= '0' && c <= '9')
 		return (uint8_t)(c - '0');
 	if (c >= 'A' && c <= 'F')
-		return (uint8_t)(c - 'A');
+        return (uint8_t)(10 + c - 'A');
 	return 0;
 }
 
@@ -72,7 +72,7 @@ public:
 		return m_str.substr(start, endpos - start);
 	}
 
-	int GetPos() const { return m_pos; }
+    uint32_t GetPos() const { return (uint32_t) m_pos; }
 
 private:
 	const std::string&	m_str;
@@ -85,7 +85,8 @@ Dispatcher::Dispatcher(QTcpSocket* tcpSocket, TargetModel* pTargetModel) :
 	m_pTargetModel(pTargetModel)
 {
 	connect(m_pTcpSocket, &QAbstractSocket::connected, this, &Dispatcher::connected);
-	connect(m_pTcpSocket, &QAbstractSocket::readyRead, this, &Dispatcher::readyRead);
+    connect(m_pTcpSocket, &QAbstractSocket::disconnected, this, &Dispatcher::disconnected);
+    connect(m_pTcpSocket, &QAbstractSocket::readyRead, this, &Dispatcher::readyRead);
 }
 
 Dispatcher::~Dispatcher()
@@ -146,9 +147,18 @@ void Dispatcher::ReceivePacket(const char* response)
 
 void Dispatcher::connected()
 {
+    // Do this before the UI gets to do its requests
+    this->SendCommandPacket("status");
+    m_pTargetModel->SetConnected(1);
 	// THIS HAPPENS ON THE EVENT LOOP
 	printf("Host connected\n");
-	this->SendCommandPacket("status");
+}
+
+void Dispatcher::disconnected()
+{
+    m_pTargetModel->SetConnected(0);
+    // THIS HAPPENS ON THE EVENT LOOP
+    printf("Host disconnected\n");
 }
 
 void Dispatcher::readyRead()
@@ -190,10 +200,12 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 	StringSplitter splitResp(cmd.m_response);
 	if (type == "regs")
 	{
-		Registers regs;
+        /*std::string cmd*/ splitResp.Split(' ');    // skip "regs"
+        Registers regs;
 		while (true)
-		{
-			std::string reg = splitResp.Split(':');
+        {
+
+            std::string reg = splitResp.Split(':');
 			if (reg.size() == 0)
 				break;
 			std::string valueStr = splitResp.Split(' ');

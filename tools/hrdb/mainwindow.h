@@ -8,12 +8,14 @@
 */
 
 #include <QMainWindow>
+#include "targetmodel.h"
 
 class QPushButton;
 class QLabel;
 class QTcpSocket;
 class QTextEdit;
 
+class DisasmWidget;
 class Dispatcher;
 class TargetModel;
 
@@ -26,6 +28,7 @@ public:
     ~MainWindow();
 
 public slots:
+    void connectChangedSlot();
 	void startStopChangedSlot();
 	void registersChangedSlot();
 	void memoryChangedSlot();
@@ -42,9 +45,12 @@ private:
     QPushButton*	m_pSingleStepButton;
 	QTextEdit*		m_pRegistersTextEdit;
 	QTextEdit*		m_pMemoryTextEdit;
+    DisasmWidget*   m_pDisasmWindow;
 
 	QTcpSocket* 	tcpSocket;
     Dispatcher*		m_pDispatcher;
 	TargetModel*	m_pTargetModel;
+
+    Registers       m_prevRegs;
 };
 #endif // MAINWINDOW_H

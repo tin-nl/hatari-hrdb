@@ -20,7 +20,8 @@ Registers::Registers()
 
 TargetModel::TargetModel() :
 	QObject(),
-	m_bRunning(true),
+    m_bConnected(false),
+    m_bRunning(true),
 	m_pTestMemory(NULL)
 {
 
@@ -28,20 +29,26 @@ TargetModel::TargetModel() :
 
 TargetModel::~TargetModel()
 {
-	delete m_pTestMemory;
+    delete m_pTestMemory;
+}
+
+void TargetModel::SetConnected(int connected)
+{
+    m_bConnected = connected;
+    emit connectChangedSignal();
 }
 
 void TargetModel::SetStatus(int running, uint32_t pc)
 {
 	m_bRunning = running;
 	m_pc = pc;
-	emit startStopChangedSlot();
+    emit startStopChangedSignal();
 }
 
 void TargetModel::SetRegisters(const Registers& regs)
 {
 	m_regs = regs;
-	emit registersChangedSlot();
+    emit registersChangedSignal();
 }
 
 void TargetModel::SetMemory(const Memory* pMem)
@@ -50,5 +57,5 @@ void TargetModel::SetMemory(const Memory* pMem)
 		delete m_pTestMemory;
 
 	m_pTestMemory = pMem;
-	emit memoryChangedSlot();
+    emit memoryChangedSignal();
 }
