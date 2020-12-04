@@ -187,7 +187,7 @@ static int RemoteDebug_Regs(int nArgc, char *psArgs[], int fd)
  *
  * Input: "mem <start addr> <size in bytes>\n"
  *
- * Output: "mem <hexaddress> <hexsize> <memory as base16 string>\n"
+ * Output: "mem <address-expr> <size-expr> <memory as base16 string>\n"
  */
 static int RemoteDebug_Mem(int nArgc, char *psArgs[], int fd)
 {
@@ -195,16 +195,20 @@ static int RemoteDebug_Mem(int nArgc, char *psArgs[], int fd)
 	Uint32 value, memdump_upper = 0;
 	Uint32 memdump_addr = 0;
 	Uint32 memdump_count = 0;
+	int offset = 0;
+	const char* err_str = NULL;
 
 	/* For remote debug, only "address" "count" is supported */
 	arg = 1;
 	if (nArgc >= arg + 2)
 	{
-		if (!Eval_Number(psArgs[arg], &memdump_addr))
+		err_str = Eval_Expression(psArgs[arg], &memdump_addr, &offset, false);
+		if (err_str)
 			return 1;
 
 		++arg;
-		if (!Eval_Number(psArgs[arg], &memdump_count))
+		err_str = Eval_Expression(psArgs[arg], &memdump_count, &offset, false);
+		if (err_str)
 			return 1;
 		++arg;
 	}

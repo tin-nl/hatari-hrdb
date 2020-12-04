@@ -113,7 +113,7 @@ void MainWindow::startStopChangedSlot()
         m_pDispatcher->SendCommandPacket("regs");
 
         uint32_t pc = m_pTargetModel->GetPC();
-        m_pDispatcher->RequestMemory(MemorySlot::kMemview, pc, 100);
+        m_pDispatcher->RequestMemory(MemorySlot::kMemview, "a0", "100");
         m_pStartStopButton->setText("START");
 		m_pSingleStepButton->setEnabled(true);	
 	}

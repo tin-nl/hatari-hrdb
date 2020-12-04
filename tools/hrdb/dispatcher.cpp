@@ -94,9 +94,9 @@ Dispatcher::~Dispatcher()
     // NO CHECK delete all pending commands
 }
 
-void Dispatcher::RequestMemory(MemorySlot slot, uint32_t address, uint32_t size)
+void Dispatcher::RequestMemory(MemorySlot slot, std::string address, std::string size)
 {
-    std::string command = std::string("mem ") + std::to_string(address) + " " + std::to_string(size);
+    std::string command = std::string("mem " + address + " " + size);
 
     RemoteCommand* pNewCmd = new RemoteCommand();
     pNewCmd->m_cmd = std::string(command);

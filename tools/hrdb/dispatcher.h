@@ -20,8 +20,9 @@ public:
     // TODO replace with strings
     void SendCommandPacket(const char* command);
 
-    // Request a specific memory block
-    void RequestMemory(MemorySlot slot, uint32_t address, uint32_t size);
+    // Request a specific memory block.
+    // Allows strings so expressions can evaluate
+    void RequestMemory(MemorySlot slot, std::string address, std::string size);
 
 private slots:
 

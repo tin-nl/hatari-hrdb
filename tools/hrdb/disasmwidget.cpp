@@ -28,6 +28,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableView->horizontalHeader()->hide();
     m_pTableView->setColumnWidth(0, 9*8);
     m_pTableView->setColumnWidth(1, 16);
+    m_pTableView->setColumnWidth(2, 300);
 
     m_pTableView->verticalHeader()->hide();
     //m_pTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
@@ -53,8 +54,7 @@ void DisasmWidget::startStopChangedSlot()
     // Request new memory for the view
     if (!m_pTargetModel->IsRunning())
     {
-        uint32_t pc = m_pTargetModel->GetPC();
-        m_pDispatcher->RequestMemory(MemorySlot::kDisasm, pc, 100);
+        m_pDispatcher->RequestMemory(MemorySlot::kDisasm, "pc", "100");
     }
 }
 
