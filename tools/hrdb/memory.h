@@ -9,7 +9,7 @@ enum MemorySlot
     kNone,          // e.g. regs
     kDisasm,        // general disassembly view memory
     kDisasmPC,      // auto-requested memory at the stopped PC
-    kMemview,       // general memory view memory
+    kMemoryView,    // general memory view memory
 
     kMemorySlotCount
 };

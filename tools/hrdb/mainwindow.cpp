@@ -5,14 +5,16 @@
 #include <QtNetwork>
 #include <QShortcut>
 
-#include "disasmwidget.h"
 #include "dispatcher.h"
 #include "targetmodel.h"
 
-#include "disassembler.h"
-#include "hopper/buffer.h"
-#include "hopper/instruction.h"
-#include "hopper/decode.h"
+#include "disasmwidget.h"
+#include "memoryviewwidget.h"
+
+//#include "disassembler.h"
+//#include "hopper/buffer.h"
+//#include "hopper/instruction.h"
+//#include "hopper/decode.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -33,32 +35,29 @@ MainWindow::MainWindow(QWidget *parent)
     m_pStartStopButton = new QPushButton("STOP", pGroupBox);
     m_pSingleStepButton = new QPushButton("Step", pGroupBox);
     m_pRegistersTextEdit = new QTextEdit("", pGroupBox);
-    m_pMemoryTextEdit = new QTextEdit("", pGroupBox);
 	m_pRegistersTextEdit->setReadOnly(true);
-	m_pMemoryTextEdit->setReadOnly(true);
 	m_pRegistersTextEdit->setAcceptRichText(false);
-	m_pMemoryTextEdit->setAcceptRichText(false);
+
     m_pDisasmWindow = new DisasmWidget(this, m_pTargetModel, m_pDispatcher);
+    m_pMemoryViewWidget = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher);
 
     QFont monoFont("Monospace");
     monoFont.setStyleHint(QFont::TypeWriter);
     monoFont.setPointSize(9);
     m_pRegistersTextEdit->setCurrentFont(monoFont);
-    m_pMemoryTextEdit->setCurrentFont(monoFont);
 
     layout->addWidget(m_pStartStopButton);
     layout->addWidget(m_pSingleStepButton);
     layout->addWidget(m_pRegistersTextEdit);
-    layout->addWidget(m_pMemoryTextEdit);
     pGroupBox->setLayout(layout);
 	setCentralWidget(pGroupBox);
 
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWindow);
+    this->addDockWidget(Qt::RightDockWidgetArea, m_pMemoryViewWidget);
 
 	// Listen for target changes
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &MainWindow::registersChangedSlot);
-    connect(m_pTargetModel, &TargetModel::memoryChangedSignal,    this, &MainWindow::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,   this, &MainWindow::connectChangedSlot);
 
 	// Wire up buttons to actions
@@ -91,9 +90,7 @@ void MainWindow::connectChangedSlot()
     m_pStartStopButton->setEnabled(isConnect);
     m_pSingleStepButton->setEnabled(isConnect);
     m_pRegistersTextEdit->setEnabled(isConnect);
-    m_pMemoryTextEdit->setEnabled(isConnect);
 
-    PopulateMemory();
     PopulateRegisters();
 }
 
@@ -107,17 +104,12 @@ void MainWindow::startStopChangedSlot()
 	}
 	else
 	{
-        // Stopped -- refresh all requested buffers
-
 		// TODO this is where all windows should put in requests for data
         m_pDispatcher->SendCommandPacket("regs");
 
-        uint32_t pc = m_pTargetModel->GetPC();
-        m_pDispatcher->RequestMemory(MemorySlot::kMemview, "a0", "100");
         m_pStartStopButton->setText("START");
 		m_pSingleStepButton->setEnabled(true);	
 	}
-    PopulateMemory();
     PopulateRegisters();
 }
 
@@ -125,12 +117,6 @@ void MainWindow::registersChangedSlot()
 {
 	// Update text here
 	PopulateRegisters();
-}
-
-void MainWindow::memoryChangedSlot()
-{
-	// Update text here
-	PopulateMemory();
 }
 
 void MainWindow::startStopClicked()
@@ -226,34 +212,5 @@ void MainWindow::PopulateRegisters()
     m_pRegistersTextEdit->setHtml(regsText);
     // Update our previous values
     m_prevRegs = regs;
-}
-
-void MainWindow::PopulateMemory()
-{
-    if (!m_pTargetModel->IsConnected())
-    {
-        m_pMemoryTextEdit->clear();
-        return;
-    }
-
-    if (m_pTargetModel->IsRunning())
-		return;
-
-	// Build up the text area
-	QString regsText;
-    const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kMemview);
-    if (!pMem)
-        return;
-
-    for (uint32_t i = 0; i < pMem->GetSize(); ++i)
-	{
-		QString pc_text;
-		pc_text = QString::asprintf("%02x ", pMem->Get(i));
-		regsText += pc_text;
-
-		if ((i % 16) == 15)
-			regsText += "\n";
-	}
-    m_pMemoryTextEdit->setPlainText(regsText);
 }
 

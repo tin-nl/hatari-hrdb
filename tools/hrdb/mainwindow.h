@@ -15,9 +15,11 @@ class QLabel;
 class QTcpSocket;
 class QTextEdit;
 
-class DisasmWidget;
 class Dispatcher;
 class TargetModel;
+
+class DisasmWidget;
+class MemoryViewWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -31,7 +33,6 @@ public slots:
     void connectChangedSlot();
 	void startStopChangedSlot();
 	void registersChangedSlot();
-	void memoryChangedSlot();
 
     void startStopClicked();
     void singleStepClicked();
@@ -39,13 +40,13 @@ private:
 
 	// Populaters
 	void PopulateRegisters();
-	void PopulateMemory();
 
     QPushButton*	m_pStartStopButton;
     QPushButton*	m_pSingleStepButton;
 	QTextEdit*		m_pRegistersTextEdit;
-	QTextEdit*		m_pMemoryTextEdit;
+
     DisasmWidget*   m_pDisasmWindow;
+    MemoryViewWidget* m_pMemoryViewWidget;
 
 	QTcpSocket* 	tcpSocket;
     Dispatcher*		m_pDispatcher;

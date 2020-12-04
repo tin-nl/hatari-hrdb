@@ -24,7 +24,8 @@ SOURCES += \
     mainwindow.cpp \
 	targetmodel.cpp \
     disasmwidget.cpp \
-    memory.cpp
+    memory.cpp \
+    memoryviewwidget.cpp
 
 HEADERS += \
     disassembler.h \
@@ -36,7 +37,8 @@ HEADERS += \
 	targetmodel.h \
     disasmwidget.h \
     memory.h \
-    remotecommand.h
+    remotecommand.h \
+    memoryviewwidget.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
