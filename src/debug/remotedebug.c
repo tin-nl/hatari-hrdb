@@ -381,9 +381,10 @@ static bool RemoteDebug_BreakLoop(void)
 	// Notify after state change happens
 	RemoteDebug_NotifyState(state->AcceptedFD);
 
-	// NO CHECK handle no connection
 #if HAVE_WINSOCK_SOCKETS
-	SetNonBlocking(state->SocketFD, 0);
+	// Set the socket to blocking on the connection now, so we
+	// sleep until data is available.
+	SetNonBlocking(state->AcceptedFD, 0);
 #endif
 
 	while (bRemoteBreakIsActive)
@@ -408,7 +409,7 @@ static bool RemoteDebug_BreakLoop(void)
 		}
 		else if (bytes == 0)
 		{
-			// This represents an orderly EOF
+			// This represents an orderly EOF, even in Winsock
 			printf("Remote Debug connection closed\n");
 			DebugUI_RegisterRemoteDebug(NULL);
 			close(state->AcceptedFD);
@@ -419,8 +420,10 @@ static bool RemoteDebug_BreakLoop(void)
 		}
 		else
 		{
-			// On Windows -1 simply means
-			printf("Unknown cmd\n");
+			// On Windows -1 simply means a general error and might be OK.
+#if HAVE_WINSOCK_SOCKETS
+			printf("Unknown cmd %d\n", WSAGetLastError());
+#endif
 		}
 	}
 	bRemoteBreakIsActive = false;
@@ -431,7 +434,7 @@ static bool RemoteDebug_BreakLoop(void)
 	RemoteDebug_NotifyState(state->AcceptedFD);
 
 #if HAVE_WINSOCK_SOCKETS
-	SetNonBlocking(state->SocketFD, 1);
+	SetNonBlocking(state->AcceptedFD, 1);
 #endif
 
 	return true;
@@ -538,6 +541,9 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 		{
 			printf("Remote Debug connection accepted\n");
 			DebugUI_RegisterRemoteDebug(RemoteDebug_BreakLoop);
+#ifdef HAVE_WINSOCK_SOCKETS
+			SetNonBlocking(state->SocketFD, 1);
+#endif
 		}
 	}
 }
