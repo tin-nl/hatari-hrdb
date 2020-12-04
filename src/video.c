@@ -452,7 +452,7 @@ const char Video_fileid[] = "Hatari video.c : " __DATE__ " " __TIME__;
 #include "ikbd.h"
 #include "floppy_ipf.h"
 #include "statusbar.h"
-#include "debugui.h"
+#include "remotedebug.h"
 
 /* The border's mask allows to keep track of all the border tricks		*/
 /* applied to one video line. The masks for all lines are stored in the array	*/
