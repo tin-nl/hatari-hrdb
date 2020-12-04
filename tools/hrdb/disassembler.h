@@ -26,7 +26,7 @@ public:
         std::vector<line>    lines;
     };
 
-    static int decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t address);
+    static int decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t address, uint32_t maxLines);
     static void print(const instruction& inst, /*const symbols& symbols, */ uint32_t inst_address, QTextStream& ref);
 };
 

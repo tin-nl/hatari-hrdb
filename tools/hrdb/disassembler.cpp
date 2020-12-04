@@ -126,7 +126,7 @@ const char* instruction_names[Opcode::COUNT] =
     "unlk"
 };
 
-int Disassembler::decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t address)
+int Disassembler::decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t address, uint32_t maxLines)
 {
     while (buf.get_remain() >= 2)
     {
@@ -141,6 +141,8 @@ int Disassembler::decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t a
         disasm.lines.push_back(line);
 
         buf.advance(line.inst.byte_count);
+        if (disasm.lines.size() >= maxLines)
+            break;
     }
     return 0;
 }

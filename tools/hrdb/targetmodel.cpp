@@ -9,7 +9,7 @@ const char* Registers::s_names[] =
 	"PC", "SR", 
 	"USP", "ISP",
 	"EX",
-	NULL
+    nullptr
 };
 
 Registers::Registers()
@@ -21,15 +21,16 @@ Registers::Registers()
 TargetModel::TargetModel() :
 	QObject(),
     m_bConnected(false),
-    m_bRunning(true),
-	m_pTestMemory(NULL)
+    m_bRunning(true)
 {
-
+    for (int i = 0; i < MemorySlot::kMemorySlotCount; ++i)
+        m_pTestMemory[i] = nullptr;
 }
 
 TargetModel::~TargetModel()
 {
-    delete m_pTestMemory;
+    for (int i = 0; i < MemorySlot::kMemorySlotCount; ++i)
+        delete m_pTestMemory[i];
 }
 
 void TargetModel::SetConnected(int connected)
@@ -51,11 +52,11 @@ void TargetModel::SetRegisters(const Registers& regs)
     emit registersChangedSignal();
 }
 
-void TargetModel::SetMemory(const Memory* pMem)
+void TargetModel::SetMemory(MemorySlot slot, const Memory* pMem)
 {
-	if (m_pTestMemory)
-		delete m_pTestMemory;
+    if (m_pTestMemory[slot])
+        delete m_pTestMemory[slot];
 
-	m_pTestMemory = pMem;
-    emit memoryChangedSignal();
+    m_pTestMemory[slot] = pMem;
+    emit memoryChangedSignal(slot);
 }

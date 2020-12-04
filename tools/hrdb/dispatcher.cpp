@@ -6,7 +6,7 @@
 
 #include "targetmodel.h"
 
-//#define DISPATCHER_DEBUG
+#define DISPATCHER_DEBUG
 
 //-----------------------------------------------------------------------------
 int RegNameToEnum(const char* name)
@@ -91,7 +91,18 @@ Dispatcher::Dispatcher(QTcpSocket* tcpSocket, TargetModel* pTargetModel) :
 
 Dispatcher::~Dispatcher()
 {
-	// NO CHECK delete all pending commands
+    // NO CHECK delete all pending commands
+}
+
+void Dispatcher::RequestMemory(MemorySlot slot, uint32_t address, uint32_t size)
+{
+    std::string command = std::string("mem ") + std::to_string(address) + " " + std::to_string(size);
+
+    RemoteCommand* pNewCmd = new RemoteCommand();
+    pNewCmd->m_cmd = std::string(command);
+    pNewCmd->m_memorySlot = slot;
+    m_sentCommands.push_front(pNewCmd);
+    m_pTcpSocket->write(command.c_str(), command.size() + 1);
 }
 
 void Dispatcher::SendCommandPacket(const char *command)
@@ -99,6 +110,7 @@ void Dispatcher::SendCommandPacket(const char *command)
 	// NO CHECK ensure that the packet was sent before adding to the pending list...
 	RemoteCommand* pNewCmd = new RemoteCommand();
 	pNewCmd->m_cmd = std::string(command);
+    pNewCmd->m_memorySlot = MemorySlot::kNone;
 	m_sentCommands.push_front(pNewCmd);
 	m_pTcpSocket->write(command, strlen(command) + 1);
 }
@@ -242,7 +254,7 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 			pMem->Set(off, byte);
 		}
 
-		m_pTargetModel->SetMemory(pMem);
+        m_pTargetModel->SetMemory(cmd.m_memorySlot, pMem);
 	}
 }
 

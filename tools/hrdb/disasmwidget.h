@@ -6,6 +6,7 @@
 #include "disassembler.h"
 
 class TargetModel;
+class Dispatcher;
 
 class DisasmTableModel : public QAbstractTableModel
 {
@@ -22,22 +23,29 @@ public:
     // So I expect we can emit that if we see the target has changed
 
 public slots:
-    void memoryChangedSlot();
+    void memoryChangedSlot(int memorySlot);
 
 private:
     TargetModel* m_pTargetModel;
+
+    // These are taken at the same time. Is there a race condition...?
     Disassembler::disassembly m_disasm;
+    uint32_t m_pc;
 };
 
 class DisasmWidget : public QDockWidget
 {
     Q_OBJECT
 public:
-    DisasmWidget(QWidget *parent, TargetModel* pTargetModel);
+    DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher);
+    void startStopChangedSlot();
 
 private:
     QLineEdit*      m_pLineEdit;
     QTableView*     m_pTableView;
+
+    TargetModel*    m_pTargetModel;
+    Dispatcher*     m_pDispatcher;
 };
 
 #endif // DISASMWINDOW_H

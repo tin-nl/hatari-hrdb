@@ -46,57 +46,6 @@ struct Registers
 	static const char* s_names[];
 };
 
-// A block of memory pulled from the target.
-struct Memory
-{
-public:
-	Memory(uint32_t addr, uint32_t size) :
-		m_addr(addr),
-		m_size(size)
-	{
-		m_pData = new uint8_t[size];		
-	}
-
-	~Memory()
-	{
-		delete [] m_pData;
-	}
-
-	void Set(uint32_t offset, uint8_t val)
-	{
-		assert(offset < m_size);
-		m_pData[offset] = val;
-	}
-
-	uint8_t Get(uint32_t offset) const
-	{
-        assert(offset < m_size);
-        return m_pData[offset];
-	}
-
-	uint32_t GetAddress() const
-	{
-		return m_addr;
-	}
-
-	uint32_t GetSize() const
-	{
-		return m_size;
-	}
-
-    const uint8_t* GetData() const
-    {
-        return m_pData;
-    }
-
-private:
-	Memory(const Memory& other);	// hide to prevent accidental use
-
-	uint32_t	m_addr;
-	uint32_t	m_size;		// size in bytes
-	uint8_t*	m_pData;
-};
-
 class TargetModel : public QObject
 {
 	Q_OBJECT
@@ -107,15 +56,17 @@ public:
     void SetConnected(int running);
     void SetStatus(int running, uint32_t pc);
 	void SetRegisters(const Registers& regs);
-	void SetMemory(const Memory* pMem);
+    void SetMemory(MemorySlot slot, const Memory* pMem);
 
 	// NOTE: all these return copies to avoid data contention
     int IsConnected() const { return m_bConnected; }
     int IsRunning() const { return m_bRunning; }
 	uint32_t GetPC() const { return m_pc; }
 	Registers GetRegs() const { return m_regs; }
-	// NO CHECK unsafe
-	const Memory* GetMemory() const { return m_pTestMemory; }
+    const Memory* GetMemory(MemorySlot slot) const
+    {
+        return m_pTestMemory[slot];
+    }
 
 public slots:
 
@@ -130,7 +81,7 @@ signals:
 
 	// When a block of fetched memory is changed
 	// TODO: don't have every view listening to the same slot?
-    void memoryChangedSignal();
+    void memoryChangedSignal(int memorySlot);
 
 private:
 
@@ -140,7 +91,7 @@ private:
 
 	Registers	m_regs;			// Current register values
 
-	const Memory*	m_pTestMemory;	// TODO handle many types of these
+    const Memory*	m_pTestMemory[MemorySlot::kMemorySlotCount];
 };
 
 #endif // TARGET_MODEL_H

@@ -21,10 +21,14 @@ MainWindow::MainWindow(QWidget *parent)
     // Create the core data models, since other object want to connect to them.
     m_pTargetModel = new TargetModel();
 
-    // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
+    // Create the TCP socket and start listening
+    QHostAddress qha(QHostAddress::LocalHost);
+    tcpSocket->connectToHost(qha, 56001);
 
+    m_pDispatcher = new Dispatcher(tcpSocket, m_pTargetModel);
+
+    // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
 	auto pGroupBox = new QGroupBox(this);
-	//pGroupBox->size().setHeight(500);
     QVBoxLayout *layout = new QVBoxLayout;
     m_pStartStopButton = new QPushButton("STOP", pGroupBox);
     m_pSingleStepButton = new QPushButton("Step", pGroupBox);
@@ -34,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
 	m_pMemoryTextEdit->setReadOnly(true);
 	m_pRegistersTextEdit->setAcceptRichText(false);
 	m_pMemoryTextEdit->setAcceptRichText(false);
-    m_pDisasmWindow = new DisasmWidget(this, m_pTargetModel);
+    m_pDisasmWindow = new DisasmWidget(this, m_pTargetModel, m_pDispatcher);
 
     QFont monoFont("Monospace");
     monoFont.setStyleHint(QFont::TypeWriter);
@@ -49,13 +53,7 @@ MainWindow::MainWindow(QWidget *parent)
     pGroupBox->setLayout(layout);
 	setCentralWidget(pGroupBox);
 
-    this->addDockWidget(Qt::LeftDockWidgetArea, m_pDisasmWindow);
-
-	// Create the TCP socket and start listening
-	QHostAddress qha(QHostAddress::LocalHost);
-    tcpSocket->connectToHost(qha, 56001);
-
-	m_pDispatcher = new Dispatcher(tcpSocket, m_pTargetModel);
+    this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWindow);
 
 	// Listen for target changes
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
@@ -109,13 +107,14 @@ void MainWindow::startStopChangedSlot()
 	}
 	else
 	{
-		// TODO this is where all windows should put in requests for data
-		m_pDispatcher->SendCommandPacket("regs");
+        // Stopped -- refresh all requested buffers
 
-		uint32_t pc = m_pTargetModel->GetPC();
-		std::string cmd = std::string("mem ") + std::to_string(pc) + std::string(" 100");
-		m_pDispatcher->SendCommandPacket(cmd.c_str());
-		m_pStartStopButton->setText("START");
+		// TODO this is where all windows should put in requests for data
+        m_pDispatcher->SendCommandPacket("regs");
+
+        uint32_t pc = m_pTargetModel->GetPC();
+        m_pDispatcher->RequestMemory(MemorySlot::kMemview, pc, 100);
+        m_pStartStopButton->setText("START");
 		m_pSingleStepButton->setEnabled(true);	
 	}
     PopulateMemory();
@@ -137,14 +136,14 @@ void MainWindow::memoryChangedSlot()
 void MainWindow::startStopClicked()
 {
 	if (m_pTargetModel->IsRunning())
-		m_pDispatcher->SendCommandPacket("break");
+        m_pDispatcher->SendCommandPacket("break");
 	else
-		m_pDispatcher->SendCommandPacket("run");
+        m_pDispatcher->SendCommandPacket("run");
 }
 
 void MainWindow::singleStepClicked()
 {
-	m_pDispatcher->SendCommandPacket("step");
+    m_pDispatcher->SendCommandPacket("step");
 }
 
 QString DispReg16(int regIndex, const Registers& prevRegs, const Registers& regs)
@@ -242,12 +241,11 @@ void MainWindow::PopulateMemory()
 
 	// Build up the text area
 	QString regsText;
-	const Memory* pMem = m_pTargetModel->GetMemory();
+    const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kMemview);
     if (!pMem)
         return;
 
-    /*
-	for (uint32_t i = 0; i < pMem->GetSize(); ++i)
+    for (uint32_t i = 0; i < pMem->GetSize(); ++i)
 	{
 		QString pc_text;
 		pc_text = QString::asprintf("%02x ", pMem->Get(i));
@@ -256,24 +254,6 @@ void MainWindow::PopulateMemory()
 		if ((i % 16) == 15)
 			regsText += "\n";
 	}
-    */
-
-    // Disassemble the given code
-    buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize());
-    Disassembler::disassembly disasm;
-    Disassembler::decode_buf(disasmBuf, disasm, pMem->GetAddress());
-
-    QString disasmStr;
-    QTextStream ref(&disasmStr);
-    for (size_t i = 0; i < disasm.lines.size(); ++i)
-    {
-        QString line_text;
-        const Disassembler::line& line = disasm.lines[i];
-        line_text = QString::asprintf("%08x %04x ", line.address, line.inst.header);
-        ref << line_text;
-        Disassembler::print(line.inst, line.address, ref);
-        ref << "\n";
-    }
-    m_pMemoryTextEdit->setPlainText(disasmStr);
+    m_pMemoryTextEdit->setPlainText(regsText);
 }
 

@@ -17,19 +17,25 @@ public:
     Dispatcher(QTcpSocket* tcpSocket, TargetModel* pTargetModel);
     virtual ~Dispatcher();
 
+    // TODO replace with strings
     void SendCommandPacket(const char* command);
-	void ReceivePacket(const char* response);
+
+    // Request a specific memory block
+    void RequestMemory(MemorySlot slot, uint32_t address, uint32_t size);
 
 private slots:
 
    void connected();
    void disconnected();
+
+   // Called by the socket class to process incoming messages
    void readyRead();
 
 private:
 
 	void ReceiveResponsePacket(const RemoteCommand& command);
 	void ReceiveNotification(const RemoteNotification& notification);
+    void ReceivePacket(const char* response);
 
 	std::deque<RemoteCommand*>		m_sentCommands;
 	QTcpSocket*						m_pTcpSocket;
