@@ -140,17 +140,5 @@ void MemoryViewTableModel::memoryChangedSlot(int memorySlot)
 
     emit beginResetModel();
     emit endResetModel();
-    //emit modelReset(QPrivateSignal());
 }
 
-
-/*
- *     if (!m_pTargetModel->IsConnected())
-    {
-        return;
-    }
-
-    if (m_pTargetModel->IsRunning())
-        return;
-
-*/

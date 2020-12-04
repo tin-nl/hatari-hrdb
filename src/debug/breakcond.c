@@ -1662,3 +1662,18 @@ bool BreakAddr_Command(char *args, bool bForDsp)
 	}
 	return true;
 }
+
+bool BreakCond_GetCpuBreakpointInfo(int index, bc_breakpoint_query_t *result)
+{
+	result->expression = "";
+	result->ccount = 0;
+	result->hits = 0;
+	if (index >= CpuBreakPoints.count)
+		return false;
+
+	const bc_breakpoint_t* orig = &CpuBreakPoints.breakpoint[index];
+	result->expression = orig->expression;
+	result->ccount = orig->ccount;
+	result->hits = orig->hits;
+	return true;
+}

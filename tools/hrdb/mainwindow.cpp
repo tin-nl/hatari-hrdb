@@ -106,6 +106,7 @@ void MainWindow::startStopChangedSlot()
 	{
 		// TODO this is where all windows should put in requests for data
         m_pDispatcher->SendCommandPacket("regs");
+        m_pDispatcher->SendCommandPacket("bplist");
 
         m_pStartStopButton->setText("START");
 		m_pSingleStepButton->setEnabled(true);	

@@ -97,22 +97,19 @@ Dispatcher::~Dispatcher()
 void Dispatcher::RequestMemory(MemorySlot slot, std::string address, std::string size)
 {
     std::string command = std::string("mem " + address + " " + size);
+    SendCommandShared(slot, command);
+}
 
-    RemoteCommand* pNewCmd = new RemoteCommand();
-    pNewCmd->m_cmd = std::string(command);
-    pNewCmd->m_memorySlot = slot;
-    m_sentCommands.push_front(pNewCmd);
-    m_pTcpSocket->write(command.c_str(), command.size() + 1);
+void Dispatcher::SetBreakpoint(std::string expression)
+{
+    std::string command = std::string("bp " + expression);
+    SendCommandShared(MemorySlot::kNone, command);
+    SendCommandShared(MemorySlot::kNone, "bplist"); // update state
 }
 
 void Dispatcher::SendCommandPacket(const char *command)
 {
-	// NO CHECK ensure that the packet was sent before adding to the pending list...
-	RemoteCommand* pNewCmd = new RemoteCommand();
-	pNewCmd->m_cmd = std::string(command);
-    pNewCmd->m_memorySlot = MemorySlot::kNone;
-	m_sentCommands.push_front(pNewCmd);
-	m_pTcpSocket->write(command, strlen(command) + 1);
+    SendCommandShared(MemorySlot::kNone, command);
 }
 
 void Dispatcher::ReceivePacket(const char* response)
@@ -195,7 +192,16 @@ void Dispatcher::readyRead()
 			m_active_resp += data[i];
 		}
 	}
-	delete[] data;
+    delete[] data;
+}
+
+void Dispatcher::SendCommandShared(MemorySlot slot, std::string command)
+{
+    RemoteCommand* pNewCmd = new RemoteCommand();
+    pNewCmd->m_cmd = command;
+    pNewCmd->m_memorySlot = slot;
+    m_sentCommands.push_front(pNewCmd);
+    m_pTcpSocket->write(command.c_str(), command.size() + 1);
 }
 
 void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)

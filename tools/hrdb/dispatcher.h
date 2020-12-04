@@ -24,6 +24,8 @@ public:
     // Allows strings so expressions can evaluate
     void RequestMemory(MemorySlot slot, std::string address, std::string size);
 
+    void SetBreakpoint(std::string expression);
+
 private slots:
 
    void connected();
@@ -33,6 +35,7 @@ private slots:
    void readyRead();
 
 private:
+    void SendCommandShared(MemorySlot slot, std::string command);
 
 	void ReceiveResponsePacket(const RemoteCommand& command);
 	void ReceiveNotification(const RemoteNotification& notification);

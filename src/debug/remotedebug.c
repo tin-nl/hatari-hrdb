@@ -34,6 +34,7 @@
 #include "debugcpu.h"	/* For stepping */
 #include "evaluate.h"
 #include "stMemory.h"
+#include "breakcond.h"
 
 #define REMOTE_DEBUG_PORT          (56001)
 #define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
@@ -118,7 +119,7 @@ static int RemoteDebug_Break(int nArgc, char *psArgs[], int fd)
 	}
 	else
 	{
-		send_str(fd, "NG");
+		return 1;
 	}
 	
 	return 0;
@@ -169,7 +170,7 @@ static int RemoteDebug_Regs(int nArgc, char *psArgs[], int fd)
 		"A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7" };
 	int regIdx;
 
-	send_str(fd, "regs ");
+	send_str(fd, "OK ");
 	for (regIdx = 0; regIdx < ARRAY_SIZE(regIds); ++regIdx)
 		send_key_value(fd, regNames[regIdx], Regs[regIds[regIdx]]);
 		
@@ -218,7 +219,7 @@ static int RemoteDebug_Mem(int nArgc, char *psArgs[], int fd)
 		return 1;
 	}
 
-	send_str(fd, "mem ");
+	send_str(fd, "OK ");
 	send_hex(fd, memdump_addr);
 	send_str(fd, " ");
 	send_hex(fd, memdump_count);
@@ -234,6 +235,44 @@ static int RemoteDebug_Mem(int nArgc, char *psArgs[], int fd)
 	return 0;
 }
 
+// -----------------------------------------------------------------------------
+/* Set a breakpoint at an address. */
+static int RemoteDebug_bp(int nArgc, char *psArgs[], int fd)
+{
+	int arg = 1;
+	if (nArgc >= arg + 1)
+	{
+		// Pass to standard simple function
+		if (BreakAddr_Command(psArgs[arg], false))
+			return 0;
+	}
+	return 1;
+}
+
+// -----------------------------------------------------------------------------
+/* List all breakpoints */
+static int RemoteDebug_bplist(int nArgc, char *psArgs[], int fd)
+{
+	int count = BreakCond_CpuBreakPointCount();
+	int i;
+	send_str(fd, "OK ");
+	send_hex(fd, count);
+	send_str(fd, " ");
+	for (i = 0; i < count; ++i)
+	{
+		bc_breakpoint_query_t query;
+		BreakCond_GetCpuBreakpointInfo(i, &query);
+
+		send_str(fd, query.expression);
+		/* Note this has the ` character to flag the expression end */
+		send_str(fd, "` ");
+		send_hex(fd, query.ccount);
+		send_str(fd, " ");
+		send_hex(fd, query.hits);
+		send_str(fd, " ");
+	}
+	return 0;
+}
 
 // -----------------------------------------------------------------------------
 /* DebugUI command structure */
@@ -252,6 +291,8 @@ static const rdbcommand_t remoteDebugCommandList[] = {
 	{ RemoteDebug_Run, 		"run"		},
 	{ RemoteDebug_Regs,     "regs"		},
 	{ RemoteDebug_Mem,      "mem"		},
+	{ RemoteDebug_bp, 		"bp"		},
+	{ RemoteDebug_bplist,	"bplist"	},
 
 	/* Terminator */
 	{ NULL, NULL }
@@ -350,8 +391,11 @@ static void RemoteDebug_ProcessBuffer(RemoteDebugState* state)
 		printf("Received: %s\n", pCmd);
 		cmd_ret = RemoteDebug_Parse(pCmd, state->AcceptedFD);
 
-		// TODO return an error over the network
-		(void)cmd_ret;
+		if (cmd_ret != 0)
+		{
+			// return an error if something failed
+			send_str(state->AcceptedFD, "NG");
+		}
 
 		// Write packet terminator
 		char terminator;

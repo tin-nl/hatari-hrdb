@@ -21,8 +21,8 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pLineEdit = new QLineEdit(this);
     m_pTableView = new QTableView(this);
 
-    DisasmTableModel* pModel = new DisasmTableModel(this, pTargetModel);
-    m_pTableView->setModel(pModel);
+    m_pTableModel = new DisasmTableModel(this, pTargetModel);
+    m_pTableView->setModel(m_pTableModel);
 
     m_pTableView->horizontalHeader()->setMinimumSectionSize(0);
     m_pTableView->horizontalHeader()->hide();
@@ -46,7 +46,8 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableView->resizeRowsToContents();
 
     // Listen for start/stop, so we can update our memory request
-    connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &DisasmWidget::startStopChangedSlot);
+    connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmWidget::startStopChangedSlot);
+    connect(m_pTableView,   &QTableView::clicked,                 this, &DisasmWidget::cellClickedSlot);
 }
 
 void DisasmWidget::startStopChangedSlot()
@@ -58,6 +59,7 @@ void DisasmWidget::startStopChangedSlot()
     }
 }
 
+// ============================================================================
 DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel) :
     QAbstractTableModel(parent),
     m_pTargetModel(pTargetModel),
@@ -122,7 +124,7 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot)
     if (!pMem)
         return;
 
-    // Fetch underlying data
+    // Fetch underlying data, this is picked up by the model class
     buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize());
     Disassembler::decode_buf(disasmBuf, m_disasm, pMem->GetAddress(), 10);
     m_pc = m_pTargetModel->GetPC();
@@ -130,5 +132,16 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot)
     emit beginResetModel();
     emit endResetModel();
     //emit modelReset(QPrivateSignal());
+}
+
+void DisasmWidget::cellClickedSlot(const QModelIndex &index)
+{
+    if (index.column() != 1)
+        return;
+
+    // set a breakpoint
+    uint32_t addr = m_pTableModel->m_disasm.lines[index.row()].address;
+    QString cmd = QString::asprintf("bp %d", addr);
+    m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
 }
 
