@@ -18,7 +18,10 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , tcpSocket(new QTcpSocket(this))
 {
-	// https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
+    // Create the core data models, since other object want to connect to them.
+    m_pTargetModel = new TargetModel();
+
+    // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
 
 	auto pGroupBox = new QGroupBox(this);
 	//pGroupBox->size().setHeight(500);
@@ -31,7 +34,7 @@ MainWindow::MainWindow(QWidget *parent)
 	m_pMemoryTextEdit->setReadOnly(true);
 	m_pRegistersTextEdit->setAcceptRichText(false);
 	m_pMemoryTextEdit->setAcceptRichText(false);
-    m_pDisasmWindow = new DisasmWidget(this);
+    m_pDisasmWindow = new DisasmWidget(this, m_pTargetModel);
 
     QFont monoFont("Monospace");
     monoFont.setStyleHint(QFont::TypeWriter);
@@ -47,9 +50,6 @@ MainWindow::MainWindow(QWidget *parent)
 	setCentralWidget(pGroupBox);
 
     this->addDockWidget(Qt::LeftDockWidgetArea, m_pDisasmWindow);
-
-	// Create the core data model
-	m_pTargetModel = new TargetModel();
 
 	// Create the TCP socket and start listening
 	QHostAddress qha(QHostAddress::LocalHost);
