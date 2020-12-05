@@ -66,6 +66,7 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel) :
     m_pc(0)
 {
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &DisasmTableModel::memoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::breakpointsChangedSignal, this, &DisasmTableModel::breakpointsChangedSlot);
 }
 
 int DisasmTableModel::rowCount(const QModelIndex &parent) const
@@ -86,27 +87,34 @@ int DisasmTableModel::columnCount(const QModelIndex &parent) const
 
 QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
 {
+    uint32_t row = (uint32_t)index.row();
     if (role == Qt::DisplayRole)
     {
         if (index.column() == 0)
         {
-            QString addr = QString::asprintf("%08x", m_disasm.lines[index.row()].address);
+            QString addr = QString::asprintf("%08x", m_disasm.lines[row].address);
             return addr;
         }
         else if (index.column() == 1)
         {
-            if (m_pc == m_disasm.lines[index.row()].address)
+            QString bps;
+            uint32_t addr = m_disasm.lines[row].address;
+            for (size_t i = 0; i < m_breakpoints.m_breakpoints.size(); ++i)
             {
-                return QString(">");
+                if (m_breakpoints.m_breakpoints[i].m_pcHack == addr)
+                    bps += "*";
             }
-            return QVariant(); // invalid item
+
+            if (m_pc == m_disasm.lines[row].address)
+                bps += ">>";
+            return bps;
         }
         else if (index.column() == 2)
         {
             QString str;
             QTextStream ref(&str);
-            Disassembler::print(m_disasm.lines[index.row()].inst,
-                    m_disasm.lines[index.row()].address, ref);
+            Disassembler::print(m_disasm.lines[row].inst,
+                    m_disasm.lines[row].address, ref);
             return str;
         }
         return QString("addr");
@@ -131,7 +139,13 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot)
 
     emit beginResetModel();
     emit endResetModel();
-    //emit modelReset(QPrivateSignal());
+}
+
+void DisasmTableModel::breakpointsChangedSlot()
+{
+    m_breakpoints = m_pTargetModel->GetBreakpoints();
+    emit beginResetModel();
+    emit endResetModel();
 }
 
 void DisasmWidget::cellClickedSlot(const QModelIndex &index)
@@ -143,5 +157,6 @@ void DisasmWidget::cellClickedSlot(const QModelIndex &index)
     uint32_t addr = m_pTableModel->m_disasm.lines[index.row()].address;
     QString cmd = QString::asprintf("bp %d", addr);
     m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
+    m_pDispatcher->SendCommandPacket("bplist");
 }
 

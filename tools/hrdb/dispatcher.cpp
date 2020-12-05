@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "targetmodel.h"
+#include "stringsplitter.h"
 
 #define DISPATCHER_DEBUG
 
@@ -32,52 +33,6 @@ uint8_t charToHexNybble(char c)
         return (uint8_t)(10 + c - 'A');
 	return 0;
 }
-
-//-----------------------------------------------------------------------------
-class StringSplitter
-{
-public:
-	explicit StringSplitter(const std::string& str) :
-		m_str(str),
-		m_pos(0)
-	{
-	}
-
-	std::string Split(const char c)
-	{
-		if (m_pos == std::string::npos)
-			return "";
-
-		// Skip this char at the start
-		//while (m_pos < m_str.size() && m_str[m_pos] == c)
-		//	++m_pos;
-
-		if (m_pos == m_str.size())
-			return "";
-
-		std::size_t start = m_pos;
-		m_pos = m_str.find(c, m_pos);
-		std::size_t endpos = m_pos;
-
-		if (m_pos == std::string::npos)
-			m_pos = endpos = m_str.size();
-		else
-		{
-			// Skip any extra occurences of the char
-			while (m_pos < m_str.size() && m_str[m_pos] == c)
-				++m_pos;
-		}
-		
-
-		return m_str.substr(start, endpos - start);
-	}
-
-    uint32_t GetPos() const { return (uint32_t) m_pos; }
-
-private:
-	const std::string&	m_str;
-	std::size_t			m_pos;
-};
 
 //-----------------------------------------------------------------------------
 Dispatcher::Dispatcher(QTcpSocket* tcpSocket, TargetModel* pTargetModel) :
@@ -215,10 +170,16 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 	StringSplitter splitCmd(cmd.m_cmd);
 	std::string type = splitCmd.Split(' ');
 
-	StringSplitter splitResp(cmd.m_response);
+    StringSplitter splitResp(cmd.m_response);
+    std::string cmd_status = splitResp.Split(' ');
+    if (cmd_status != std::string("OK"))
+    {
+        std::cout << "Repsonse dropped: " << cmd.m_response;
+        return;
+    }
+
 	if (type == "regs")
 	{
-        /*std::string cmd*/ splitResp.Split(' ');    // skip "regs"
         Registers regs;
 		while (true)
         {
@@ -239,7 +200,6 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 	}
 	else if (type == "mem")
 	{
-		std::string cmdName = splitResp.Split(' '); // "mem"
 		std::string addrStr = splitResp.Split(' ');
 		std::string sizeStr = splitResp.Split(' ');
 		char* endpr;
@@ -262,6 +222,25 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 
         m_pTargetModel->SetMemory(cmd.m_memorySlot, pMem);
 	}
+    else if (type == "bplist")
+    {
+        // Breakpoints
+        std::string countStr = splitResp.Split(' ');
+        char* endpr;
+        uint32_t count = std::strtol(countStr.c_str(), &endpr, 16);
+
+        Breakpoints bps;
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            Breakpoint bp;
+            bp.SetExpression(splitResp.Split('`'));
+            std::string ccount = splitResp.Split(' ');
+            std::string hits = splitResp.Split(' ');
+            bps.m_breakpoints.push_back(bp);
+        }
+
+        m_pTargetModel->SetBreakpoints(bps);
+    }
 }
 
 void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)

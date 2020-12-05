@@ -244,7 +244,10 @@ static int RemoteDebug_bp(int nArgc, char *psArgs[], int fd)
 	{
 		// Pass to standard simple function
 		if (BreakAddr_Command(psArgs[arg], false))
+		{
+			send_str(fd, "OK");
 			return 0;
+		}
 	}
 	return 1;
 }
@@ -264,8 +267,9 @@ static int RemoteDebug_bplist(int nArgc, char *psArgs[], int fd)
 		BreakCond_GetCpuBreakpointInfo(i, &query);
 
 		send_str(fd, query.expression);
-		/* Note this has the ` character to flag the expression end */
-		send_str(fd, "` ");
+		/* Note this has the ` character to flag the expression end,
+		since the expression can contain spaces */
+		send_str(fd, "`");
 		send_hex(fd, query.ccount);
 		send_str(fd, " ");
 		send_hex(fd, query.hits);

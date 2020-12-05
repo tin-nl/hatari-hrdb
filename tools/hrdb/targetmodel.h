@@ -11,7 +11,10 @@
 
 #include <stdint.h>
 #include <QObject>
+
 #include "remotecommand.h"
+#include "breakpoint.h"
+#include "memory.h"
 
 struct Registers
 {
@@ -57,6 +60,7 @@ public:
     void SetStatus(int running, uint32_t pc);
 	void SetRegisters(const Registers& regs);
     void SetMemory(MemorySlot slot, const Memory* pMem);
+    void SetBreakpoints(const Breakpoints& bps);
 
 	// NOTE: all these return copies to avoid data contention
     int IsConnected() const { return m_bConnected; }
@@ -67,6 +71,7 @@ public:
     {
         return m_pTestMemory[slot];
     }
+    const Breakpoints& GetBreakpoints() const { return m_breakpoints; }
 
 public slots:
 
@@ -83,6 +88,8 @@ signals:
 	// TODO: don't have every view listening to the same slot?
     void memoryChangedSignal(int memorySlot);
 
+    void breakpointsChangedSignal();
+
 private:
 
     int         m_bConnected;   // 0 == disconnected, 1 == connected
@@ -90,8 +97,8 @@ private:
 	uint32_t	m_pc;			// PC register (for next instruction)
 
 	Registers	m_regs;			// Current register values
-
     const Memory*	m_pTestMemory[MemorySlot::kMemorySlotCount];
+    Breakpoints m_breakpoints;  // Current breakpoint list
 };
 
 #endif // TARGET_MODEL_H

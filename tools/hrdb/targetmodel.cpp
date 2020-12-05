@@ -60,3 +60,9 @@ void TargetModel::SetMemory(MemorySlot slot, const Memory* pMem)
     m_pTestMemory[slot] = pMem;
     emit memoryChangedSignal(slot);
 }
+
+void TargetModel::SetBreakpoints(const Breakpoints& bps)
+{
+    m_breakpoints = bps;
+    emit breakpointsChangedSignal();
+}

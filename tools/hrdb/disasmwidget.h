@@ -4,6 +4,7 @@
 #include <QDockWidget>
 #include <QTableView>
 #include "disassembler.h"
+#include "breakpoint.h"
 
 class TargetModel;
 class Dispatcher;
@@ -23,10 +24,11 @@ public:
 
     // NO CHECK
     Disassembler::disassembly m_disasm;
+    Breakpoints m_breakpoints;
 
 public slots:
     void memoryChangedSlot(int memorySlot);
-
+    void breakpointsChangedSlot();
 
 private:
     TargetModel* m_pTargetModel;
