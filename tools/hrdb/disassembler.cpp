@@ -202,6 +202,17 @@ QString to_hex32(uint32_t val)
     return tmp;
 }
 
+QString to_abs_word(uint16_t val)
+{
+    QString tmp;
+    if (val & 0x8000)
+        tmp = QString::asprintf("$ffff%04x", val);
+    else {
+        tmp = QString::asprintf("$%x", val);
+    }
+    return tmp;
+}
+
 // ----------------------------------------------------------------------------
 void print(const operand& operand, uint32_t inst_address, QTextStream& ref)
 {
@@ -232,7 +243,7 @@ void print(const operand& operand, uint32_t inst_address, QTextStream& ref)
         case OpType::ABSOLUTE_WORD:
             // NO CHECK
             if (operand.absolute_word.wordaddr & 0x8000)
-                ref << to_hex32(operand.absolute_word.wordaddr) << ".w";
+                ref << to_abs_word(operand.absolute_word.wordaddr) << ".w";
             else
                 ref << to_hex32(operand.absolute_word.wordaddr) << ".w";
             return;
