@@ -29,11 +29,14 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_pDispatcher = new Dispatcher(tcpSocket, m_pTargetModel);
 
-
+    // Top row of buttons
     m_pRunningSquare = new QWidget(this);
-
-    m_pStartStopButton = new QPushButton("STOP", this);
+    m_pRunningSquare->setFixedSize(10, 25);
+    m_pRunningSquare->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
+    m_pStartStopButton = new QPushButton("Break", this);
     m_pSingleStepButton = new QPushButton("Step", this);
+
+    // Register/status window
     m_pRegistersTextEdit = new QTextEdit("", this);
 	m_pRegistersTextEdit->setReadOnly(true);
 	m_pRegistersTextEdit->setAcceptRichText(false);
@@ -41,6 +44,8 @@ MainWindow::MainWindow(QWidget *parent)
     monoFont.setStyleHint(QFont::TypeWriter);
     monoFont.setPointSize(9);
     m_pRegistersTextEdit->setCurrentFont(monoFont);
+    m_pRegistersTextEdit->setFixedSize(400, 200);
+    m_pRegistersTextEdit->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
 
     m_pDisasmWindow = new DisasmWidget(this, m_pTargetModel, m_pDispatcher);
     m_pMemoryViewWidget = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher);
@@ -48,8 +53,10 @@ MainWindow::MainWindow(QWidget *parent)
     // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
     QVBoxLayout *vlayout = new QVBoxLayout;
     QHBoxLayout *hlayout = new QHBoxLayout;
-    auto pMainGroupBox = new QGroupBox(this);
     auto pTopGroupBox = new QGroupBox(this);
+    auto pMainGroupBox = new QGroupBox(this);
+    pTopGroupBox->setFixedSize(400, 50);
+    pTopGroupBox->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred));
 
     hlayout->addWidget(m_pRunningSquare);
     hlayout->addWidget(m_pStartStopButton);
@@ -58,7 +65,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     vlayout->addWidget(pTopGroupBox);
     vlayout->addWidget(m_pRegistersTextEdit);
+    vlayout->setAlignment(Qt::Alignment(Qt::AlignTop));
     pMainGroupBox->setLayout(vlayout);
+    pTopGroupBox->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
 
     setCentralWidget(pMainGroupBox);
 
@@ -119,7 +128,7 @@ void MainWindow::startStopChangedSlot()
 	// Update text here
 	if (m_pTargetModel->IsRunning())
 	{
-		m_pStartStopButton->setText("STOP");
+        m_pStartStopButton->setText("Break");
 		m_pSingleStepButton->setEnabled(false);	
 	}
 	else
@@ -129,7 +138,7 @@ void MainWindow::startStopChangedSlot()
         m_pDispatcher->SendCommandPacket("bplist");
         m_pDispatcher->RequestMemory(MemorySlot::kMainPC, "pc", "100");
 
-        m_pStartStopButton->setText("START");
+        m_pStartStopButton->setText("Run");
 		m_pSingleStepButton->setEnabled(true);	
 	}
     PopulateRunningSquare();
@@ -296,11 +305,9 @@ void MainWindow::PopulateRunningSquare()
     {
         col = Qt::green;
     }
-
     pal.setColor(QPalette::Background, col);
     m_pRunningSquare->setAutoFillBackground(true);
     m_pRunningSquare->setPalette(pal);
-
 }
 
 void MainWindow::newFile()
