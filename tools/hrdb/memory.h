@@ -20,17 +20,9 @@ enum MemorySlot
 struct Memory
 {
 public:
-    Memory(uint32_t addr, uint32_t size) :
-        m_addr(addr),
-        m_size(size)
-    {
-        m_pData = new uint8_t[size];
-    }
+    Memory(uint32_t addr, uint32_t size);
 
-    ~Memory()
-    {
-        delete [] m_pData;
-    }
+    ~Memory();
 
     void Set(uint32_t offset, uint8_t val)
     {
