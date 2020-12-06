@@ -138,15 +138,6 @@ static int RemoteDebug_Step(int nArgc, char *psArgs[], int fd)
 }
 
 // -----------------------------------------------------------------------------
-/* Step next instruction. This is currently a passthrough to the normal debugui code. */
-static int RemoteDebug_Next(int nArgc, char *psArgs[], int fd)
-{
-	send_str(fd, "OK");
-	bRemoteBreakIsActive = false;
-	return 0;
-}
-
-// -----------------------------------------------------------------------------
 static int RemoteDebug_Run(int nArgc, char *psArgs[], int fd)
 {
 	send_str(fd, "OK");
@@ -243,7 +234,8 @@ static int RemoteDebug_bp(int nArgc, char *psArgs[], int fd)
 	if (nArgc >= arg + 1)
 	{
 		// Pass to standard simple function
-		if (BreakAddr_Command(psArgs[arg], false))
+		printf("* arg = \"%s\"\n", psArgs[arg]);
+		if (BreakCond_Command(psArgs[arg], false))
 		{
 			send_str(fd, "OK");
 			return 0;
@@ -261,7 +253,9 @@ static int RemoteDebug_bplist(int nArgc, char *psArgs[], int fd)
 	send_str(fd, "OK ");
 	send_hex(fd, count);
 	send_str(fd, " ");
-	for (i = 0; i < count; ++i)
+
+	/* NOTE breakpoint query indices start at 1 */
+	for (i = 1; i <= count; ++i)
 	{
 		bc_breakpoint_query_t query;
 		BreakCond_GetCpuBreakpointInfo(i, &query);
@@ -279,24 +273,47 @@ static int RemoteDebug_bplist(int nArgc, char *psArgs[], int fd)
 }
 
 // -----------------------------------------------------------------------------
+/* Remove breakpoint number N.
+   NOTE breakpoint IDs start at 1!
+*/
+static int RemoteDebug_bpdel(int nArgc, char *psArgs[], int fd)
+{
+	int arg = 1;
+	Uint32 bp_position;
+	if (nArgc >= arg + 1)
+	{
+		if (Eval_Number(psArgs[arg], &bp_position))
+		{
+			if (BreakCond_RemoveCpuBreakpoint(bp_position))
+			{
+				send_str(fd, "OK");
+				return 0;
+			}
+		}
+	}
+	return 1;
+}
+
+// -----------------------------------------------------------------------------
 /* DebugUI command structure */
 typedef struct
 {
 	int (*pFunction)(int argc, char *argv[], int fd);
 	const char *sName;
+	bool split_args;
 } rdbcommand_t;
 
 /* Array of all remote debug command descriptors */
 static const rdbcommand_t remoteDebugCommandList[] = {
-	{ RemoteDebug_Status,   "status"	},
-	{ RemoteDebug_Break,    "break"		},
-	{ RemoteDebug_Step,     "step"		},
-	{ RemoteDebug_Next,     "next"		},
-	{ RemoteDebug_Run, 		"run"		},
-	{ RemoteDebug_Regs,     "regs"		},
-	{ RemoteDebug_Mem,      "mem"		},
-	{ RemoteDebug_bp, 		"bp"		},
-	{ RemoteDebug_bplist,	"bplist"	},
+	{ RemoteDebug_Status,   "status"	, true		},
+	{ RemoteDebug_Break,    "break"		, true		},
+	{ RemoteDebug_Step,     "step"		, true		},
+	{ RemoteDebug_Run, 		"run"		, true		},
+	{ RemoteDebug_Regs,     "regs"		, true		},
+	{ RemoteDebug_Mem,      "mem"		, true		},
+	{ RemoteDebug_bp, 		"bp"		, false		},
+	{ RemoteDebug_bplist,	"bplist"	, true		},
+	{ RemoteDebug_bpdel,	"bpdel"		, true		},
 
 	/* Terminator */
 	{ NULL, NULL }
@@ -309,12 +326,14 @@ static const rdbcommand_t remoteDebugCommandList[] = {
  */
 static int RemoteDebug_Parse(const char *input_orig, int fd)
 {
-	char *psArgs[64], *input;
+	char *psArgs[64], *input, *input2;
 	const char *delim;
 	int nArgc = -1;
 	int retval;
 
 	input = strdup(input_orig);
+	input2 = strdup(input_orig);
+	// NO CHECK use the safer form of strtok
 	psArgs[0] = strtok(input, " \t");
 
 	/* Search the command ... */
@@ -334,12 +353,25 @@ static int RemoteDebug_Parse(const char *input_orig, int fd)
 	delim = " \t";
 
 	/* Separate arguments and put the pointers into psArgs */
-	for (nArgc = 1; nArgc < ARRAY_SIZE(psArgs); nArgc++)
+	if (pCommand->split_args)
 	{
-		psArgs[nArgc] = strtok(NULL, delim);
-		if (psArgs[nArgc] == NULL)
-			break;
+		for (nArgc = 1; nArgc < ARRAY_SIZE(psArgs); nArgc++)
+		{
+			psArgs[nArgc] = strtok(NULL, delim);
+			if (psArgs[nArgc] == NULL)
+				break;
+		}
 	}
+	else
+	{
+		/* Single arg to pass through to some internal calls,
+		   for example breakpoint parsing
+		*/
+		printf("input: %s", input2);
+		psArgs[1] = input + strlen(psArgs[0]) + 1;
+		nArgc = 2;
+	}
+	
 	if (nArgc >= ARRAY_SIZE(psArgs))
 	{
 		retval = -1;
@@ -350,6 +382,7 @@ static int RemoteDebug_Parse(const char *input_orig, int fd)
 		retval = pCommand->pFunction(nArgc, psArgs, fd);
 	}
 	free(input);
+	free(input2);
 	return retval;
 }
 

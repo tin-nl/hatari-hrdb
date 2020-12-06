@@ -27,7 +27,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableView->horizontalHeader()->setMinimumSectionSize(0);
     m_pTableView->horizontalHeader()->hide();
     m_pTableView->setColumnWidth(0, 9*8);
-    m_pTableView->setColumnWidth(1, 16);
+    m_pTableView->setColumnWidth(1, 32);
     m_pTableView->setColumnWidth(2, 300);
 
     m_pTableView->verticalHeader()->hide();
@@ -155,8 +155,24 @@ void DisasmWidget::cellClickedSlot(const QModelIndex &index)
 
     // set a breakpoint
     uint32_t addr = m_pTableModel->m_disasm.lines[index.row()].address;
-    QString cmd = QString::asprintf("bp %d", addr);
-    m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
+    bool removed = false;
+
+    for (size_t i = 0; i < m_pTableModel->m_breakpoints.m_breakpoints.size(); ++i)
+    {
+        if (m_pTableModel->m_breakpoints.m_breakpoints[i].m_pcHack == addr)
+        {
+            QString cmd = QString::asprintf("bpdel %d", i + 1);
+            m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
+            removed = true;
+        }
+    }
+
+    if (!removed)
+    {
+        QString cmd = QString::asprintf("bp pc = %d", addr);
+        m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
+    }
+
     m_pDispatcher->SendCommandPacket("bplist");
 }
 

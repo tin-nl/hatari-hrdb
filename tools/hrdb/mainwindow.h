@@ -9,6 +9,7 @@
 
 #include <QMainWindow>
 #include "targetmodel.h"
+#include "disassembler.h"
 
 class QPushButton;
 class QLabel;
@@ -33,9 +34,11 @@ public slots:
     void connectChangedSlot();
 	void startStopChangedSlot();
 	void registersChangedSlot();
+    void memoryChangedSlot(int slot);
 
     void startStopClicked();
     void singleStepClicked();
+    void nextClicked();
 private:
 
 	// Populaters
@@ -53,5 +56,6 @@ private:
 	TargetModel*	m_pTargetModel;
 
     Registers       m_prevRegs;
+    Disassembler::disassembly      m_disasm;
 };
 #endif // MAINWINDOW_H

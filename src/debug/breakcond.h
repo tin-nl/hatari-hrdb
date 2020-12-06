@@ -25,13 +25,17 @@ extern bool BreakAddr_Command(char *expression, bool bforDsp);
 /* extra functions exported for the test code */
 extern int BreakCond_MatchCpuExpression(int position, const char *expression);
 
+/* Remote Debugging Functions */
 typedef struct {
 	const char *expression;
 	int ccount;	/* condition count */
 	int hits;	/* how many times breakpoint hit */
 } bc_breakpoint_query_t;
+
 /* Remote debugging: query data for CPU breakpoint N.
+	Breakpoints are indexed from 1!
 	Returns true if data found */
-extern bool BreakCond_GetCpuBreakpointInfo(int index, bc_breakpoint_query_t *result);
+extern bool BreakCond_GetCpuBreakpointInfo(int position, bc_breakpoint_query_t *result);
+extern bool BreakCond_RemoveCpuBreakpoint(int position);
 
 #endif

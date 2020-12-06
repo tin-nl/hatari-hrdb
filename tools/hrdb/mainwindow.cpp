@@ -59,6 +59,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &MainWindow::registersChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,   this, &MainWindow::connectChangedSlot);
+    connect(m_pTargetModel, &TargetModel::memoryChangedSignal,    this, &MainWindow::memoryChangedSlot);
 
 	// Wire up buttons to actions
     connect(m_pStartStopButton, &QAbstractButton::clicked, this, &MainWindow::startStopClicked);
@@ -69,9 +70,13 @@ MainWindow::MainWindow(QWidget *parent)
 					this,
 					SLOT(startStopClicked()));
 
-	new QShortcut(QKeySequence(tr("F10", "Step")),
+    new QShortcut(QKeySequence(tr("F10", "Next")),
 					this,
-					SLOT(singleStepClicked()));
+                    SLOT(nextClicked()));
+
+    new QShortcut(QKeySequence(tr("F11", "Step")),
+                    this,
+                    SLOT(singleStepClicked()));
 
     // Update everything
     connectChangedSlot();
@@ -107,6 +112,7 @@ void MainWindow::startStopChangedSlot()
 		// TODO this is where all windows should put in requests for data
         m_pDispatcher->SendCommandPacket("regs");
         m_pDispatcher->SendCommandPacket("bplist");
+        m_pDispatcher->RequestMemory(MemorySlot::kMainPC, "pc", "100");
 
         m_pStartStopButton->setText("START");
 		m_pSingleStepButton->setEnabled(true);	
@@ -117,7 +123,27 @@ void MainWindow::startStopChangedSlot()
 void MainWindow::registersChangedSlot()
 {
 	// Update text here
-	PopulateRegisters();
+    PopulateRegisters();
+
+    // Update our previous values
+    m_prevRegs = m_pTargetModel->GetRegs();
+}
+
+void MainWindow::memoryChangedSlot(int slot)
+{
+    if (slot != MemorySlot::kMainPC)
+        return;
+
+    // Disassemble the first instruction
+    m_disasm.lines.clear();
+    const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kMainPC);
+    if (!pMem)
+        return;
+
+    // Fetch underlying data, this is picked up by the model class
+    buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize());
+    Disassembler::decode_buf(disasmBuf, m_disasm, pMem->GetAddress(), 2);
+    PopulateRegisters();
 }
 
 void MainWindow::startStopClicked()
@@ -131,6 +157,19 @@ void MainWindow::startStopClicked()
 void MainWindow::singleStepClicked()
 {
     m_pDispatcher->SendCommandPacket("step");
+}
+
+
+void MainWindow::nextClicked()
+{
+    // Work out where the next PC is
+    if (m_disasm.lines.size() == 0)
+        return;
+
+    uint32_t next_pc = m_disasm.lines[0].inst.byte_count + m_disasm.lines[0].address;
+    QString str = QString::asprintf("bp pc = $%x : once", next_pc);
+    m_pDispatcher->SendCommandPacket(str.toStdString().c_str());
+    m_pDispatcher->SendCommandPacket("run");
 }
 
 QString DispReg16(int regIndex, const Registers& prevRegs, const Registers& regs)
@@ -173,7 +212,12 @@ void MainWindow::PopulateRegisters()
 	Registers regs = m_pTargetModel->GetRegs();
 
     ref << "<font face=\"Courier\">";
-    ref << DispReg32(Registers::PC, m_prevRegs, regs) << "<br>";
+    ref << DispReg32(Registers::PC, m_prevRegs, regs) << "   ";
+    if (m_disasm.lines.size() > 0)
+        Disassembler::print(m_disasm.lines[0].inst, m_disasm.lines[0].address, ref);
+    ref << "<br>";
+
+
     ref << DispReg16(Registers::SR, m_prevRegs, regs) << "   ";
 	ref << DispSR(m_prevRegs, regs, 15, "T");
 	ref << DispSR(m_prevRegs, regs, 14, "T");
@@ -209,9 +253,6 @@ void MainWindow::PopulateRegisters()
 		regsText += pc_text;
 	}
     */
-
     m_pRegistersTextEdit->setHtml(regsText);
-    // Update our previous values
-    m_prevRegs = regs;
 }
 

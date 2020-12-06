@@ -7,8 +7,10 @@
 enum MemorySlot
 {
     kNone,          // e.g. regs
+    kMainPC,        // Memory around the stopped PC for the main view (to allow stepping etc)
+
     kDisasm,        // general disassembly view memory
-    kDisasmPC,      // auto-requested memory at the stopped PC
+
     kMemoryView,    // general memory view memory
 
     kMemorySlotCount
