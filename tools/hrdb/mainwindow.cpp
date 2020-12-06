@@ -166,10 +166,21 @@ void MainWindow::nextClicked()
     if (m_disasm.lines.size() == 0)
         return;
 
-    uint32_t next_pc = m_disasm.lines[0].inst.byte_count + m_disasm.lines[0].address;
-    QString str = QString::asprintf("bp pc = $%x : once", next_pc);
-    m_pDispatcher->SendCommandPacket(str.toStdString().c_str());
-    m_pDispatcher->SendCommandPacket("run");
+    const Disassembler::line& nextInst = m_disasm.lines[0];
+    // Either "next" or set breakpoint to following instruction
+    bool shouldStepOver = DisAnalyse::isSubroutine(nextInst.inst) ||
+                          DisAnalyse::isTrap(nextInst.inst);
+    if (shouldStepOver)
+    {
+        uint32_t next_pc = nextInst.inst.byte_count + nextInst.address;
+        QString str = QString::asprintf("bp pc = $%x : once", next_pc);
+        m_pDispatcher->SendCommandPacket(str.toStdString().c_str());
+        m_pDispatcher->SendCommandPacket("run");
+    }
+    else
+    {
+        m_pDispatcher->SendCommandPacket("step");
+    }
 }
 
 QString DispReg16(int regIndex, const Registers& prevRegs, const Registers& regs)

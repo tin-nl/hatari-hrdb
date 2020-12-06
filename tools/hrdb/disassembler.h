@@ -30,4 +30,11 @@ public:
     static void print(const instruction& inst, /*const symbols& symbols, */ uint32_t inst_address, QTextStream& ref);
 };
 
+class DisAnalyse
+{
+public:
+    static bool isSubroutine(const instruction& inst);
+    static bool isTrap(const instruction& inst);
+};
+
 #endif // DISASSEMBLER_H

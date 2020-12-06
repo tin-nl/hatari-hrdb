@@ -369,3 +369,27 @@ void Disassembler::print(const instruction& inst, /*const symbols& symbols, */ u
         ::print(inst.op1, /*symbols,*/ inst_address, ref);
     }
 }
+
+bool DisAnalyse::isSubroutine(const instruction &inst)
+{
+    switch (inst.opcode)
+    {
+        case Opcode::JSR:
+        case Opcode::BSR:
+            return true;
+        default:
+            break;
+    }
+    return false;
+}
+
+bool DisAnalyse::isTrap(const instruction &inst)
+{
+    switch (inst.opcode)
+    {
+        case Opcode::TRAP:
+        default:
+            break;
+    }
+    return false;
+}
