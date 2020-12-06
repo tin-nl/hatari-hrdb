@@ -175,6 +175,9 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     //m_pTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     m_pTableView->verticalHeader()->setDefaultSectionSize(16);
 
+    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::NoSelection);
+    m_pTableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
+
     layout->addWidget(m_pLineEdit);
     layout->addWidget(m_pTableView);
     pGroupBox->setLayout(layout);
