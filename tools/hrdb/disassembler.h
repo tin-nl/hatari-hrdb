@@ -14,6 +14,11 @@ public:
     {
         uint32_t    address;
         instruction inst;
+
+        uint32_t    GetEnd() const
+        {
+            return address + inst.byte_count;
+        }
     };
 
     // ----------------------------------------------------------------------------

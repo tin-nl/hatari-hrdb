@@ -5,6 +5,7 @@
 #include <QTableView>
 #include "disassembler.h"
 #include "breakpoint.h"
+#include "memory.h"
 
 class TargetModel;
 class Dispatcher;
@@ -13,7 +14,7 @@ class DisasmTableModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
-    DisasmTableModel(QObject * parent, TargetModel* pTargetModel);
+    DisasmTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher);
 
     // "When subclassing QAbstractTableModel, you must implement rowCount(), columnCount(), and data()."
     virtual int rowCount(const QModelIndex &parent) const;
@@ -26,15 +27,23 @@ public:
     Disassembler::disassembly m_disasm;
     Breakpoints m_breakpoints;
 
+    uint32_t GetAddress() const { return m_addr; }
+    void SetAddress(uint32_t addr);
+    void MoveUp();
+    void MoveDown();
+
 public slots:
+    void startStopChangedSlot();
     void memoryChangedSlot(int memorySlot);
     void breakpointsChangedSlot();
 
 private:
     TargetModel* m_pTargetModel;
+    Dispatcher*  m_pDispatcher;
+    Memory       m_memory;
 
-    // These are taken at the same time. Is there a race condition...?
-    uint32_t m_pc;
+    // Address of the top line of text that was requested
+    uint32_t m_addr;
 };
 
 class DisasmWidget : public QDockWidget
@@ -44,8 +53,9 @@ public:
     DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher);
 
 public slots:
-    void startStopChangedSlot();
     void cellClickedSlot(const QModelIndex& index);
+    void keyDownPressed();
+    void keyUpPressed();
 protected:
 
 private:

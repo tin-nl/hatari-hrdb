@@ -59,6 +59,8 @@ public:
         return m_pData;
     }
 
+    Memory& operator=(const Memory& other);
+
 private:
     Memory(const Memory& other);	// hide to prevent accidental use
 
