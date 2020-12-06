@@ -64,10 +64,12 @@ private:
 
 	// Populaters
 	void PopulateRegisters();
+    void PopulateRunningSquare();
 
     QPushButton*	m_pStartStopButton;
     QPushButton*	m_pSingleStepButton;
 	QTextEdit*		m_pRegistersTextEdit;
+    QWidget*        m_pRunningSquare;
 
     DisasmWidget*   m_pDisasmWindow;
     MemoryViewWidget* m_pMemoryViewWidget;

@@ -29,28 +29,38 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_pDispatcher = new Dispatcher(tcpSocket, m_pTargetModel);
 
-    // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
-	auto pGroupBox = new QGroupBox(this);
-    QVBoxLayout *layout = new QVBoxLayout;
-    m_pStartStopButton = new QPushButton("STOP", pGroupBox);
-    m_pSingleStepButton = new QPushButton("Step", pGroupBox);
-    m_pRegistersTextEdit = new QTextEdit("", pGroupBox);
+
+    m_pRunningSquare = new QWidget(this);
+
+    m_pStartStopButton = new QPushButton("STOP", this);
+    m_pSingleStepButton = new QPushButton("Step", this);
+    m_pRegistersTextEdit = new QTextEdit("", this);
 	m_pRegistersTextEdit->setReadOnly(true);
 	m_pRegistersTextEdit->setAcceptRichText(false);
-
-    m_pDisasmWindow = new DisasmWidget(this, m_pTargetModel, m_pDispatcher);
-    m_pMemoryViewWidget = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher);
-
     QFont monoFont("Monospace");
     monoFont.setStyleHint(QFont::TypeWriter);
     monoFont.setPointSize(9);
     m_pRegistersTextEdit->setCurrentFont(monoFont);
 
-    layout->addWidget(m_pStartStopButton);
-    layout->addWidget(m_pSingleStepButton);
-    layout->addWidget(m_pRegistersTextEdit);
-    pGroupBox->setLayout(layout);
-	setCentralWidget(pGroupBox);
+    m_pDisasmWindow = new DisasmWidget(this, m_pTargetModel, m_pDispatcher);
+    m_pMemoryViewWidget = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher);
+
+    // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
+    QVBoxLayout *vlayout = new QVBoxLayout;
+    QHBoxLayout *hlayout = new QHBoxLayout;
+    auto pMainGroupBox = new QGroupBox(this);
+    auto pTopGroupBox = new QGroupBox(this);
+
+    hlayout->addWidget(m_pRunningSquare);
+    hlayout->addWidget(m_pStartStopButton);
+    hlayout->addWidget(m_pSingleStepButton);
+    pTopGroupBox->setLayout(hlayout);
+
+    vlayout->addWidget(pTopGroupBox);
+    vlayout->addWidget(m_pRegistersTextEdit);
+    pMainGroupBox->setLayout(vlayout);
+
+    setCentralWidget(pMainGroupBox);
 
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWindow);
     this->addDockWidget(Qt::RightDockWidgetArea, m_pMemoryViewWidget);
@@ -100,6 +110,7 @@ void MainWindow::connectChangedSlot()
     m_pSingleStepButton->setEnabled(isConnect);
     m_pRegistersTextEdit->setEnabled(isConnect);
 
+    PopulateRunningSquare();
     PopulateRegisters();
 }
 
@@ -121,6 +132,7 @@ void MainWindow::startStopChangedSlot()
         m_pStartStopButton->setText("START");
 		m_pSingleStepButton->setEnabled(true);	
 	}
+    PopulateRunningSquare();
     PopulateRegisters();
 }
 
@@ -268,6 +280,27 @@ void MainWindow::PopulateRegisters()
 	}
     */
     m_pRegistersTextEdit->setHtml(regsText);
+}
+
+void MainWindow::PopulateRunningSquare()
+{
+    QPalette pal = m_pRunningSquare->palette();
+
+    // set black background
+    QColor col = Qt::red;
+    if (!m_pTargetModel->IsConnected())
+    {
+        col = Qt::gray;
+    }
+    else if (m_pTargetModel->IsRunning())
+    {
+        col = Qt::green;
+    }
+
+    pal.setColor(QPalette::Background, col);
+    m_pRunningSquare->setAutoFillBackground(true);
+    m_pRunningSquare->setPalette(pal);
+
 }
 
 void MainWindow::newFile()
