@@ -7,7 +7,7 @@
 #include "targetmodel.h"
 #include "stringsplitter.h"
 
-#define DISPATCHER_DEBUG
+//#define DISPATCHER_DEBUG
 
 //-----------------------------------------------------------------------------
 int RegNameToEnum(const char* name)
