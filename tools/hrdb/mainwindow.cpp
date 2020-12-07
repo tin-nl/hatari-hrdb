@@ -125,7 +125,13 @@ void MainWindow::startStopChangedSlot()
 {
 	// Update text here
 	if (m_pTargetModel->IsRunning())
-	{
+	{       
+        // Update our previous values
+        // TODO: this is not the ideal way to do this, since there
+        // are timing issues. In future, parcel up the stopping updates so
+        // that widget refreshes happen as one.
+        m_prevRegs = m_pTargetModel->GetRegs();
+
         m_pStartStopButton->setText("Break");
 		m_pSingleStepButton->setEnabled(false);	
 	}
@@ -147,9 +153,6 @@ void MainWindow::registersChangedSlot()
 {
 	// Update text here
     PopulateRegisters();
-
-    // Update our previous values
-    m_prevRegs = m_pTargetModel->GetRegs();
 }
 
 void MainWindow::memoryChangedSlot(int slot)
