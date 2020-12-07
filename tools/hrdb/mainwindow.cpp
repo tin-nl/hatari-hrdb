@@ -23,10 +23,6 @@ MainWindow::MainWindow(QWidget *parent)
     // Create the core data models, since other object want to connect to them.
     m_pTargetModel = new TargetModel();
 
-    // Create the TCP socket and start listening
-    QHostAddress qha(QHostAddress::LocalHost);
-    tcpSocket->connectToHost(qha, 56001);
-
     m_pDispatcher = new Dispatcher(tcpSocket, m_pTargetModel);
 
     // Top row of buttons
@@ -85,7 +81,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pSingleStepButton, &QAbstractButton::clicked, this, &MainWindow::singleStepClicked);
 
     // Set up menus
-
     createActions();
     createMenus();
 	// Keyboard shortcuts
@@ -100,6 +95,9 @@ MainWindow::MainWindow(QWidget *parent)
     new QShortcut(QKeySequence(tr("F11", "Step")),
                     this,
                     SLOT(singleStepClicked()));
+
+    // Try initial connect
+    Connect();
 
     // Update everything
     connectChangedSlot();
@@ -208,6 +206,19 @@ void MainWindow::nextClicked()
     }
 }
 
+// Network
+void MainWindow::Connect()
+{
+    // Create the TCP socket and start listening
+    QHostAddress qha(QHostAddress::LocalHost);
+    tcpSocket->connectToHost(qha, 56001);
+}
+
+void MainWindow::Disconnect()
+{
+    tcpSocket->disconnectFromHost();
+}
+
 QString DispReg16(int regIndex, const Registers& prevRegs, const Registers& regs)
 {
     const char* col = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]) ? "red" : "black";
@@ -310,16 +321,20 @@ void MainWindow::PopulateRunningSquare()
     m_pRunningSquare->setPalette(pal);
 }
 
+
+
 void MainWindow::newFile()
 {
 }
 
-void MainWindow::open()
+void MainWindow::menuConnect()
 {
+    Connect();
 }
 
-void MainWindow::save()
+void MainWindow::menuDisconnect()
 {
+    Disconnect();
 }
 
 void MainWindow::print()
@@ -399,16 +414,16 @@ void MainWindow::createActions()
     connect(newAct, &QAction::triggered, this, &MainWindow::newFile);
 //! [4]
 
-    openAct = new QAction(tr("&Open..."), this);
-    openAct->setShortcuts(QKeySequence::Open);
-    openAct->setStatusTip(tr("Open an existing file"));
-    connect(openAct, &QAction::triggered, this, &MainWindow::open);
+    openAct = new QAction(tr("&Connect..."), this);
+    //openAct->setShortcuts(QKeySequence::Open);
+    openAct->setStatusTip(tr("Connect to server"));
+    connect(openAct, &QAction::triggered, this, &MainWindow::menuConnect);
 //! [5]
 
-    saveAct = new QAction(tr("&Save"), this);
-    saveAct->setShortcuts(QKeySequence::Save);
-    saveAct->setStatusTip(tr("Save the document to disk"));
-    connect(saveAct, &QAction::triggered, this, &MainWindow::save);
+    saveAct = new QAction(tr("&Disconnect"), this);
+    //saveAct->setShortcuts(QKeySequence::Save);
+    saveAct->setStatusTip(tr("Disconnect from server"));
+    connect(saveAct, &QAction::triggered, this, &MainWindow::menuDisconnect);
 
     printAct = new QAction(tr("&Print..."), this);
     printAct->setShortcuts(QKeySequence::Print);

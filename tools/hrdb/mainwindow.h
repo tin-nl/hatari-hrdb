@@ -42,8 +42,8 @@ public slots:
     void nextClicked();
 private slots:
     void newFile();
-    void open();
-    void save();
+    void menuConnect();
+    void menuDisconnect();
     void print();
     void undo();
     void redo();
@@ -61,6 +61,9 @@ private slots:
     void about();
     void aboutQt();
 private:
+    // Network
+    void Connect();
+    void Disconnect();
 
 	// Populaters
 	void PopulateRegisters();
