@@ -32,6 +32,8 @@ public:
     void SetAddress(std::string addr);
     void MoveUp();
     void MoveDown();
+    void PageUp();
+    void PageDown();
 
 public slots:
     void startStopChangedSlot();
@@ -59,6 +61,8 @@ protected slots:
     void cellClickedSlot(const QModelIndex& index);
     void keyDownPressed();
     void keyUpPressed();
+    void keyPageDownPressed();
+    void keyPageUpPressed();
     void textEditChangedSlot();
 
 private:

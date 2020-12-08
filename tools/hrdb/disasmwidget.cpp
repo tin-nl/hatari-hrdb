@@ -104,6 +104,21 @@ void DisasmTableModel::MoveDown()
     }
 }
 
+void DisasmTableModel::PageUp()
+{
+    // TODO we should actually disassemble upwards to see if something sensible appears
+    SetAddress(m_addr - 20);
+}
+
+void DisasmTableModel::PageDown()
+{
+    if (m_disasm.lines.size() > 9)
+    {
+        // This will go off and request the memory itself
+        SetAddress(m_disasm.lines[9].GetEnd());
+    }
+}
+
 void DisasmTableModel::startStopChangedSlot()
 {
     // Request new memory for the view
@@ -194,12 +209,11 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     connect(m_pTableView,   &QTableView::clicked,                 this, &DisasmWidget::cellClickedSlot);
     connect(m_pLineEdit, &QLineEdit::textChanged,                 this, &DisasmWidget::textEditChangedSlot);
 
-    new QShortcut(QKeySequence(tr("Down", "Next instructions")),
-                    this,
-                    SLOT(keyDownPressed()));
-    new QShortcut(QKeySequence(tr("Up", "Prev instructions")),
-                    this,
-                    SLOT(keyUpPressed()));
+    new QShortcut(QKeySequence(tr("Down", "Next instructions")), this, SLOT(keyDownPressed()));
+    new QShortcut(QKeySequence(tr("Up",   "Prev instructions")), this, SLOT(keyUpPressed()));
+    new QShortcut(QKeySequence(QKeySequence::MoveToNextPage),     this, SLOT(keyPageDownPressed()));
+    new QShortcut(QKeySequence(QKeySequence::MoveToPreviousPage), this, SLOT(keyPageUpPressed()));
+
 }
 
 void DisasmWidget::cellClickedSlot(const QModelIndex &index)
@@ -237,6 +251,15 @@ void DisasmWidget::keyDownPressed()
 void DisasmWidget::keyUpPressed()
 {
     m_pTableModel->MoveUp();
+}
+
+void DisasmWidget::keyPageDownPressed()
+{
+    m_pTableModel->PageDown();
+}
+void DisasmWidget::keyPageUpPressed()
+{
+    m_pTableModel->PageUp();
 }
 
 void DisasmWidget::textEditChangedSlot()
