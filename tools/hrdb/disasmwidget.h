@@ -29,6 +29,7 @@ public:
 
     uint32_t GetAddress() const { return m_addr; }
     void SetAddress(uint32_t addr);
+    void SetAddress(std::string addr);
     void MoveUp();
     void MoveDown();
 
@@ -52,11 +53,13 @@ class DisasmWidget : public QDockWidget
 public:
     DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher);
 
-public slots:
+protected:
+
+protected slots:
     void cellClickedSlot(const QModelIndex& index);
     void keyDownPressed();
     void keyUpPressed();
-protected:
+    void textEditChangedSlot();
 
 private:
     QLineEdit*      m_pLineEdit;

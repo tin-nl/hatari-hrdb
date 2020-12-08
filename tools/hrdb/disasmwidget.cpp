@@ -81,12 +81,12 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
 void DisasmTableModel::SetAddress(uint32_t addr)
 {
     // Request memory
-    uint32_t topAddr = addr;
-    if (addr > 60)
-        topAddr = addr - 60;
-    uint32_t size = 60 + 100 + 60;
-    m_pDispatcher->RequestMemory(MemorySlot::kDisasm, std::to_string(topAddr), std::to_string(size));
-    m_addr = addr;
+    m_pDispatcher->RequestMemory(MemorySlot::kDisasm, std::to_string(addr), "100");
+}
+
+void DisasmTableModel::SetAddress(std::string addr)
+{
+    m_pDispatcher->RequestMemory(MemorySlot::kDisasm, addr, "100");
 }
 
 void DisasmTableModel::MoveUp()
@@ -127,6 +127,7 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot)
     m_memory = *pMemOrig;
 
     // Make sure the data we get back matches our expectations...
+    m_addr = m_memory.GetAddress();
     if (m_addr < m_memory.GetAddress())
         return;
     if (m_addr >= m_memory.GetAddress() + m_memory.GetSize())
@@ -191,6 +192,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
     // Listen for start/stop, so we can update our memory request
     connect(m_pTableView,   &QTableView::clicked,                 this, &DisasmWidget::cellClickedSlot);
+    connect(m_pLineEdit, &QLineEdit::textChanged,                 this, &DisasmWidget::textEditChangedSlot);
 
     new QShortcut(QKeySequence(tr("Down", "Next instructions")),
                     this,
@@ -237,4 +239,8 @@ void DisasmWidget::keyUpPressed()
     m_pTableModel->MoveUp();
 }
 
+void DisasmWidget::textEditChangedSlot()
+{
+    m_pTableModel->SetAddress(m_pLineEdit->text().toStdString());
+}
 
