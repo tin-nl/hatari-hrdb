@@ -375,7 +375,7 @@ void print(const operand& operand, uint32_t inst_address, QTextStream& ref)
             ref << "ccr";
             return;
         default:
-            ref << "???";
+            ref << "?";
     }
 }
 
@@ -384,27 +384,28 @@ void Disassembler::print(const instruction& inst, /*const symbols& symbols, */ u
 {
     if (inst.opcode == Opcode::NONE)
     {
-        ref << "? " << to_hex32(inst.header);
+        ref << "dc.w    " << to_hex32(inst.header);
         return;
     }
-    ref << instruction_names[inst.opcode];
+    QString opcode = instruction_names[inst.opcode];
     switch (inst.suffix)
     {
         case Suffix::BYTE:
-            ref << ".b"; break;
+            opcode += ".b"; break;
         case Suffix::WORD:
-            ref << ".w"; break;
+            opcode += ".w"; break;
         case Suffix::LONG:
-            ref << ".l"; break;
+            opcode += ".l"; break;
         case Suffix::SHORT:
-            ref << ".s"; break;
+            opcode += ".s"; break;
         default:
             break;
     }
+    QString pad = QString("%1").arg(opcode, -8);
+    ref << pad;
 
     if (inst.op0.type != OpType::INVALID)
     {
-        ref << " ";
         ::print(inst.op0, /*symbols,*/ inst_address, ref);
     }
 
