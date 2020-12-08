@@ -274,7 +274,7 @@ void print(const operand& operand, uint32_t inst_address, QTextStream& ref)
             ref << "(a" << operand.indirect.reg << ")";
             return;
         case OpType::INDIRECT_POSTINC:
-        ref << "(a" << operand.indirect_postinc.reg << ")+";
+            ref << "(a" << operand.indirect_postinc.reg << ")+";
             return;
         case OpType::INDIRECT_PREDEC:
             ref << "-(a" << operand.indirect_predec.reg << ")";
@@ -290,78 +290,22 @@ void print(const operand& operand, uint32_t inst_address, QTextStream& ref)
             ref << to_abs_word(operand.absolute_word.wordaddr) << ".w";
             return;
         case OpType::ABSOLUTE_LONG:
-        {
-            ref << to_hex32(operand.absolute_long.longaddr) << ".l";
-        /*
-            symbol sym;
-            if (find_symbol(symbols, operand.absolute_long.longaddr, sym))
-                ref <<"%s", sym.label.c_str());
-            else
-                ref <<"$%x.l",
-                    operand.absolute_long.longaddr);
-                    */
+            ref << to_hex32(operand.absolute_long.longaddr);
             return;
-        }
         case OpType::PC_DISP:
-        {
-        /*
-            symbol sym;
-            uint32_t target_address;
-            calc_relative_address(operand, inst_address, target_address);
-            if (find_symbol(symbols, target_address, sym))
-                ref <<"%s(pc)", sym.label.c_str());
-            else
-                ref <<"$%x(pc)", target_address);
-                */
             ref << operand.pc_disp.disp << "(pc)";
             return;
-        }
         case OpType::PC_DISP_INDEX:
-        {
-        /*
-            symbol sym;
-            uint32_t target_address;
-            calc_relative_address(operand, inst_address, target_address);
-
-            if (find_symbol(symbols, target_address, sym))
-            {
-                ref <<"%s(pc,d%d.%s)",
-                        sym.label.c_str(),
-                        operand.pc_disp_index.d_reg,
-                        operand.pc_disp_index.is_long ? "l" : "w");
-            }
-            else
-            {
-                ref <<"$%x(pc,d%d.%s)",
-                    target_address,
-                    operand.pc_disp_index.d_reg,
-                    operand.pc_disp_index.is_long ? "l" : "w");
-
-            }
-            */
             ref << operand.pc_disp_index.disp << "(pc,d" << operand.pc_disp_index.d_reg << ")";
             return;
-        }
         case OpType::MOVEM_REG:
-        {
             print_movem_mask(operand.movem_reg.reg_mask, ref);
             return;
-        }
         case OpType::RELATIVE_BRANCH:
-        {
             uint32_t target_address;
             calc_relative_address(operand, inst_address, target_address);
             ref << to_hex32(target_address);
-        /*
-            symbol sym;
-            if (find_symbol(symbols, target_address, sym))
-                ref <<"%s", sym.label.c_str());
-            else
-                ref <<"$%x", target_address);
-           */
             return;
-        }
-
         case OpType::IMMEDIATE:
             ref << "#" << to_hex32(operand.imm.val0);
             return;
