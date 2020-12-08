@@ -37,7 +37,7 @@ int DisasmTableModel::columnCount(const QModelIndex &parent) const
     if (parent.isValid())
         return 0;
 
-    return 3;
+    return kColCount;
 }
 
 QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
@@ -45,17 +45,20 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
     uint32_t row = (uint32_t)index.row();
     if (role == Qt::DisplayRole)
     {
-        if (index.column() == 0)
+        if (index.column() == kColSymbol)
         {
             uint32_t addr = m_disasm.lines[row].address;
             Symbol sym;
             if (m_pTargetModel->GetSymbolTable().Find(addr, sym))
-                return QString::fromStdString(sym.name);
-
+                return QString::fromStdString(sym.name) + ":";
+        }
+        else if (index.column() == kColAddress)
+        {
+            uint32_t addr = m_disasm.lines[row].address;
             QString addrStr = QString::asprintf("%08x", addr);
             return addrStr;
         }
-        else if (index.column() == 1)
+        else if (index.column() == kColBreakpoint)
         {
             uint32_t pc = m_pTargetModel->GetPC();
             QString bps;
@@ -70,7 +73,7 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
                 bps += ">";
             return bps;
         }
-        else if (index.column() == 2)
+        else if (index.column() == kColDisasm)
         {
             QString str;
             QTextStream ref(&str);
@@ -78,7 +81,6 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
                     m_disasm.lines[row].address, ref);
             return str;
         }
-        return QString("addr");
     }
     return QVariant(); // invalid item
 }
@@ -179,6 +181,31 @@ void DisasmTableModel::symbolTableChangedSlot()
     emit endResetModel();
 }
 
+void DisasmTableModel::ToggleBreakpoint(const QModelIndex& index)
+{
+    // set a breakpoint
+    uint32_t addr = m_disasm.lines[index.row()].address;
+    bool removed = false;
+
+    const Breakpoints& bp = m_pTargetModel->GetBreakpoints();
+    for (size_t i = 0; i < bp.m_breakpoints.size(); ++i)
+    {
+        if (bp.m_breakpoints[i].m_pcHack == addr)
+        {
+            QString cmd = QString::asprintf("bpdel %d", i + 1);
+            m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
+            removed = true;
+        }
+    }
+    if (!removed)
+    {
+        QString cmd = QString::asprintf("bp pc = %d", addr);
+        m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
+    }
+    m_pDispatcher->SendCommandPacket("bplist");
+}
+
+
 DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher) :
     QDockWidget(parent),
     m_pTargetModel(pTargetModel),
@@ -195,15 +222,16 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
     m_pTableView->horizontalHeader()->setMinimumSectionSize(0);
     m_pTableView->horizontalHeader()->hide();
-    m_pTableView->setColumnWidth(0, 10*8);      // Windows needs more
-    m_pTableView->setColumnWidth(1, 32);
-    m_pTableView->setColumnWidth(2, 300);
+    m_pTableView->setColumnWidth(DisasmTableModel::kColSymbol, 10*15);
+    m_pTableView->setColumnWidth(DisasmTableModel::kColAddress, 10*8);      // Windows needs more
+    m_pTableView->setColumnWidth(DisasmTableModel::kColBreakpoint, 32);
+    m_pTableView->setColumnWidth(DisasmTableModel::kColDisasm, 300);
 
     m_pTableView->verticalHeader()->hide();
     //m_pTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     m_pTableView->verticalHeader()->setDefaultSectionSize(16);
 
-    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::NoSelection);
+    //m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::NoSelection);
     m_pTableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
 
     layout->addWidget(m_pLineEdit);
@@ -229,30 +257,9 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
 void DisasmWidget::cellClickedSlot(const QModelIndex &index)
 {
-    if (index.column() != 1)
+    if (index.column() != DisasmTableModel::kColBreakpoint)
         return;
-
-    // set a breakpoint
-    uint32_t addr = m_pTableModel->m_disasm.lines[index.row()].address;
-    bool removed = false;
-
-    for (size_t i = 0; i < m_pTableModel->m_breakpoints.m_breakpoints.size(); ++i)
-    {
-        if (m_pTableModel->m_breakpoints.m_breakpoints[i].m_pcHack == addr)
-        {
-            QString cmd = QString::asprintf("bpdel %d", i + 1);
-            m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
-            removed = true;
-        }
-    }
-
-    if (!removed)
-    {
-        QString cmd = QString::asprintf("bp pc = %d", addr);
-        m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
-    }
-
-    m_pDispatcher->SendCommandPacket("bplist");
+    m_pTableModel->ToggleBreakpoint(index);
 }
 
 void DisasmWidget::keyDownPressed()

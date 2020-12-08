@@ -14,6 +14,16 @@ class DisasmTableModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
+    enum Column
+    {
+        kColSymbol,
+        kColAddress,
+        kColBreakpoint,
+        kColDisasm,
+
+        kColCount
+    };
+
     DisasmTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher);
 
     // "When subclassing QAbstractTableModel, you must implement rowCount(), columnCount(), and data()."
@@ -23,10 +33,6 @@ public:
     // "The model emits signals to indicate changes. For example, dataChanged() is emitted whenever items of data made available by the model are changed"
     // So I expect we can emit that if we see the target has changed
 
-    // NO CHECK
-    Disassembler::disassembly m_disasm;
-    Breakpoints m_breakpoints;
-
     uint32_t GetAddress() const { return m_addr; }
     void SetAddress(uint32_t addr);
     void SetAddress(std::string addr);
@@ -34,6 +40,7 @@ public:
     void MoveDown();
     void PageUp();
     void PageDown();
+    void ToggleBreakpoint(const QModelIndex &index);
 
 public slots:
     void startStopChangedSlot();
@@ -44,7 +51,10 @@ public slots:
 private:
     TargetModel* m_pTargetModel;
     Dispatcher*  m_pDispatcher;
+
     Memory       m_memory;
+    Disassembler::disassembly m_disasm;
+    Breakpoints m_breakpoints;
 
     // Address of the top line of text that was requested
     uint32_t m_addr;
