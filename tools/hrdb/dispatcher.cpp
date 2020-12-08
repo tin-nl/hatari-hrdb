@@ -169,12 +169,13 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 	// e.g. "break"
 	StringSplitter splitCmd(cmd.m_cmd);
 	std::string type = splitCmd.Split(' ');
+    char* endpr;
 
     StringSplitter splitResp(cmd.m_response);
     std::string cmd_status = splitResp.Split(' ');
     if (cmd_status != std::string("OK"))
     {
-        std::cout << "Repsonse dropped: " << cmd.m_response;
+        std::cout << "Repsonse dropped: " << cmd.m_response << std::endl;
         return;
     }
 
@@ -188,7 +189,6 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 			if (reg.size() == 0)
 				break;
 			std::string valueStr = splitResp.Split(' ');
-			char* endpr;
 			uint32_t value = std::strtol(valueStr.c_str(), &endpr, 16);
 
 			// Write this value into register structure
@@ -202,7 +202,6 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 	{
 		std::string addrStr = splitResp.Split(' ');
 		std::string sizeStr = splitResp.Split(' ');
-		char* endpr;
 		uint32_t addr = std::strtol(addrStr.c_str(), &endpr, 16);
 		uint32_t size = std::strtol(sizeStr.c_str(), &endpr, 16);
 		
@@ -226,7 +225,6 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     {
         // Breakpoints
         std::string countStr = splitResp.Split(' ');
-        char* endpr;
         uint32_t count = std::strtol(countStr.c_str(), &endpr, 16);
 
         Breakpoints bps;
@@ -240,6 +238,25 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         }
 
         m_pTargetModel->SetBreakpoints(bps);
+    }
+    else if (type == "symlist")
+    {
+        // Symbols
+        std::string countStr = splitResp.Split(' ');
+        uint32_t count = std::strtol(countStr.c_str(), &endpr, 16);
+
+        SymbolTable syms;
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            Symbol sym;
+            sym.name = splitResp.Split('`');
+            std::string addrStr = splitResp.Split(' ');
+            sym.type = splitResp.Split(' ');
+
+            sym.address = std::strtol(addrStr.c_str(), &endpr, 16);
+            syms.Add(sym);
+        }
+        m_pTargetModel->SetSymbolTable(syms);
     }
 }
 

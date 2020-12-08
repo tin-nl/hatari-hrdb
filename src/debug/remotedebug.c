@@ -35,6 +35,7 @@
 #include "evaluate.h"
 #include "stMemory.h"
 #include "breakcond.h"
+#include "symbols.h"
 
 #define REMOTE_DEBUG_PORT          (56001)
 #define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
@@ -74,6 +75,14 @@ static void send_hexchar(int fd, uint32_t val)
 {
 	char str[3];
 	sprintf(str, "%02X", val);
+	send(fd, str, strlen(str), 0);
+}
+
+// -----------------------------------------------------------------------------
+static void send_char(int fd, char val)
+{
+	char str[2];
+	sprintf(str, "%c", val);
 	send(fd, str, strlen(str), 0);
 }
 
@@ -248,8 +257,9 @@ static int RemoteDebug_bp(int nArgc, char *psArgs[], int fd)
 /* List all breakpoints */
 static int RemoteDebug_bplist(int nArgc, char *psArgs[], int fd)
 {
-	int count = BreakCond_CpuBreakPointCount();
-	int i;
+	int i, count;
+
+	count = BreakCond_CpuBreakPointCount();
 	send_str(fd, "OK ");
 	send_hex(fd, count);
 	send_str(fd, " ");
@@ -295,6 +305,31 @@ static int RemoteDebug_bpdel(int nArgc, char *psArgs[], int fd)
 }
 
 // -----------------------------------------------------------------------------
+/* "symlist" -- List all CPU symbols */
+static int RemoteDebug_symlist(int nArgc, char *psArgs[], int fd)
+{
+	int i, count;
+	count = Symbols_CpuSymbolCount();
+	send_str(fd, "OK ");
+	send_hex(fd, count);
+	send_str(fd, " ");
+	
+	for (i = 0; i < count; ++i)
+	{
+		rdb_symbol_t query;
+		if (!Symbols_GetCpuSymbol(i, &query))
+			break;
+		send_str(fd, query.name);
+		send_str(fd, "`");
+		send_hex(fd, query.address);
+		send_str(fd, " ");
+		send_char(fd, query.type);
+		send_str(fd, " ");
+	}
+	return 0;
+}
+
+// -----------------------------------------------------------------------------
 /* DebugUI command structure */
 typedef struct
 {
@@ -314,6 +349,7 @@ static const rdbcommand_t remoteDebugCommandList[] = {
 	{ RemoteDebug_bp, 		"bp"		, false		},
 	{ RemoteDebug_bplist,	"bplist"	, true		},
 	{ RemoteDebug_bpdel,	"bpdel"		, true		},
+	{ RemoteDebug_symlist,	"symlist"	, true		},
 
 	/* Terminator */
 	{ NULL, NULL }

@@ -15,6 +15,7 @@
 #include "remotecommand.h"
 #include "breakpoint.h"
 #include "memory.h"
+#include "symboltable.h"
 
 struct Registers
 {
@@ -61,6 +62,7 @@ public:
 	void SetRegisters(const Registers& regs);
     void SetMemory(MemorySlot slot, const Memory* pMem);
     void SetBreakpoints(const Breakpoints& bps);
+    void SetSymbolTable(const SymbolTable& syms);
 
 	// NOTE: all these return copies to avoid data contention
     int IsConnected() const { return m_bConnected; }
@@ -72,6 +74,7 @@ public:
         return m_pTestMemory[slot];
     }
     const Breakpoints& GetBreakpoints() const { return m_breakpoints; }
+    const SymbolTable& GetSymbolTable() const { return m_symbolTable; }
 
 public slots:
 
@@ -89,6 +92,7 @@ signals:
     void memoryChangedSignal(int memorySlot);
 
     void breakpointsChangedSignal();
+    void symbolTableChangedSignal();
 
 private:
 
@@ -99,6 +103,8 @@ private:
 	Registers	m_regs;			// Current register values
     const Memory*	m_pTestMemory[MemorySlot::kMemorySlotCount];
     Breakpoints m_breakpoints;  // Current breakpoint list
+
+    SymbolTable m_symbolTable;
 };
 
 #endif // TARGET_MODEL_H

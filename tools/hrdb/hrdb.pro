@@ -27,7 +27,8 @@ SOURCES += \
     memory.cpp \
     memoryviewwidget.cpp \
     breakpoint.cpp \
-    stringsplitter.cpp
+    stringsplitter.cpp \
+    symboltable.cpp
 
 HEADERS += \
     disassembler.h \
@@ -42,7 +43,8 @@ HEADERS += \
     remotecommand.h \
     memoryviewwidget.h \
     breakpoint.h \
-    stringsplitter.h
+    stringsplitter.h \
+    symboltable.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

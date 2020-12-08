@@ -39,6 +39,7 @@ public slots:
     void startStopChangedSlot();
     void memoryChangedSlot(int memorySlot);
     void breakpointsChangedSlot();
+    void symbolTableChangedSlot();
 
 private:
     TargetModel* m_pTargetModel;

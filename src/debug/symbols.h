@@ -48,6 +48,14 @@ extern void Symbols_LoadCurrentProgram(void);
 /* symbols/dspsymbols command parsing */
 extern char *Symbols_MatchCommand(const char *text, int state);
 extern int Symbols_Command(int nArgc, char *psArgs[]);
-extern void Symbols_ShowRemoteDebug(void);
+
+/* Remote debug code */
+typedef struct {
+	char *name;
+	Uint32 address;
+	char type;
+} rdb_symbol_t;
+extern int Symbols_CpuSymbolCount(void);
+extern bool Symbols_GetCpuSymbol(int index, rdb_symbol_t* result);
 
 #endif

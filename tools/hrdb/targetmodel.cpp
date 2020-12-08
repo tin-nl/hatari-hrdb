@@ -66,3 +66,9 @@ void TargetModel::SetBreakpoints(const Breakpoints& bps)
     m_breakpoints = bps;
     emit breakpointsChangedSignal();
 }
+
+void TargetModel::SetSymbolTable(const SymbolTable& syms)
+{
+    m_symbolTable = syms;
+    emit symbolTableChangedSignal();
+}

@@ -47,8 +47,13 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
     {
         if (index.column() == 0)
         {
-            QString addr = QString::asprintf("%08x", m_disasm.lines[row].address);
-            return addr;
+            uint32_t addr = m_disasm.lines[row].address;
+            Symbol sym;
+            if (m_pTargetModel->GetSymbolTable().Find(addr, sym))
+                return QString::fromStdString(sym.name);
+
+            QString addrStr = QString::asprintf("%08x", addr);
+            return addrStr;
         }
         else if (index.column() == 1)
         {
@@ -167,6 +172,13 @@ void DisasmTableModel::breakpointsChangedSlot()
     emit endResetModel();
 }
 
+void DisasmTableModel::symbolTableChangedSlot()
+{
+    // Don't copy here, just force a re-read
+    emit beginResetModel();
+    emit endResetModel();
+}
+
 DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher) :
     QDockWidget(parent),
     m_pTargetModel(pTargetModel),
@@ -213,7 +225,6 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     new QShortcut(QKeySequence(tr("Up",   "Prev instructions")), this, SLOT(keyUpPressed()));
     new QShortcut(QKeySequence(QKeySequence::MoveToNextPage),     this, SLOT(keyPageDownPressed()));
     new QShortcut(QKeySequence(QKeySequence::MoveToPreviousPage), this, SLOT(keyPageUpPressed()));
-
 }
 
 void DisasmWidget::cellClickedSlot(const QModelIndex &index)
