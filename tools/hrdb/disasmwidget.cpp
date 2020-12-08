@@ -168,7 +168,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
     m_pTableView->horizontalHeader()->setMinimumSectionSize(0);
     m_pTableView->horizontalHeader()->hide();
-    m_pTableView->setColumnWidth(0, 9*8);
+    m_pTableView->setColumnWidth(0, 10*8);      // Windows needs more
     m_pTableView->setColumnWidth(1, 32);
     m_pTableView->setColumnWidth(2, 300);
 
