@@ -256,6 +256,7 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
             sym.address = std::strtol(addrStr.c_str(), &endpr, 16);
             syms.Add(sym);
         }
+        syms.AddComplete(); // cache the address map lookup
         m_pTargetModel->SetSymbolTable(syms);
     }
 }

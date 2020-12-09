@@ -144,7 +144,7 @@ void MainWindow::startStopChangedSlot()
         m_pDispatcher->RequestMemory(MemorySlot::kMainPC, "pc", "100");
 
         // Only re-request symbols if we didn't find any the first time
-        if (m_pTargetModel->GetSymbolTable().Count() == 0)
+        if (m_pTargetModel->GetSymbolTable().m_userSymbolCount == 0)  // NO CHECK
             m_pDispatcher->SendCommandPacket("symlist");
 
         m_pStartStopButton->setText("Run");

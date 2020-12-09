@@ -20,6 +20,7 @@ public:
         kColAddress,
         kColBreakpoint,
         kColDisasm,
+        kColComments,
 
         kColCount
     };
@@ -49,6 +50,7 @@ public slots:
     void symbolTableChangedSlot();
 
 private:
+    void printEA(const operand &op, const Registers &regs, uint32_t address, QTextStream &ref) const;
     TargetModel* m_pTargetModel;
     Dispatcher*  m_pDispatcher;
 

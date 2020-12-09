@@ -1,11 +1,29 @@
 #include "symboltable.h"
 
+SymbolTable::SymbolTable() :
+    m_userSymbolCount(0)
+{
+    // Create some dummy entries
+    Add(Symbol("HW_REGS",   0xff0000));
+    Add(Symbol("VID_REGS" , 0xff8200));
+    Add(Symbol("MFP_REGS",  0xfffa00));
+    Add(Symbol("YM_REGS",   0xff8800));
+    Add(Symbol("IKBD_REGS", 0xfffc00));
+
+    AddComplete();
+    m_userSymbolCount = 0; // reset after Add()
+}
+
 void SymbolTable::Add(const Symbol &sym)
 {
     size_t index = m_symbols.size();
     m_addrLookup.insert(Pair(sym.address, index));
     m_symbols.push_back(sym);
+    ++m_userSymbolCount;
+}
 
+void SymbolTable::AddComplete()
+{
     // Recalc the keys table
     m_addrKeys.clear();
     Map::iterator it(m_addrLookup.begin());
@@ -58,4 +76,10 @@ bool SymbolTable::FindLowerOrEqual(uint32_t address, Symbol &result) const
 
     result = m_symbols[m_addrKeys[lower].second];
     return true;
+}
+
+Symbol::Symbol(std::string nameArg, uint32_t addressArg) :
+    name(nameArg), address(addressArg)
+{
+
 }

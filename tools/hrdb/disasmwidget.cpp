@@ -81,6 +81,17 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
                     m_disasm.lines[row].address, ref);
             return str;
         }
+        else if (index.column() == kColComments)
+        {
+            QString str;
+            QTextStream ref(&str);
+            Registers regs = m_pTargetModel->GetRegs();
+            printEA(m_disasm.lines[row].inst.op0, regs, m_disasm.lines[row].address, ref);
+            if (str.size() != 0)
+                ref << "  ";
+            printEA(m_disasm.lines[row].inst.op1, regs, m_disasm.lines[row].address, ref);
+            return str;
+        }
     }
     return QVariant(); // invalid item
 }
@@ -205,6 +216,26 @@ void DisasmTableModel::ToggleBreakpoint(const QModelIndex& index)
     m_pDispatcher->SendCommandPacket("bplist");
 }
 
+void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_t address, QTextStream& ref) const
+{
+    uint32_t ea;
+    if (Disassembler::calc_fixed_ea(op, regs, address, ea))
+    {
+        ref << "$" << QString::asprintf("%x", ea);
+        Symbol sym;
+        if (m_pTargetModel->GetSymbolTable().FindLowerOrEqual(ea, sym))
+        {
+            uint32_t offset = ea - sym.address;
+            if (offset)
+                ref << " " << QString::fromStdString(sym.name) << "+" << offset;
+            else
+                ref << " " << QString::fromStdString(sym.name);
+        }
+    };
+
+}
+
+
 
 DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher) :
     QDockWidget(parent),
@@ -222,16 +253,17 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableView->setModel(m_pTableModel);
 
     m_pTableView->horizontalHeader()->setMinimumSectionSize(12);
-    m_pTableView->horizontalHeader()->hide();
+    //m_pTableView->horizontalHeader()->hide();
     m_pTableView->setColumnWidth(DisasmTableModel::kColSymbol, 10*15);
     m_pTableView->setColumnWidth(DisasmTableModel::kColAddress, 10*8);      // Windows needs more
     m_pTableView->setColumnWidth(DisasmTableModel::kColBreakpoint, 32);
     m_pTableView->setColumnWidth(DisasmTableModel::kColDisasm, 300);
+    m_pTableView->setColumnWidth(DisasmTableModel::kColComments, 300);
 
     m_pTableView->verticalHeader()->hide();
     //m_pTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
-    m_pTableView->verticalHeader()->setDefaultSectionSize(15);// affects Linux but not Windows
+    m_pTableView->verticalHeader()->setDefaultSectionSize(20);// affects Linux but not Windows
     // These have no effect
     //m_pTableView->verticalHeader()->contentsMargins().setTop(0);
     //m_pTableView->verticalHeader()->contentsMargins().setBottom(0);

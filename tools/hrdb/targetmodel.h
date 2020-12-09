@@ -16,39 +16,7 @@
 #include "breakpoint.h"
 #include "memory.h"
 #include "symboltable.h"
-
-struct Registers
-{
-	Registers();
-	enum
-	{
-		D0 = 0,
-		D1,
-		D2,
-		D3,
-		D4,
-		D5,
-		D6,
-		D7,
-		A0,
-		A1,
-		A2,
-		A3,
-		A4,
-		A5,
-		A6,
-		A7,
-		PC,
-		SR,
-		USP,
-		ISP,
-		EX,			// Exception number
-		REG_COUNT
-	};
-	uint32_t	m_value[REG_COUNT];
-	// Null-terminated 1:1 array of register names
-	static const char* s_names[];
-};
+#include "registers.h"
 
 class TargetModel : public QObject
 {

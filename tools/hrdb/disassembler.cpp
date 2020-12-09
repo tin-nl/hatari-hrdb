@@ -3,6 +3,8 @@
 #include "hopper/buffer.h"
 #include "hopper/instruction.h"
 #include "hopper/decode.h"
+#include "symboltable.h"
+#include "registers.h"
 
 const char* instruction_names[Opcode::COUNT] =
 {
@@ -268,7 +270,7 @@ void print(const operand& operand, uint32_t inst_address, QTextStream& ref)
             ref << "d" << operand.d_register.reg;
             return;
         case OpType::A_DIRECT:
-            ref << "a" << operand.d_register.reg;
+            ref << "a" << operand.a_register.reg;
             return;
         case OpType::INDIRECT:
             ref << "(a" << operand.indirect.reg << ")";
@@ -357,6 +359,61 @@ void Disassembler::print(const instruction& inst, /*const symbols& symbols, */ u
     {
         ref << ",";
         ::print(inst.op1, /*symbols,*/ inst_address, ref);
+    }
+}
+
+bool Disassembler::calc_fixed_ea(const operand &operand, const Registers& regs, uint32_t inst_address, uint32_t& ea)
+{
+    switch (operand.type)
+    {
+        case OpType::D_DIRECT:
+            return false;
+        case OpType::A_DIRECT:
+            return false;
+        case OpType::INDIRECT:
+            ea = regs.GetAReg(operand.indirect.reg);
+            return true;
+        case OpType::INDIRECT_POSTINC:
+            ea = regs.GetAReg(operand.indirect_postinc.reg);
+            return true;
+        case OpType::INDIRECT_PREDEC:
+            ea = regs.GetAReg(operand.indirect_predec.reg);
+            return true;
+        case OpType::INDIRECT_DISP:
+            ea = regs.GetAReg(operand.indirect_disp.reg) + operand.indirect_disp.disp;
+            return true;
+        case OpType::INDIRECT_INDEX:
+            return false; // TODO
+            // ea = regs.GetAReg(operand.indirect_index.reg) + operand.indirect_index.reg;
+        case OpType::ABSOLUTE_WORD:
+            ea = operand.absolute_word.wordaddr;
+            if (ea & 0x8000)
+                ea |= 0xff0000;     // extend to full EA
+            return true;
+        case OpType::ABSOLUTE_LONG:
+            // Shorten $ff for symbol lookup purposes
+            ea = operand.absolute_long.longaddr & 0xffffff;
+            return true;
+        case OpType::PC_DISP:
+            return false;
+        case OpType::PC_DISP_INDEX:
+            return false;
+        case OpType::MOVEM_REG:
+            return false;
+        case OpType::RELATIVE_BRANCH:
+            calc_relative_address(operand, inst_address, ea);
+            return true;
+        case OpType::IMMEDIATE:
+            return false;
+        case OpType::SR:
+            return false;
+        case OpType::USP:
+            ea = regs.m_value[Registers::USP];
+            return true;
+        case OpType::CCR:
+            return false;
+        default:
+            return false;
     }
 }
 

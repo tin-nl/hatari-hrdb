@@ -44,7 +44,8 @@ HEADERS += \
     memoryviewwidget.h \
     breakpoint.h \
     stringsplitter.h \
-    symboltable.h
+    symboltable.h \
+    registers.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

@@ -7,6 +7,9 @@
 #include "hopper/instruction.h"
 #include "hopper/buffer.h"
 
+class SymbolTable;
+class Registers;
+
 class Disassembler
 {
 public:
@@ -33,6 +36,7 @@ public:
 
     static int decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t address, uint32_t maxLines);
     static void print(const instruction& inst, /*const symbols& symbols, */ uint32_t inst_address, QTextStream& ref);
+    static bool calc_fixed_ea(const operand &operand, const Registers& regs, uint32_t inst_address, uint32_t& ea);
 };
 
 class DisAnalyse
