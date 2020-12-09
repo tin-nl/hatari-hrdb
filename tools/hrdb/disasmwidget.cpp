@@ -230,10 +230,13 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
     m_pTableView->verticalHeader()->hide();
     //m_pTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
-    m_pTableView->verticalHeader()->setDefaultSectionSize(16);
 
-    //m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::NoSelection);
+    m_pTableView->verticalHeader()->setDefaultSectionSize(9);       // can shrink, but no further?
+    // These have no effect
+    //m_pTableView->verticalHeader()->contentsMargins().setTop(0);
+    //m_pTableView->verticalHeader()->contentsMargins().setBottom(0);
     m_pTableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
+    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
 
     layout->addWidget(m_pLineEdit);
     layout->addWidget(m_pTableView);

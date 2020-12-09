@@ -49,11 +49,11 @@ MainWindow::MainWindow(QWidget *parent)
     // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
     QVBoxLayout *vlayout = new QVBoxLayout;
     QHBoxLayout *hlayout = new QHBoxLayout;
-    auto pTopGroupBox = new QGroupBox(this);
+    auto pTopGroupBox = new QWidget(this);
     auto pMainGroupBox = new QGroupBox(this);
+
     pTopGroupBox->setFixedSize(400, 50);
     pTopGroupBox->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred));
-
     hlayout->addWidget(m_pRunningSquare);
     hlayout->addWidget(m_pStartStopButton);
     hlayout->addWidget(m_pSingleStepButton);
@@ -62,8 +62,8 @@ MainWindow::MainWindow(QWidget *parent)
     vlayout->addWidget(pTopGroupBox);
     vlayout->addWidget(m_pRegistersTextEdit);
     vlayout->setAlignment(Qt::Alignment(Qt::AlignTop));
+    pMainGroupBox->setFlat(true);
     pMainGroupBox->setLayout(vlayout);
-    pTopGroupBox->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
 
     setCentralWidget(pMainGroupBox);
 
