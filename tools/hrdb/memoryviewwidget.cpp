@@ -15,6 +15,8 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher)
 {
+    this->setWindowTitle("Memory");
+
     QVBoxLayout *layout = new QVBoxLayout;
     auto pGroupBox = new QGroupBox(this);
 

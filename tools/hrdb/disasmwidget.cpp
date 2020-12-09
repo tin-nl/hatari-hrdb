@@ -211,6 +211,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher)
 {
+    this->setWindowTitle("Disassembly");
     QVBoxLayout *layout = new QVBoxLayout;
     auto pGroupBox = new QGroupBox(this);
 
