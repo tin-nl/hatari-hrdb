@@ -36,6 +36,7 @@ public slots:
 	void startStopChangedSlot();
 	void registersChangedSlot();
     void memoryChangedSlot(int slot);
+    void symbolTableChangedSlot();
 
     void startStopClicked();
     void singleStepClicked();
@@ -67,6 +68,7 @@ private:
 
 	// Populaters
 	void PopulateRegisters();
+    QString FindSymbol(uint32_t addr);
     void PopulateRunningSquare();
 
     QPushButton*	m_pStartStopButton;

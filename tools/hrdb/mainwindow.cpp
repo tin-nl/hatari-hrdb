@@ -40,7 +40,7 @@ MainWindow::MainWindow(QWidget *parent)
     monoFont.setStyleHint(QFont::TypeWriter);
     monoFont.setPointSize(9);
     m_pRegistersTextEdit->setCurrentFont(monoFont);
-    m_pRegistersTextEdit->setFixedSize(400, 200);
+    m_pRegistersTextEdit->setFixedSize(550, 200);
     m_pRegistersTextEdit->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
 
     m_pDisasmWindow = new DisasmWidget(this, m_pTargetModel, m_pDispatcher);
@@ -75,6 +75,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &MainWindow::registersChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,   this, &MainWindow::connectChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,    this, &MainWindow::memoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal,this, &MainWindow::symbolTableChangedSlot);
 
 	// Wire up buttons to actions
     connect(m_pStartStopButton, &QAbstractButton::clicked, this, &MainWindow::startStopClicked);
@@ -176,6 +177,11 @@ void MainWindow::memoryChangedSlot(int slot)
     PopulateRegisters();
 }
 
+void MainWindow::symbolTableChangedSlot()
+{
+    PopulateRegisters();
+}
+
 void MainWindow::startStopClicked()
 {
 	if (m_pTargetModel->IsRunning())
@@ -269,6 +275,7 @@ void MainWindow::PopulateRegisters()
     ref << DispReg32(Registers::PC, m_prevRegs, regs) << "   ";
     if (m_disasm.lines.size() > 0)
         Disassembler::print(m_disasm.lines[0].inst, m_disasm.lines[0].address, ref);
+    ref << "     ;" << FindSymbol(regs.m_value[Registers::PC]);
     ref << "<br>";
 
     ref << DispReg16(Registers::SR, m_prevRegs, regs) << "   ";
@@ -287,15 +294,14 @@ void MainWindow::PopulateRegisters()
 	ref << DispSR(m_prevRegs, regs, 1, "V");
 	ref << DispSR(m_prevRegs, regs, 0, "C");
     ref << "<br><br>";
-    ref << DispReg32(Registers::D0, m_prevRegs, regs) << " " << DispReg32(Registers::A0, m_prevRegs, regs) << "<br>";
-    ref << DispReg32(Registers::D1, m_prevRegs, regs) << " " << DispReg32(Registers::A1, m_prevRegs, regs) << "<br>";
-    ref << DispReg32(Registers::D2, m_prevRegs, regs) << " " << DispReg32(Registers::A2, m_prevRegs, regs) << "<br>";
-    ref << DispReg32(Registers::D3, m_prevRegs, regs) << " " << DispReg32(Registers::A3, m_prevRegs, regs) << "<br>";
-    ref << DispReg32(Registers::D4, m_prevRegs, regs) << " " << DispReg32(Registers::A4, m_prevRegs, regs) << "<br>";
-    ref << DispReg32(Registers::D5, m_prevRegs, regs) << " " << DispReg32(Registers::A5, m_prevRegs, regs) << "<br>";
-    ref << DispReg32(Registers::D6, m_prevRegs, regs) << " " << DispReg32(Registers::A6, m_prevRegs, regs) << "<br>";
-    ref << DispReg32(Registers::D7, m_prevRegs, regs) << " " << DispReg32(Registers::A7, m_prevRegs, regs) << "<br>";
-
+    ref << DispReg32(Registers::D0, m_prevRegs, regs) << " " << DispReg32(Registers::A0, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A0]) << "<br>";
+    ref << DispReg32(Registers::D1, m_prevRegs, regs) << " " << DispReg32(Registers::A1, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A1]) << "<br>";
+    ref << DispReg32(Registers::D2, m_prevRegs, regs) << " " << DispReg32(Registers::A2, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A2]) << "<br>";
+    ref << DispReg32(Registers::D3, m_prevRegs, regs) << " " << DispReg32(Registers::A3, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A3]) << "<br>";
+    ref << DispReg32(Registers::D4, m_prevRegs, regs) << " " << DispReg32(Registers::A4, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A4]) << "<br>";
+    ref << DispReg32(Registers::D5, m_prevRegs, regs) << " " << DispReg32(Registers::A5, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A5]) << "<br>";
+    ref << DispReg32(Registers::D6, m_prevRegs, regs) << " " << DispReg32(Registers::A6, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A6]) << "<br>";
+    ref << DispReg32(Registers::D7, m_prevRegs, regs) << " " << DispReg32(Registers::A7, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A7]) << "<br>";
 
     ref << "</font>";
     /*
@@ -307,6 +313,18 @@ void MainWindow::PopulateRegisters()
 	}
     */
     m_pRegistersTextEdit->setHtml(regsText);
+}
+
+QString MainWindow::FindSymbol(uint32_t addr)
+{
+    Symbol sym;
+    if (!m_pTargetModel->GetSymbolTable().FindLowerOrEqual(addr, sym))
+        return QString();
+
+    uint32_t offset = addr - sym.address;
+    if (offset)
+        return QString::asprintf("%s+%d", sym.name.c_str(), offset);
+    return QString::fromStdString(sym.name);
 }
 
 void MainWindow::PopulateRunningSquare()
