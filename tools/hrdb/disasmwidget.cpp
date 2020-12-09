@@ -221,7 +221,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableModel = new DisasmTableModel(this, pTargetModel, pDispatcher);
     m_pTableView->setModel(m_pTableModel);
 
-    m_pTableView->horizontalHeader()->setMinimumSectionSize(0);
+    m_pTableView->horizontalHeader()->setMinimumSectionSize(12);
     m_pTableView->horizontalHeader()->hide();
     m_pTableView->setColumnWidth(DisasmTableModel::kColSymbol, 10*15);
     m_pTableView->setColumnWidth(DisasmTableModel::kColAddress, 10*8);      // Windows needs more
@@ -231,7 +231,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableView->verticalHeader()->hide();
     //m_pTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
-    m_pTableView->verticalHeader()->setDefaultSectionSize(9);       // can shrink, but no further?
+    m_pTableView->verticalHeader()->setDefaultSectionSize(15);// affects Linux but not Windows
     // These have no effect
     //m_pTableView->verticalHeader()->contentsMargins().setTop(0);
     //m_pTableView->verticalHeader()->contentsMargins().setBottom(0);
