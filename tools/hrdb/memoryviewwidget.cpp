@@ -105,7 +105,7 @@ QVariant MemoryViewTableModel::data(const QModelIndex &index, int role) const
     return QVariant(); // invalid item
 }
 
-void MemoryViewTableModel::memoryChangedSlot(int memorySlot)
+void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
 {
     if (memorySlot != MemorySlot::kMemoryView)
         return;

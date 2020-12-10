@@ -25,12 +25,15 @@ public:
 	TargetModel();
 	virtual ~TargetModel();
 
+    // These are called by the Dispatcher when notifications/events arrive
     void SetConnected(int running);
     void SetStatus(int running, uint32_t pc);
-	void SetRegisters(const Registers& regs);
-    void SetMemory(MemorySlot slot, const Memory* pMem);
-    void SetBreakpoints(const Breakpoints& bps);
-    void SetSymbolTable(const SymbolTable& syms);
+
+    // These are called by the Dispatcher when responses arrive
+    void SetRegisters(const Registers& regs, uint64_t commandId);
+    void SetMemory(MemorySlot slot, const Memory* pMem, uint64_t commandId);
+    void SetBreakpoints(const Breakpoints& bps, uint64_t commandId);
+    void SetSymbolTable(const SymbolTable& syms, uint64_t commandId);
 
 	// NOTE: all these return copies to avoid data contention
     int IsConnected() const { return m_bConnected; }
@@ -52,15 +55,16 @@ signals:
 
     // When start/stop status is changed
     void startStopChangedSignal();
+
 	// When new CPU registers are changed
-    void registersChangedSignal();
+    void registersChangedSignal(uint64_t commandId);
 
 	// When a block of fetched memory is changed
 	// TODO: don't have every view listening to the same slot?
-    void memoryChangedSignal(int memorySlot);
+    void memoryChangedSignal(int memorySlot, uint64_t commandId);
 
-    void breakpointsChangedSignal();
-    void symbolTableChangedSignal();
+    void breakpointsChangedSignal(uint64_t commandId);
+    void symbolTableChangedSignal(uint64_t commandId);
 
 private:
 

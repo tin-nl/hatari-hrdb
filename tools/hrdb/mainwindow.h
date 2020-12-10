@@ -34,9 +34,9 @@ public:
 public slots:
     void connectChangedSlot();
 	void startStopChangedSlot();
-	void registersChangedSlot();
-    void memoryChangedSlot(int slot);
-    void symbolTableChangedSlot();
+    void registersChangedSlot(uint64_t commandId);
+    void memoryChangedSlot(int slot, uint64_t commandId);
+    void symbolTableChangedSlot(uint64_t commandId);
 
     void startStopClicked();
     void singleStepClicked();

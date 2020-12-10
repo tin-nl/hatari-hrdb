@@ -23,7 +23,7 @@ public:
     // So I expect we can emit that if we see the target has changed
 
 public slots:
-    void memoryChangedSlot(int memorySlot);
+    void memoryChangedSlot(int memorySlot, uint64_t commandId);
 
 private:
     TargetModel* m_pTargetModel;

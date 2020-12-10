@@ -147,7 +147,7 @@ void DisasmTableModel::startStopChangedSlot()
     }
 }
 
-void DisasmTableModel::memoryChangedSlot(int memorySlot)
+void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
 {
     if (memorySlot != MemorySlot::kDisasm)
         return;
@@ -177,7 +177,7 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot)
     emit endResetModel();
 }
 
-void DisasmTableModel::breakpointsChangedSlot()
+void DisasmTableModel::breakpointsChangedSlot(uint64_t commandId)
 {
     // Cache data
     m_breakpoints = m_pTargetModel->GetBreakpoints();
@@ -185,7 +185,7 @@ void DisasmTableModel::breakpointsChangedSlot()
     emit endResetModel();
 }
 
-void DisasmTableModel::symbolTableChangedSlot()
+void DisasmTableModel::symbolTableChangedSlot(uint64_t commandId)
 {
     // Don't copy here, just force a re-read
     emit beginResetModel();

@@ -149,13 +149,13 @@ void MainWindow::startStopChangedSlot()
     PopulateRegisters();
 }
 
-void MainWindow::registersChangedSlot()
+void MainWindow::registersChangedSlot(uint64_t commandId)
 {
 	// Update text here
     PopulateRegisters();
 }
 
-void MainWindow::memoryChangedSlot(int slot)
+void MainWindow::memoryChangedSlot(int slot, uint64_t commandId)
 {
     if (slot != MemorySlot::kMainPC)
         return;
@@ -172,7 +172,7 @@ void MainWindow::memoryChangedSlot(int slot)
     PopulateRegisters();
 }
 
-void MainWindow::symbolTableChangedSlot()
+void MainWindow::symbolTableChangedSlot(uint64_t commandId)
 {
     PopulateRegisters();
 }

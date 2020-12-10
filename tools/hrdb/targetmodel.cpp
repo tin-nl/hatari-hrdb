@@ -46,29 +46,29 @@ void TargetModel::SetStatus(int running, uint32_t pc)
     emit startStopChangedSignal();
 }
 
-void TargetModel::SetRegisters(const Registers& regs)
+void TargetModel::SetRegisters(const Registers& regs, uint64_t commandId)
 {
 	m_regs = regs;
-    emit registersChangedSignal();
+    emit registersChangedSignal(commandId);
 }
 
-void TargetModel::SetMemory(MemorySlot slot, const Memory* pMem)
+void TargetModel::SetMemory(MemorySlot slot, const Memory* pMem, uint64_t commandId)
 {
     if (m_pTestMemory[slot])
         delete m_pTestMemory[slot];
 
     m_pTestMemory[slot] = pMem;
-    emit memoryChangedSignal(slot);
+    emit memoryChangedSignal(slot, commandId);
 }
 
-void TargetModel::SetBreakpoints(const Breakpoints& bps)
+void TargetModel::SetBreakpoints(const Breakpoints& bps, uint64_t commandId)
 {
     m_breakpoints = bps;
-    emit breakpointsChangedSignal();
+    emit breakpointsChangedSignal(commandId);
 }
 
-void TargetModel::SetSymbolTable(const SymbolTable& syms)
+void TargetModel::SetSymbolTable(const SymbolTable& syms, uint64_t commandId)
 {
     m_symbolTable = syms;
-    emit symbolTableChangedSignal();
+    emit symbolTableChangedSignal(commandId);
 }

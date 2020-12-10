@@ -45,9 +45,9 @@ public:
 
 public slots:
     void startStopChangedSlot();
-    void memoryChangedSlot(int memorySlot);
-    void breakpointsChangedSlot();
-    void symbolTableChangedSlot();
+    void memoryChangedSlot(int memorySlot, uint64_t commandId);
+    void breakpointsChangedSlot(uint64_t commandId);
+    void symbolTableChangedSlot(uint64_t commandId);
 
 private:
     void printEA(const operand &op, const Registers &regs, uint32_t address, QTextStream &ref) const;

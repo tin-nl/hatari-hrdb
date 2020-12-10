@@ -190,7 +190,7 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 			if (reg_id != Registers::REG_COUNT)
 				regs.m_value[reg_id] = value;
 		}
-		m_pTargetModel->SetRegisters(regs);
+        m_pTargetModel->SetRegisters(regs, cmd.m_uid);
 	}
 	else if (type == "mem")
 	{
@@ -221,7 +221,7 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 			pMem->Set(off, byte);
 		}
 
-        m_pTargetModel->SetMemory(cmd.m_memorySlot, pMem);
+        m_pTargetModel->SetMemory(cmd.m_memorySlot, pMem, cmd.m_uid);
 	}
     else if (type == "bplist")
     {
@@ -241,7 +241,7 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
             bps.m_breakpoints.push_back(bp);
         }
 
-        m_pTargetModel->SetBreakpoints(bps);
+        m_pTargetModel->SetBreakpoints(bps, cmd.m_uid);
     }
     else if (type == "symlist")
     {
@@ -263,7 +263,7 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
             syms.Add(sym);
         }
         syms.AddComplete(); // cache the address map lookup
-        m_pTargetModel->SetSymbolTable(syms);
+        m_pTargetModel->SetSymbolTable(syms, cmd.m_uid);
     }
 }
 
