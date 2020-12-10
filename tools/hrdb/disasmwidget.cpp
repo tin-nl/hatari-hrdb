@@ -278,7 +278,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
     QFont monoFont("Monospace");
     monoFont.setStyleHint(QFont::TypeWriter);
-    monoFont.setPointSize(9);
+    //monoFont.setPointSize(9);
     m_pTableView->setFont(monoFont);
     m_pTableView->resizeRowsToContents();
 

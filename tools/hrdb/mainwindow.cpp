@@ -11,11 +11,6 @@
 #include "disasmwidget.h"
 #include "memoryviewwidget.h"
 
-//#include "disassembler.h"
-//#include "hopper/buffer.h"
-//#include "hopper/instruction.h"
-//#include "hopper/decode.h"
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , tcpSocket(new QTcpSocket(this))
@@ -36,12 +31,12 @@ MainWindow::MainWindow(QWidget *parent)
     m_pRegistersTextEdit = new QTextEdit("", this);
 	m_pRegistersTextEdit->setReadOnly(true);
 	m_pRegistersTextEdit->setAcceptRichText(false);
+
     QFont monoFont("Monospace");
     monoFont.setStyleHint(QFont::TypeWriter);
-    monoFont.setPointSize(9);
     m_pRegistersTextEdit->setCurrentFont(monoFont);
-    m_pRegistersTextEdit->setFixedSize(550, 200);
-    m_pRegistersTextEdit->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
+    m_pRegistersTextEdit->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
+    m_pRegistersTextEdit->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
 
     m_pDisasmWindow = new DisasmWidget(this, m_pTargetModel, m_pDispatcher);
     m_pMemoryViewWidget = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher);
@@ -52,8 +47,8 @@ MainWindow::MainWindow(QWidget *parent)
     auto pTopGroupBox = new QWidget(this);
     auto pMainGroupBox = new QGroupBox(this);
 
-    pTopGroupBox->setFixedSize(400, 50);
-    pTopGroupBox->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred));
+    //pTopGroupBox->setFixedSize(400, 50);
+    //pTopGroupBox->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred));
     hlayout->addWidget(m_pRunningSquare);
     hlayout->addWidget(m_pStartStopButton);
     hlayout->addWidget(m_pSingleStepButton);
