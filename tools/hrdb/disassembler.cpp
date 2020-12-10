@@ -388,11 +388,10 @@ bool Disassembler::calc_fixed_ea(const operand &operand, const Registers& regs, 
         case OpType::ABSOLUTE_WORD:
             ea = operand.absolute_word.wordaddr;
             if (ea & 0x8000)
-                ea |= 0xff0000;     // extend to full EA
+                ea |= 0xffff0000;     // extend to full EA
             return true;
         case OpType::ABSOLUTE_LONG:
-            // Shorten $ff for symbol lookup purposes
-            ea = operand.absolute_long.longaddr & 0xffffff;
+            ea = operand.absolute_long.longaddr;
             return true;
         case OpType::PC_DISP:
             return false;

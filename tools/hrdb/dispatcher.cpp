@@ -6,6 +6,7 @@
 
 #include "targetmodel.h"
 #include "stringsplitter.h"
+#include "stringparsers.h"
 
 //#define DISPATCHER_DEBUG
 
@@ -22,16 +23,6 @@ int RegNameToEnum(const char* name)
 		++i;
 	}
 	return Registers::REG_COUNT;
-}
-
-//-----------------------------------------------------------------------------
-uint8_t charToHexNybble(char c)
-{
-	if (c >= '0' && c <= '9')
-		return (uint8_t)(c - '0');
-	if (c >= 'A' && c <= 'F')
-        return (uint8_t)(10 + c - 'A');
-	return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -169,8 +160,6 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 	// e.g. "break"
 	StringSplitter splitCmd(cmd.m_cmd);
 	std::string type = splitCmd.Split(' ');
-    char* endpr;
-
     StringSplitter splitResp(cmd.m_response);
     std::string cmd_status = splitResp.Split(' ');
     if (cmd_status != std::string("OK"))
@@ -189,7 +178,9 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 			if (reg.size() == 0)
 				break;
 			std::string valueStr = splitResp.Split(' ');
-			uint32_t value = std::strtol(valueStr.c_str(), &endpr, 16);
+            uint32_t value;
+            if (!StringParsers::ParseHexString(valueStr.c_str(), value))
+                return;
 
 			// Write this value into register structure
 			int reg_id = RegNameToEnum(reg.c_str());
@@ -202,9 +193,13 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 	{
 		std::string addrStr = splitResp.Split(' ');
 		std::string sizeStr = splitResp.Split(' ');
-		uint32_t addr = std::strtol(addrStr.c_str(), &endpr, 16);
-		uint32_t size = std::strtol(sizeStr.c_str(), &endpr, 16);
-		
+        uint32_t addr;
+        if (!StringParsers::ParseHexString(addrStr.c_str(), addr))
+            return;
+        uint32_t size;
+        if (!StringParsers::ParseHexString(sizeStr.c_str(), size))
+            return;
+
 		// Create a new memory block to pass to the data model
 		Memory* pMem = new Memory(addr, size);
 
@@ -212,8 +207,12 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
 		int readPos = splitResp.GetPos();
 		for (uint32_t off = 0; off < size; ++off)
 		{
-			uint8_t nybbleHigh = charToHexNybble(cmd.m_response[readPos++]);
-			uint8_t nybbleLow = charToHexNybble(cmd.m_response[readPos++]);
+            uint8_t nybbleHigh;
+            uint8_t nybbleLow;
+            if (!StringParsers::ParseHexChar(cmd.m_response[readPos++], nybbleHigh))
+                break;
+            if (!StringParsers::ParseHexChar(cmd.m_response[readPos++], nybbleLow))
+                break;
 
 			uint8_t byte = (nybbleHigh << 4) | nybbleLow;
 			pMem->Set(off, byte);
@@ -225,7 +224,9 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     {
         // Breakpoints
         std::string countStr = splitResp.Split(' ');
-        uint32_t count = std::strtol(countStr.c_str(), &endpr, 16);
+        uint32_t count;
+        if (!StringParsers::ParseHexString(countStr.c_str(), count))
+            return;
 
         Breakpoints bps;
         for (uint32_t i = 0; i < count; ++i)
@@ -243,7 +244,9 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     {
         // Symbols
         std::string countStr = splitResp.Split(' ');
-        uint32_t count = std::strtol(countStr.c_str(), &endpr, 16);
+        uint32_t count;
+        if (!StringParsers::ParseHexString(countStr.c_str(), count))
+            return;
 
         SymbolTable syms;
         for (uint32_t i = 0; i < count; ++i)
@@ -251,9 +254,9 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
             Symbol sym;
             sym.name = splitResp.Split('`');
             std::string addrStr = splitResp.Split(' ');
+            if (!StringParsers::ParseHexString(addrStr.c_str(), sym.address))
+                return;
             sym.type = splitResp.Split(' ');
-
-            sym.address = std::strtol(addrStr.c_str(), &endpr, 16);
             syms.Add(sym);
         }
         syms.AddComplete(); // cache the address map lookup
@@ -273,10 +276,12 @@ void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
 	{
 		std::string runningStr = s.Split(' ');
 		std::string pcStr = s.Split(' ');
-
-		char* endpr;
-		int running = std::strtol(runningStr.c_str(), &endpr, 16);
-		int pc = std::strtol(pcStr.c_str(), &endpr, 16);
+        uint32_t running;
+        uint32_t pc;
+        if (!StringParsers::ParseHexString(runningStr.c_str(), running))
+            return;
+        if (!StringParsers::ParseHexString(pcStr.c_str(), pc))
+            return;
 		m_pTargetModel->SetStatus(running, pc);
 	}
 }

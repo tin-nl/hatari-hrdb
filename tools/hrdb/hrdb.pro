@@ -22,6 +22,7 @@ SOURCES += \
     hopper/decode.cpp \
     main.cpp \
     mainwindow.cpp \
+	stringparsers.cpp \
 	targetmodel.cpp \
     disasmwidget.cpp \
     memory.cpp \
@@ -37,6 +38,7 @@ HEADERS += \
     hopper/decode.h \
     hopper/instruction.h \
     mainwindow.h \
+	stringparsers.h \
 	targetmodel.h \
     disasmwidget.h \
     memory.h \

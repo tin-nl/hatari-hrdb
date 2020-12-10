@@ -221,6 +221,7 @@ void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_
     uint32_t ea;
     if (Disassembler::calc_fixed_ea(op, regs, address, ea))
     {
+        ea &= 0xffffff; // mask for ST hardware range
         ref << "$" << QString::asprintf("%x", ea);
         Symbol sym;
         if (m_pTargetModel->GetSymbolTable().FindLowerOrEqual(ea, sym))
