@@ -1,6 +1,7 @@
 #include "breakpoint.h"
 
 #include <string.h>
+#include <errno.h>
 
 /* define which character indicates which type of number on expression  */
 #define PREFIX_BIN '%'                            /* binary decimal     */
