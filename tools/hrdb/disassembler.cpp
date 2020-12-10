@@ -394,7 +394,8 @@ bool Disassembler::calc_fixed_ea(const operand &operand, const Registers& regs, 
             ea = operand.absolute_long.longaddr;
             return true;
         case OpType::PC_DISP:
-            return false;
+            calc_relative_address(operand, inst_address, ea);
+            return true;
         case OpType::PC_DISP_INDEX:
             return false;
         case OpType::MOVEM_REG:

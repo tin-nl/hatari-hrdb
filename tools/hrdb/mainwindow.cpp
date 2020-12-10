@@ -318,7 +318,7 @@ void MainWindow::PopulateRegisters()
 QString MainWindow::FindSymbol(uint32_t addr)
 {
     Symbol sym;
-    if (!m_pTargetModel->GetSymbolTable().FindLowerOrEqual(addr, sym))
+    if (!m_pTargetModel->GetSymbolTable().FindLowerOrEqual(addr & 0xffffff, sym))
         return QString();
 
     uint32_t offset = addr - sym.address;
