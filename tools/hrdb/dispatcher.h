@@ -18,13 +18,13 @@ public:
     virtual ~Dispatcher();
 
     // TODO replace with strings
-    void SendCommandPacket(const char* command);
+    uint64_t SendCommandPacket(const char* command);
 
     // Request a specific memory block.
     // Allows strings so expressions can evaluate
-    void RequestMemory(MemorySlot slot, std::string address, std::string size);
+    uint64_t RequestMemory(MemorySlot slot, std::string address, std::string size);
 
-    void SetBreakpoint(std::string expression);
+    uint64_t SetBreakpoint(std::string expression);
 
 private slots:
 
@@ -35,7 +35,7 @@ private slots:
    void readyRead();
 
 private:
-    void SendCommandShared(MemorySlot slot, std::string command);
+    uint64_t SendCommandShared(MemorySlot slot, std::string command);
 
 	void ReceiveResponsePacket(const RemoteCommand& command);
 	void ReceiveNotification(const RemoteNotification& notification);
@@ -46,6 +46,7 @@ private:
 	TargetModel*					m_pTargetModel;
 
 	std::string 					m_active_resp;
+    uint64_t                        m_responseUid;
 };
 
 #endif // DISPATCHER_H

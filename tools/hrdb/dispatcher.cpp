@@ -28,7 +28,8 @@ int RegNameToEnum(const char* name)
 //-----------------------------------------------------------------------------
 Dispatcher::Dispatcher(QTcpSocket* tcpSocket, TargetModel* pTargetModel) :
 	m_pTcpSocket(tcpSocket),
-	m_pTargetModel(pTargetModel)
+    m_pTargetModel(pTargetModel),
+    m_responseUid(100)
 {
 	connect(m_pTcpSocket, &QAbstractSocket::connected, this, &Dispatcher::connected);
     connect(m_pTcpSocket, &QAbstractSocket::disconnected, this, &Dispatcher::disconnected);
@@ -40,22 +41,22 @@ Dispatcher::~Dispatcher()
     // NO CHECK delete all pending commands
 }
 
-void Dispatcher::RequestMemory(MemorySlot slot, std::string address, std::string size)
+uint64_t Dispatcher::RequestMemory(MemorySlot slot, std::string address, std::string size)
 {
     std::string command = std::string("mem " + address + " " + size);
-    SendCommandShared(slot, command);
+    return SendCommandShared(slot, command);
 }
 
-void Dispatcher::SetBreakpoint(std::string expression)
+uint64_t Dispatcher::SetBreakpoint(std::string expression)
 {
     std::string command = std::string("bp " + expression);
     SendCommandShared(MemorySlot::kNone, command);
-    SendCommandShared(MemorySlot::kNone, "bplist"); // update state
+    return SendCommandShared(MemorySlot::kNone, "bplist"); // update state
 }
 
-void Dispatcher::SendCommandPacket(const char *command)
+uint64_t Dispatcher::SendCommandPacket(const char *command)
 {
-    SendCommandShared(MemorySlot::kNone, command);
+    return SendCommandShared(MemorySlot::kNone, command);
 }
 
 void Dispatcher::ReceivePacket(const char* response)
@@ -141,13 +142,15 @@ void Dispatcher::readyRead()
     delete[] data;
 }
 
-void Dispatcher::SendCommandShared(MemorySlot slot, std::string command)
+uint64_t Dispatcher::SendCommandShared(MemorySlot slot, std::string command)
 {
     RemoteCommand* pNewCmd = new RemoteCommand();
     pNewCmd->m_cmd = command;
     pNewCmd->m_memorySlot = slot;
+    pNewCmd->m_uid = m_responseUid++;
     m_sentCommands.push_front(pNewCmd);
     m_pTcpSocket->write(command.c_str(), command.size() + 1);
+    return pNewCmd->m_uid;
 }
 
 void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)

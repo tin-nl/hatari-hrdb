@@ -10,6 +10,7 @@ public:
 	std::string		m_cmd;
 	std::string		m_response;		// filled out by receiver thread
     MemorySlot      m_memorySlot;   // what this command is associated with
+    uint64_t        m_uid;          // Tracking UID updated by dispatcher
 };
 
 class RemoteNotification
