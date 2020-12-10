@@ -46,15 +46,6 @@ static bool bRemoteBreakRequest = false;
 /* Processing is stopped and the remote debug loop is active */
 static bool bRemoteBreakIsActive = false;
 
-#if HAVE_WINSOCK_SOCKETS
-static void SetNonBlocking(SOCKET socket, u_long nonblock)
-{
-	// Set socket to blocking
-	u_long mode = nonblock;  // 0 to enable blocking socket
-	ioctlsocket(socket, FIONBIO, &mode);
-}
-#endif
-
 // Transmission functions (wrapped for platform portability)
 // -----------------------------------------------------------------------------
 static void send_str(int fd, const char* pStr)
@@ -424,6 +415,26 @@ static int RemoteDebug_Parse(const char *input_orig, int fd)
 
 
 // -----------------------------------------------------------------------------
+#if HAVE_WINSOCK_SOCKETS
+static void SetNonBlocking(SOCKET socket, u_long nonblock)
+{
+	// Set socket to blocking
+	u_long mode = nonblock;  // 0 to enable blocking socket
+	ioctlsocket(socket, FIONBIO, &mode);
+}
+#endif
+#if HAVE_UNIX_DOMAIN_SOCKETS
+static void SetNonBlocking(int socket, u_long nonblock)
+{
+	// Set socket to blocking
+	int	on = fcntl(socket, F_GETFL);
+	if (nonblock)
+		on = (on | O_NONBLOCK);
+	else
+		on &= ~O_NONBLOCK;
+	fcntl(socket, F_SETFL, on);
+}
+#endif
 
 typedef struct RemoteDebugState
 {
@@ -502,11 +513,9 @@ static bool RemoteDebug_BreakLoop(void)
 	// Notify after state change happens
 	RemoteDebug_NotifyState(state->AcceptedFD);
 
-#if HAVE_WINSOCK_SOCKETS
 	// Set the socket to blocking on the connection now, so we
 	// sleep until data is available.
 	SetNonBlocking(state->AcceptedFD, 0);
-#endif
 
 	while (bRemoteBreakIsActive)
 	{
@@ -554,10 +563,7 @@ static bool RemoteDebug_BreakLoop(void)
 	printf("RemoteDebug_CheckUpdates complete, restarting\n");
 	RemoteDebug_NotifyState(state->AcceptedFD);
 
-#if HAVE_WINSOCK_SOCKETS
 	SetNonBlocking(state->AcceptedFD, 1);
-#endif
-
 	return true;
 }
 
@@ -569,22 +575,13 @@ static int RemoteDebugState_InitServer(RemoteDebugState* state)
 	// Create listening socket on port
 	struct sockaddr_in sa;
 
-#if HAVE_UNIX_DOMAIN_SOCKETS
-	state->SocketFD = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+	state->SocketFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (state->SocketFD == -1) {
 		fprintf(stderr, "Failed to open socket\n");
 		return 1;
 	}
-#endif
-
-#if HAVE_WINSOCK_SOCKETS
-	state->SocketFD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (state->SocketFD == -1) {
-		fprintf(stderr, "Failed to open socket %d\n", WSAGetLastError());
-		return 1;
-	}
+	// Socket is non-blokcing to start with
 	SetNonBlocking(state->SocketFD, 1);
-#endif
 
 	memset(&sa, 0, sizeof sa);
 	sa.sin_family = AF_INET;
@@ -662,9 +659,7 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 		{
 			printf("Remote Debug connection accepted\n");
 			DebugUI_RegisterRemoteDebug(RemoteDebug_BreakLoop);
-#ifdef HAVE_WINSOCK_SOCKETS
-			SetNonBlocking(state->SocketFD, 1);
-#endif
+			SetNonBlocking(state->AcceptedFD, 1);
 		}
 	}
 }
