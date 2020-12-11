@@ -118,7 +118,7 @@ QVariant DisasmTableModel::headerData(int section, Qt::Orientation orientation, 
 void DisasmTableModel::SetAddress(uint32_t addr)
 {
     // Request memory for this region and save the address.
-    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, std::to_string(addr), "100");
+    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, std::to_string(addr - 100), "300");
     m_addr = addr;
 }
 
