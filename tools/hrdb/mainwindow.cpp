@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QtNetwork>
 #include <QShortcut>
+#include <QFontDatabase>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
@@ -32,8 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
 	m_pRegistersTextEdit->setReadOnly(true);
 	m_pRegistersTextEdit->setAcceptRichText(false);
 
-    QFont monoFont("Monospace");
-    monoFont.setStyleHint(QFont::TypeWriter);
+    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     m_pRegistersTextEdit->setCurrentFont(monoFont);
     m_pRegistersTextEdit->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
     m_pRegistersTextEdit->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);

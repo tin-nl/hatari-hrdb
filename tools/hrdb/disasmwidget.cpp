@@ -6,6 +6,7 @@
 #include <QVBoxLayout>
 #include <QHeaderView>
 #include <QShortcut>
+#include <QFontDatabase>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
@@ -292,9 +293,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     pGroupBox->setLayout(layout);
     setWidget(pGroupBox);
 
-    QFont monoFont("Monospace");
-    monoFont.setStyleHint(QFont::TypeWriter);
-    //monoFont.setPointSize(9);
+    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     m_pTableView->setFont(monoFont);
     m_pTableView->resizeRowsToContents();
 
