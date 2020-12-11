@@ -96,6 +96,22 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
     return QVariant(); // invalid item
 }
 
+QVariant DisasmTableModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (role == Qt::DisplayRole)
+    {
+        switch (section)
+        {
+        case kColSymbol: return QString("Symbol");
+        case kColAddress: return QString("Address");
+        case kColBreakpoint: return QString("");    // Too narrow
+        case kColDisasm: return QString("Disassembly");
+        case kColComments: return QString("");
+        }
+    }
+    return QVariant();
+}
+
 void DisasmTableModel::SetAddress(uint32_t addr)
 {
     // Request memory
