@@ -112,6 +112,10 @@ QVariant DisasmTableModel::headerData(int section, Qt::Orientation orientation, 
         case kColComments: return QString("");
         }
     }
+    if (role == Qt::TextAlignmentRole)
+    {
+        return Qt::AlignLeft;
+    }
     return QVariant();
 }
 
