@@ -18,7 +18,8 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher),
     m_memory(0, 0),
-    m_addr(0)
+    m_addr(0),
+    m_requestId(-1)
 {
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmTableModel::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &DisasmTableModel::memoryChangedSlot);
@@ -115,8 +116,9 @@ QVariant DisasmTableModel::headerData(int section, Qt::Orientation orientation, 
 
 void DisasmTableModel::SetAddress(uint32_t addr)
 {
-    // Request memory
-    m_pDispatcher->RequestMemory(MemorySlot::kDisasm, std::to_string(addr), "100");
+    // Request memory for this region and save the address.
+    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, std::to_string(addr), "100");
+    m_addr = addr;
 }
 
 void DisasmTableModel::SetAddress(std::string addr)
@@ -126,12 +128,18 @@ void DisasmTableModel::SetAddress(std::string addr)
 
 void DisasmTableModel::MoveUp()
 {
+    if (m_requestId != 0)
+        return; // not up to date
+
     // TODO we should actually disassemble upwards to see if something sensible appears
     SetAddress(m_addr - 2);
 }
 
 void DisasmTableModel::MoveDown()
 {
+    if (m_requestId != 0)
+        return; // not up to date
+
     if (m_disasm.lines.size() > 0)
     {
         // This will go off and request the memory itself
@@ -141,12 +149,18 @@ void DisasmTableModel::MoveDown()
 
 void DisasmTableModel::PageUp()
 {
+    if (m_requestId != 0)
+        return; // not up to date
+
     // TODO we should actually disassemble upwards to see if something sensible appears
     SetAddress(m_addr - 20);
 }
 
 void DisasmTableModel::PageDown()
 {
+    if (m_requestId != 0)
+        return; // not up to date
+
     if (m_disasm.lines.size() > 9)
     {
         // This will go off and request the memory itself
@@ -169,6 +183,10 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     if (memorySlot != MemorySlot::kDisasm)
         return;
 
+    // Only update for the last request we added
+    if (commandId != m_requestId)
+        return;
+
     const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kDisasm);
     if (!pMemOrig)
         return;
@@ -189,6 +207,9 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     buffer_reader disasmBuf(m_memory.GetData() + offset, size);
     m_disasm.lines.clear();
     Disassembler::decode_buf(disasmBuf, m_disasm, m_addr, 10);
+
+    // Clear the request, to say we are up to date
+    m_requestId = 0;
 
     emit beginResetModel();
     emit endResetModel();
@@ -250,7 +271,6 @@ void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_
                 ref << " " << QString::fromStdString(sym.name);
         }
     };
-
 }
 
 

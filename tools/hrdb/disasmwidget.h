@@ -56,12 +56,14 @@ private:
     TargetModel* m_pTargetModel;
     Dispatcher*  m_pDispatcher;
 
+    // Cached data when the up-to-date request comes through
     Memory       m_memory;
     Disassembler::disassembly m_disasm;
     Breakpoints m_breakpoints;
 
     // Address of the top line of text that was requested
-    uint32_t m_addr;
+    uint32_t m_addr;            // Most recent address request
+    uint64_t m_requestId;       // Most recent memory request
 };
 
 class DisasmWidget : public QDockWidget

@@ -187,12 +187,16 @@ void MainWindow::startStopClicked()
 
 void MainWindow::singleStepClicked()
 {
+    if (m_pTargetModel->IsRunning())
+        return;
     m_pDispatcher->SendCommandPacket("step");
 }
 
-
 void MainWindow::nextClicked()
 {
+    if (m_pTargetModel->IsRunning())
+        return;
+
     // Work out where the next PC is
     if (m_disasm.lines.size() == 0)
         return;
