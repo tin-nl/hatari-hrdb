@@ -24,6 +24,7 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmTableModel::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &DisasmTableModel::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::breakpointsChangedSignal, this, &DisasmTableModel::breakpointsChangedSlot);
+    connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &DisasmTableModel::symbolTableChangedSlot);
 }
 
 int DisasmTableModel::rowCount(const QModelIndex &parent) const
@@ -195,7 +196,6 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     m_memory = *pMemOrig;
 
     // Make sure the data we get back matches our expectations...
-    m_addr = m_memory.GetAddress();
     if (m_addr < m_memory.GetAddress())
         return;
     if (m_addr >= m_memory.GetAddress() + m_memory.GetSize())
