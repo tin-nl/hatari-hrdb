@@ -10,9 +10,14 @@ public:
     // returns false if char is invalid
     static bool ParseHexChar(char c, uint8_t &result);
 
-    // Convert a (non-prefixed) hex value string to a u32
+    // Convert a (non-prefixed) hex value string (null-terminated, with no
+    // leading "$") to a u32
     // returns false if any char is invalid
     static bool ParseHexString(const char *pText, uint32_t &result);
+
+    // Convert an expression string (null-terminated) to a u32
+    // returns false if could not parse
+    static bool ParseExpression(const char *pText, uint32_t &result);
 };
 
 #endif // STRINGPARSERS_H

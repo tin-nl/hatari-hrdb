@@ -40,3 +40,18 @@ bool StringParsers::ParseHexString(const char *pText, uint32_t& result)
     }
     return true;
 }
+
+//-----------------------------------------------------------------------------
+bool StringParsers::ParseExpression(const char *pText, uint32_t &result)
+{
+
+    while (*pText != 0)
+    {
+        if (*pText == '$')
+        {
+            return ParseHexString(pText + 1, result);
+        }
+        ++pText;
+    }
+    return false;
+}

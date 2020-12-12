@@ -12,7 +12,9 @@ class MemoryViewTableModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
-    MemoryViewTableModel(QObject * parent, TargetModel* pTargetModel);
+    MemoryViewTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* pDispatcher);
+
+    void SetAddress(uint32_t address);
 
     // "When subclassing QAbstractTableModel, you must implement rowCount(), columnCount(), and data()."
     virtual int rowCount(const QModelIndex &parent) const;
@@ -24,9 +26,11 @@ public:
 
 public slots:
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
+    void startStopChangedSlot();
 
 private:
-    TargetModel* m_pTargetModel;
+    TargetModel*    m_pTargetModel;
+    Dispatcher*     m_pDispatcher;
 
     // These are taken at the same time. Is there a race condition...?
     std::vector<QString> m_rows;
@@ -40,12 +44,12 @@ public:
     MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher);
 
 public slots:
-    void startStopChangedSlot();
     void textEditChangedSlot();
 private:
     QLineEdit*      m_pLineEdit;
     QTableView*     m_pTableView;
 
+    MemoryViewTableModel* pModel;
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
 };

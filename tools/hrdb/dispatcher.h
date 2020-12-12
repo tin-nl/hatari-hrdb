@@ -22,7 +22,7 @@ public:
 
     // Request a specific memory block.
     // Allows strings so expressions can evaluate
-    uint64_t RequestMemory(MemorySlot slot, std::string address, std::string size);
+    uint64_t RequestMemory(MemorySlot slot, uint32_t address, uint32_t size);
 
     uint64_t SetBreakpoint(std::string expression);
 

@@ -10,7 +10,7 @@
 
 #include "dispatcher.h"
 #include "targetmodel.h"
-
+#include "stringparsers.h"
 
 // ============================================================================
 DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher) :
@@ -18,6 +18,7 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher),
     m_memory(0, 0),
+    m_rowCount(25),
     m_addr(0),
     m_requestId(-1)
 {
@@ -32,7 +33,9 @@ int DisasmTableModel::rowCount(const QModelIndex &parent) const
     if (parent.isValid())
         return 0;
 
-    return m_disasm.lines.size();
+    // Find how many pixels a row takes
+    return std::max(m_rowCount, 1);
+    //return m_disasm.lines.size();
 }
 
 int DisasmTableModel::columnCount(const QModelIndex &parent) const
@@ -48,6 +51,9 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
     uint32_t row = (uint32_t)index.row();
     if (role == Qt::DisplayRole)
     {
+        if (row >= m_disasm.lines.size())
+            return QVariant();
+
         if (index.column() == kColSymbol)
         {
             uint32_t addr = m_disasm.lines[row].address;
@@ -101,20 +107,23 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
 
 QVariant DisasmTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    if (role == Qt::DisplayRole)
+    if (orientation == Qt::Orientation::Horizontal)
     {
-        switch (section)
+        if (role == Qt::DisplayRole)
         {
-        case kColSymbol: return QString("Symbol");
-        case kColAddress: return QString("Address");
-        case kColBreakpoint: return QString("");    // Too narrow
-        case kColDisasm: return QString("Disassembly");
-        case kColComments: return QString("");
+            switch (section)
+            {
+            case kColSymbol: return QString("Symbol");
+            case kColAddress: return QString("Address");
+            case kColBreakpoint: return QString("");    // Too narrow
+            case kColDisasm: return QString("Disassembly");
+            case kColComments: return QString("");
+            }
         }
-    }
-    if (role == Qt::TextAlignmentRole)
-    {
-        return Qt::AlignLeft;
+        if (role == Qt::TextAlignmentRole)
+        {
+            return Qt::AlignLeft;
+        }
     }
     return QVariant();
 }
@@ -122,13 +131,23 @@ QVariant DisasmTableModel::headerData(int section, Qt::Orientation orientation, 
 void DisasmTableModel::SetAddress(uint32_t addr)
 {
     // Request memory for this region and save the address.
-    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, std::to_string(addr - 100), "300");
+    std::string size = std::to_string((m_rowCount * 10) + 100);
+    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, (addr - 100), 300);
     m_addr = addr;
+    emit addressChanged(m_addr);
 }
 
-void DisasmTableModel::SetAddress(std::string addr)
+void DisasmTableModel::SetAddress(std::string addrStr)
 {
-    m_pDispatcher->RequestMemory(MemorySlot::kDisasm, addr, "100");
+    uint32_t addr;
+    if (!StringParsers::ParseExpression(addrStr.c_str(), addr))
+    {
+        return;
+    }
+
+    uint32_t size = m_rowCount * 10 + 100;
+    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, addr, size);
+    m_addr = -1;    // flag that the incoming address should be used
 }
 
 void DisasmTableModel::MoveUp()
@@ -147,7 +166,17 @@ void DisasmTableModel::MoveDown()
 
     if (m_disasm.lines.size() > 0)
     {
-        // This will go off and request the memory itself
+        // Find our current line in disassembly
+        for (size_t i = 0; i < m_disasm.lines.size(); ++i)
+        {
+            if (m_disasm.lines[i].address == m_addr)
+            {
+                // This will go off and request the memory itself
+                SetAddress(m_disasm.lines[i].GetEnd());
+                return;
+            }
+        }
+        // Default to line 1
         SetAddress(m_disasm.lines[0].GetEnd());
     }
 }
@@ -196,21 +225,15 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     if (!pMemOrig)
         return;
 
+    if (m_addr == -1)
+    {
+        m_addr = pMemOrig->GetAddress();
+        emit addressChanged(m_addr);
+    }
+
     // Cache it for later
     m_memory = *pMemOrig;
-
-    // Make sure the data we get back matches our expectations...
-    if (m_addr < m_memory.GetAddress())
-        return;
-    if (m_addr >= m_memory.GetAddress() + m_memory.GetSize())
-        return;
-
-    // Work out where we need to start disassembling from
-    uint32_t offset = m_addr - m_memory.GetAddress();
-    uint32_t size = m_memory.GetSize() - offset;
-    buffer_reader disasmBuf(m_memory.GetData() + offset, size);
-    m_disasm.lines.clear();
-    Disassembler::decode_buf(disasmBuf, m_disasm, m_addr, 10);
+    CalcDisasm();
 
     // Clear the request, to say we are up to date
     m_requestId = 0;
@@ -232,6 +255,22 @@ void DisasmTableModel::symbolTableChangedSlot(uint64_t commandId)
     // Don't copy here, just force a re-read
     emit beginResetModel();
     emit endResetModel();
+}
+
+void DisasmTableModel::CalcDisasm()
+{
+    // Make sure the data we get back matches our expectations...
+    if (m_addr < m_memory.GetAddress())
+        return;
+    if (m_addr >= m_memory.GetAddress() + m_memory.GetSize())
+        return;
+
+    // Work out where we need to start disassembling from
+    uint32_t offset = m_addr - m_memory.GetAddress();
+    uint32_t size = m_memory.GetSize() - offset;
+    buffer_reader disasmBuf(m_memory.GetData() + offset, size);
+    m_disasm.lines.clear();
+    Disassembler::decode_buf(disasmBuf, m_disasm, m_addr, m_rowCount);
 }
 
 void DisasmTableModel::ToggleBreakpoint(const QModelIndex& index)
@@ -258,6 +297,17 @@ void DisasmTableModel::ToggleBreakpoint(const QModelIndex& index)
     m_pDispatcher->SendCommandPacket("bplist");
 }
 
+void DisasmTableModel::SetRowCount(int count)
+{
+    if (count != m_rowCount)
+    {
+        m_rowCount = count;
+        CalcDisasm();
+        emit beginResetModel();
+        emit endResetModel();
+    }
+}
+
 void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_t address, QTextStream& ref) const
 {
     uint32_t ea;
@@ -277,8 +327,6 @@ void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_
     };
 }
 
-
-
 DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher) :
     QDockWidget(parent),
     m_pTargetModel(pTargetModel),
@@ -289,46 +337,46 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     auto pGroupBox = new QGroupBox(this);
 
     m_pLineEdit = new QLineEdit(this);
-    m_pTableView = new QTableView(this);
 
+    // Create model early
     m_pTableModel = new DisasmTableModel(this, pTargetModel, pDispatcher);
+    m_pTableView = new QTableView(this);
     m_pTableView->setModel(m_pTableModel);
 
+    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    m_pTableView->setFont(monoFont);
+    QFontMetrics fm(monoFont);
+
+    // This is across the top
     m_pTableView->horizontalHeader()->setMinimumSectionSize(12);
-    //m_pTableView->horizontalHeader()->hide();
     m_pTableView->setColumnWidth(DisasmTableModel::kColSymbol, 10*15);
     m_pTableView->setColumnWidth(DisasmTableModel::kColAddress, 10*8);      // Windows needs more
     m_pTableView->setColumnWidth(DisasmTableModel::kColBreakpoint, 32);
     m_pTableView->setColumnWidth(DisasmTableModel::kColDisasm, 300);
     m_pTableView->setColumnWidth(DisasmTableModel::kColComments, 300);
 
+    // Down the side
     m_pTableView->verticalHeader()->hide();
-    //m_pTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    m_pTableView->verticalHeader()->setDefaultSectionSize(fm.height());
 
-    m_pTableView->verticalHeader()->setDefaultSectionSize(20);// affects Linux but not Windows
-    // These have no effect
-    //m_pTableView->verticalHeader()->contentsMargins().setTop(0);
-    //m_pTableView->verticalHeader()->contentsMargins().setBottom(0);
     m_pTableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
     m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
-
+    m_pTableView->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
     layout->addWidget(m_pLineEdit);
     layout->addWidget(m_pTableView);
     pGroupBox->setLayout(layout);
     setWidget(pGroupBox);
 
-    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    m_pTableView->setFont(monoFont);
-    m_pTableView->resizeRowsToContents();
-
     // Listen for start/stop, so we can update our memory request
     connect(m_pTableView,   &QTableView::clicked,                 this, &DisasmWidget::cellClickedSlot);
-    connect(m_pLineEdit, &QLineEdit::textChanged,                 this, &DisasmWidget::textEditChangedSlot);
+    connect(m_pLineEdit,    &QLineEdit::returnPressed,            this, &DisasmWidget::textEditChangedSlot);
 
     new QShortcut(QKeySequence(tr("Down", "Next instructions")), this, SLOT(keyDownPressed()));
     new QShortcut(QKeySequence(tr("Up",   "Prev instructions")), this, SLOT(keyUpPressed()));
     new QShortcut(QKeySequence(QKeySequence::MoveToNextPage),     this, SLOT(keyPageDownPressed()));
     new QShortcut(QKeySequence(QKeySequence::MoveToPreviousPage), this, SLOT(keyPageUpPressed()));
+
+//    this->resizeEvent(nullptr);
 }
 
 void DisasmWidget::cellClickedSlot(const QModelIndex &index)
@@ -359,5 +407,17 @@ void DisasmWidget::keyPageUpPressed()
 void DisasmWidget::textEditChangedSlot()
 {
     m_pTableModel->SetAddress(m_pLineEdit->text().toStdString());
+}
+
+void DisasmWidget::resizeEvent(QResizeEvent*)
+{
+//    m_pTableView->resizeRowsToContents();
+    // If we add these, rows get bigger??????
+    /*
+    int h = m_pTableView->viewport()->size().height();
+    int rowh = m_pTableView->rowHeight(0);
+    if (rowh != 0)
+        m_pTableModel->SetRowCount(h / rowh);
+        */
 }
 

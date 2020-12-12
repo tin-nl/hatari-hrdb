@@ -10,6 +10,7 @@
 
 #include "dispatcher.h"
 #include "targetmodel.h"
+#include "stringparsers.h"
 
 MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher) :
     QDockWidget(parent),
@@ -21,55 +22,60 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     QVBoxLayout *layout = new QVBoxLayout;
     auto pGroupBox = new QGroupBox(this);
 
+
     m_pLineEdit = new QLineEdit(this);
     m_pTableView = new QTableView(this);
 
-    MemoryViewTableModel* pModel = new MemoryViewTableModel(this, pTargetModel);
+    pModel = new MemoryViewTableModel(this, pTargetModel, pDispatcher);
     m_pTableView->setModel(pModel);
+
+    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    m_pTableView->setFont(monoFont);
+    QFontMetrics fm(monoFont);
 
     m_pTableView->horizontalHeader()->setMinimumSectionSize(0);
     m_pTableView->horizontalHeader()->hide();
     m_pTableView->setColumnWidth(0, 9*8);
     m_pTableView->setColumnWidth(1, 500);
 
+    // Down the side
     m_pTableView->verticalHeader()->hide();
-    //m_pTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
-    m_pTableView->verticalHeader()->setDefaultSectionSize(16);
+    m_pTableView->verticalHeader()->setDefaultSectionSize(fm.height());
 
     layout->addWidget(m_pLineEdit);
     layout->addWidget(m_pTableView);
     pGroupBox->setLayout(layout);
     setWidget(pGroupBox);
 
-    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    m_pTableView->setFont(monoFont);
     m_pTableView->resizeRowsToContents();
 
     // Listen for start/stop, so we can update our memory request
-    connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryViewWidget::startStopChangedSlot);
     connect(m_pLineEdit, &QLineEdit::textChanged,                   this, &MemoryViewWidget::textEditChangedSlot);
-}
-
-void MemoryViewWidget::startStopChangedSlot()
-{
-    // Request new memory for the view
-    if (!m_pTargetModel->IsRunning())
-    {
-        m_pDispatcher->RequestMemory(MemorySlot::kMemoryView, m_pLineEdit->text().toStdString(), "100");
-    }
 }
 
 void MemoryViewWidget::textEditChangedSlot()
 {
-    m_pDispatcher->RequestMemory(MemorySlot::kMemoryView, m_pLineEdit->text().toStdString(), "100");
+    uint32_t addr;
+    if (!StringParsers::ParseExpression(m_pLineEdit->text().toStdString().c_str(), addr))
+        return;
+    pModel->SetAddress(addr);
 }
 
-MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTargetModel) :
+MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher) :
     QAbstractTableModel(parent),
     m_pTargetModel(pTargetModel),
+    m_pDispatcher(pDispatcher),
     m_address(0)
 {
-    connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &MemoryViewTableModel::memoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryViewTableModel::memoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryViewTableModel::startStopChangedSlot);
+}
+
+void MemoryViewTableModel::SetAddress(uint32_t address)
+{
+
+    m_address = address;
+    m_pDispatcher->RequestMemory(MemorySlot::kMemoryView, m_address, 100);
 }
 
 int MemoryViewTableModel::rowCount(const QModelIndex &parent) const
@@ -114,6 +120,9 @@ void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     if (!pMem)
         return;
 
+    if (pMem->GetAddress() != m_address)
+        return;
+
     // Fetch underlying data
     buffer_reader MemoryViewBuf(pMem->GetData(), pMem->GetSize());
 
@@ -121,7 +130,6 @@ void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     // Build up the text area
     uint32_t rowCount = (pMem->GetSize() + 15) / 16;
     uint32_t offset = 0;
-    m_address = pMem->GetAddress();
 
     for (uint32_t r = 0; r < rowCount; ++r)
     {
@@ -141,5 +149,14 @@ void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
 
     emit beginResetModel();
     emit endResetModel();
+}
+
+void MemoryViewTableModel::startStopChangedSlot()
+{
+    // Request new memory for the view
+    if (!m_pTargetModel->IsRunning())
+    {
+        m_pDispatcher->RequestMemory(MemorySlot::kMemoryView, m_address, 100);
+    }
 }
 

@@ -41,9 +41,9 @@ Dispatcher::~Dispatcher()
     // NO CHECK delete all pending commands
 }
 
-uint64_t Dispatcher::RequestMemory(MemorySlot slot, std::string address, std::string size)
+uint64_t Dispatcher::RequestMemory(MemorySlot slot, uint32_t address, uint32_t size)
 {
-    std::string command = std::string("mem " + address + " " + size);
+    std::string command = std::string("mem ") + std::to_string(address) + " " + std::to_string(size);
     return SendCommandShared(slot, command);
 }
 

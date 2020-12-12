@@ -133,10 +133,11 @@ void MainWindow::startStopChangedSlot()
 	}
 	else
 	{
+        // STOPPED
 		// TODO this is where all windows should put in requests for data
         m_pDispatcher->SendCommandPacket("regs");
         m_pDispatcher->SendCommandPacket("bplist");
-        m_pDispatcher->RequestMemory(MemorySlot::kMainPC, "pc", "100");
+        m_pDispatcher->RequestMemory(MemorySlot::kMainPC, m_pTargetModel->GetPC(), 10);
 
         // Only re-request symbols if we didn't find any the first time
         if (m_pTargetModel->GetSymbolTable().m_userSymbolCount == 0)  // NO CHECK

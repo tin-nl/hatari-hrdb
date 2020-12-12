@@ -37,21 +37,26 @@ public:
     // So I expect we can emit that if we see the target has changed
 
     uint32_t GetAddress() const { return m_addr; }
-    void SetAddress(uint32_t addr);
     void SetAddress(std::string addr);
     void MoveUp();
     void MoveDown();
     void PageUp();
     void PageDown();
     void ToggleBreakpoint(const QModelIndex &index);
+    void SetRowCount(int count);
 
-public slots:
+signals:
+    void addressChanged(uint64_t addr);
+
+private slots:
     void startStopChangedSlot();
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void breakpointsChangedSlot(uint64_t commandId);
     void symbolTableChangedSlot(uint64_t commandId);
 
 private:
+    void SetAddress(uint32_t addr);
+    void CalcDisasm();
     void printEA(const operand &op, const Registers &regs, uint32_t address, QTextStream &ref) const;
     TargetModel* m_pTargetModel;
     Dispatcher*  m_pDispatcher;
@@ -60,6 +65,7 @@ private:
     Memory       m_memory;
     Disassembler::disassembly m_disasm;
     Breakpoints m_breakpoints;
+    int         m_rowCount;
 
     // Address of the top line of text that was requested
     uint32_t m_addr;            // Most recent address request
@@ -76,11 +82,15 @@ protected:
 
 protected slots:
     void cellClickedSlot(const QModelIndex& index);
+
     void keyDownPressed();
     void keyUpPressed();
     void keyPageDownPressed();
     void keyPageUpPressed();
     void textEditChangedSlot();
+
+    // override
+    virtual void resizeEvent(QResizeEvent*);
 
 private:
     QLineEdit*      m_pLineEdit;
