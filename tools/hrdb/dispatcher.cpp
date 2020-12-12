@@ -260,7 +260,8 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
             if (!StringParsers::ParseHexString(addrStr.c_str(), sym.address))
                 return;
             sym.type = splitResp.Split(' ');
-            syms.Add(sym);
+            sym.size = 0;
+            syms.AddInternal(sym);
         }
         syms.AddComplete(); // cache the address map lookup
         m_pTargetModel->SetSymbolTable(syms, cmd.m_uid);
