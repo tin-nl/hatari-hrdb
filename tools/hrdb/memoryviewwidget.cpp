@@ -6,6 +6,7 @@
 #include <QVBoxLayout>
 #include <QHeaderView>
 #include <QStringListModel>
+#include <QFontDatabase>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
@@ -40,9 +41,7 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     pGroupBox->setLayout(layout);
     setWidget(pGroupBox);
 
-    QFont monoFont("Monospace");
-    monoFont.setStyleHint(QFont::TypeWriter);
-    //monoFont.setPointSize(9);
+    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     m_pTableView->setFont(monoFont);
     m_pTableView->resizeRowsToContents();
 

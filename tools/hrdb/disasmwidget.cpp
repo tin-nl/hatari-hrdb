@@ -6,6 +6,7 @@
 #include <QVBoxLayout>
 #include <QHeaderView>
 #include <QShortcut>
+#include <QFontDatabase>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
@@ -17,11 +18,13 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher),
     m_memory(0, 0),
-    m_addr(0)
+    m_addr(0),
+    m_requestId(-1)
 {
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmTableModel::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &DisasmTableModel::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::breakpointsChangedSignal, this, &DisasmTableModel::breakpointsChangedSlot);
+    connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &DisasmTableModel::symbolTableChangedSlot);
 }
 
 int DisasmTableModel::rowCount(const QModelIndex &parent) const
@@ -96,10 +99,31 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
     return QVariant(); // invalid item
 }
 
+QVariant DisasmTableModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (role == Qt::DisplayRole)
+    {
+        switch (section)
+        {
+        case kColSymbol: return QString("Symbol");
+        case kColAddress: return QString("Address");
+        case kColBreakpoint: return QString("");    // Too narrow
+        case kColDisasm: return QString("Disassembly");
+        case kColComments: return QString("");
+        }
+    }
+    if (role == Qt::TextAlignmentRole)
+    {
+        return Qt::AlignLeft;
+    }
+    return QVariant();
+}
+
 void DisasmTableModel::SetAddress(uint32_t addr)
 {
-    // Request memory
-    m_pDispatcher->RequestMemory(MemorySlot::kDisasm, std::to_string(addr), "100");
+    // Request memory for this region and save the address.
+    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, std::to_string(addr - 100), "300");
+    m_addr = addr;
 }
 
 void DisasmTableModel::SetAddress(std::string addr)
@@ -109,12 +133,18 @@ void DisasmTableModel::SetAddress(std::string addr)
 
 void DisasmTableModel::MoveUp()
 {
+    if (m_requestId != 0)
+        return; // not up to date
+
     // TODO we should actually disassemble upwards to see if something sensible appears
     SetAddress(m_addr - 2);
 }
 
 void DisasmTableModel::MoveDown()
 {
+    if (m_requestId != 0)
+        return; // not up to date
+
     if (m_disasm.lines.size() > 0)
     {
         // This will go off and request the memory itself
@@ -124,12 +154,18 @@ void DisasmTableModel::MoveDown()
 
 void DisasmTableModel::PageUp()
 {
+    if (m_requestId != 0)
+        return; // not up to date
+
     // TODO we should actually disassemble upwards to see if something sensible appears
     SetAddress(m_addr - 20);
 }
 
 void DisasmTableModel::PageDown()
 {
+    if (m_requestId != 0)
+        return; // not up to date
+
     if (m_disasm.lines.size() > 9)
     {
         // This will go off and request the memory itself
@@ -152,6 +188,10 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     if (memorySlot != MemorySlot::kDisasm)
         return;
 
+    // Only update for the last request we added
+    if (commandId != m_requestId)
+        return;
+
     const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kDisasm);
     if (!pMemOrig)
         return;
@@ -160,7 +200,6 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     m_memory = *pMemOrig;
 
     // Make sure the data we get back matches our expectations...
-    m_addr = m_memory.GetAddress();
     if (m_addr < m_memory.GetAddress())
         return;
     if (m_addr >= m_memory.GetAddress() + m_memory.GetSize())
@@ -172,6 +211,9 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     buffer_reader disasmBuf(m_memory.GetData() + offset, size);
     m_disasm.lines.clear();
     Disassembler::decode_buf(disasmBuf, m_disasm, m_addr, 10);
+
+    // Clear the request, to say we are up to date
+    m_requestId = 0;
 
     emit beginResetModel();
     emit endResetModel();
@@ -233,7 +275,6 @@ void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_
                 ref << " " << QString::fromStdString(sym.name);
         }
     };
-
 }
 
 
@@ -276,9 +317,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     pGroupBox->setLayout(layout);
     setWidget(pGroupBox);
 
-    QFont monoFont("Monospace");
-    monoFont.setStyleHint(QFont::TypeWriter);
-    //monoFont.setPointSize(9);
+    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     m_pTableView->setFont(monoFont);
     m_pTableView->resizeRowsToContents();
 

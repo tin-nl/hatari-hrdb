@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QtNetwork>
 #include <QShortcut>
+#include <QFontDatabase>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
@@ -32,8 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
 	m_pRegistersTextEdit->setReadOnly(true);
 	m_pRegistersTextEdit->setAcceptRichText(false);
 
-    QFont monoFont("Monospace");
-    monoFont.setStyleHint(QFont::TypeWriter);
+    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     m_pRegistersTextEdit->setCurrentFont(monoFont);
     m_pRegistersTextEdit->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
     m_pRegistersTextEdit->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
@@ -187,12 +187,16 @@ void MainWindow::startStopClicked()
 
 void MainWindow::singleStepClicked()
 {
+    if (m_pTargetModel->IsRunning())
+        return;
     m_pDispatcher->SendCommandPacket("step");
 }
 
-
 void MainWindow::nextClicked()
 {
+    if (m_pTargetModel->IsRunning())
+        return;
+
     // Work out where the next PC is
     if (m_disasm.lines.size() == 0)
         return;
