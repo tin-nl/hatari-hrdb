@@ -14,14 +14,16 @@ struct Symbol
 
     std::string name;
     uint32_t address;
+    uint32_t size;
     std::string type;
+
 };
 
 class SymbolTable
 {
 public:
     SymbolTable();
-    void Add(const Symbol& sym);
+    void AddInternal(const Symbol& sym);
     void AddComplete();
 
     size_t Count() const { return m_symbols.size(); }
@@ -30,6 +32,9 @@ public:
 
     int m_userSymbolCount;
 private:
+    void AddHardware();
+
+    void AddInternal(const char* name, uint32_t addr, uint32_t size);
     std::vector<Symbol> m_symbols;
 
     typedef std::pair<uint32_t, size_t> Pair;
