@@ -34,9 +34,13 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
 
     m_pTableView->horizontalHeader()->hide();
 
-    int charWidth = fm.width("W");
-    m_pTableView->setColumnWidth(0, charWidth * 9);
-    m_pTableView->setColumnWidth(1, charWidth * 16 * 3);
+    // Factor in max width and the edge margins
+    int l;
+    int r;
+    int charWidth = fm.maxWidth();
+    m_pTableView->getContentsMargins(&l, nullptr, &r, nullptr);
+    m_pTableView->setColumnWidth(0, l + r + charWidth * 9);
+    m_pTableView->setColumnWidth(1, l + r + charWidth * 16 * 3);
 
     // Down the side
     m_pTableView->verticalHeader()->hide();
