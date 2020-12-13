@@ -29,6 +29,7 @@ public:
     size_t Count() const { return m_symbols.size(); }
     bool Find(uint32_t address, Symbol& result) const;
     bool FindLowerOrEqual(uint32_t address, Symbol& result) const;
+    bool Find(std::string name, Symbol& result) const;
 
     int m_userSymbolCount;
 private:

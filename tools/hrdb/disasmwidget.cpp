@@ -141,7 +141,8 @@ void DisasmTableModel::SetAddress(uint32_t addr)
 void DisasmTableModel::SetAddress(std::string addrStr)
 {
     uint32_t addr;
-    if (!StringParsers::ParseExpression(addrStr.c_str(), addr))
+    if (!StringParsers::ParseExpression(addrStr.c_str(), addr,
+                                       m_pTargetModel->GetSymbolTable(), m_pTargetModel->GetRegs()))
     {
         return;
     }

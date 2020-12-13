@@ -128,6 +128,8 @@ void SymbolTable::AddHardware()
     ADD_SYM(prv_auxo        , 0x50e, 4)	// -> _auxostat()
     ADD_SYM(prv_aux         , 0x512, 4)	// -> _auxout()
     ADD_SYM(user_mem        ,0x1000, 0)
+
+    ADD_SYM(tos        ,0xe00000, 256 * 1024)
 }
 
 SymbolTable::SymbolTable() :
@@ -208,12 +210,26 @@ bool SymbolTable::FindLowerOrEqual(uint32_t address, Symbol &result) const
     return false;
 }
 
+bool SymbolTable::Find(std::string name, Symbol &result) const
+{
+    for (size_t i = 0; i < this->m_symbols.size(); ++i)
+    {
+        if (m_symbols[i].name == name)
+        {
+            result = m_symbols[i];
+            return true;
+        }
+    }
+    return false;
+}
+
 void SymbolTable::AddInternal(const char* name, uint32_t addr, uint32_t size)
 {
     Symbol sym;
     sym.name = name;
     sym.address = addr;
     sym.type = "H";     // hardware
+    sym.size = size;
     AddInternal(sym);
 }
 

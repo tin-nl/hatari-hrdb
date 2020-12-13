@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+class SymbolTable;
+class Registers;
+
 class StringParsers
 {
 public:
@@ -17,7 +20,7 @@ public:
 
     // Convert an expression string (null-terminated) to a u32
     // returns false if could not parse
-    static bool ParseExpression(const char *pText, uint32_t &result);
+    static bool ParseExpression(const char *pText, uint32_t &result, const SymbolTable& syms, const Registers& regs);
 };
 
 #endif // STRINGPARSERS_H

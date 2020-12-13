@@ -56,7 +56,9 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
 void MemoryViewWidget::textEditChangedSlot()
 {
     uint32_t addr;
-    if (!StringParsers::ParseExpression(m_pLineEdit->text().toStdString().c_str(), addr))
+    if (!StringParsers::ParseExpression(m_pLineEdit->text().toStdString().c_str(), addr,
+                                        m_pTargetModel->GetSymbolTable(),
+                                        m_pTargetModel->GetRegs()))
         return;
     pModel->SetAddress(addr);
 }
