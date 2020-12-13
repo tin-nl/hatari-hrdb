@@ -246,23 +246,20 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     // Clear the request, to say we are up to date
     m_requestId = 0;
 
-    emit beginResetModel();
-    emit endResetModel();
+    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
 }
 
 void DisasmTableModel::breakpointsChangedSlot(uint64_t commandId)
 {
     // Cache data
     m_breakpoints = m_pTargetModel->GetBreakpoints();
-    emit beginResetModel();
-    emit endResetModel();
+    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
 }
 
 void DisasmTableModel::symbolTableChangedSlot(uint64_t commandId)
 {
     // Don't copy here, just force a re-read
-    emit beginResetModel();
-    emit endResetModel();
+    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
 }
 
 void DisasmTableModel::CalcDisasm()
@@ -311,8 +308,7 @@ void DisasmTableModel::SetRowCount(int count)
     {
         m_rowCount = count;
         CalcDisasm();
-        emit beginResetModel();
-        emit endResetModel();
+        emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
     }
 }
 
