@@ -307,6 +307,10 @@ bool StringParsers::ParseExpression(const char *pText, uint32_t &result, const S
             t.type = Token::CONSTANT;
             t.val = 0;
             uint8_t ch;
+            // First char must exist, else "$" is a valid expression!
+            if (!ParseHexChar(*pText, ch))
+                return false;
+
             while (ParseHexChar(*pText, ch))
             {
                 t.val <<= 4;
