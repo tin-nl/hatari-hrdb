@@ -123,18 +123,28 @@ static bool IsRegisterName(const char* name, int& regId)
     return false;
 }
 
-uint64_t ApplyOp(uint64_t val1, uint64_t val2, Token::Type op)
+bool ApplyOp(uint64_t val1, uint64_t val2, Token::Type op, uint64_t& result)
 {
     if (op == Token::ADD)
-        return val1 + val2;
+    {
+        result = val1 + val2; return true;
+    }
     if (op == Token::SUB)
-        return val1 - val2;
+    {
+        result = val1 - val2; return true;
+    }
     if (op == Token::MUL)
-        return val1 * val2;
+    {
+        result = val1 * val2; return true;
+    }
     if (op == Token::DIV)
-        return val1 / val2;
+    {
+        if (val2 == 0)
+            return false;
+        result = val1 / val2; return true;
+    }
     assert(0);
-    return 0;
+    return false;
 }
 
 // Bigger the number, higher the precedence
@@ -182,6 +192,7 @@ bool Evaluate(std::vector<Token>& tokens, uint64_t& result)
         // entire brace.
         else if(tokens[i].type == Token::RIGHT_BRACE)
         {
+            // Flush all the ops back to the matching left brace
             while(!ops.empty() && ops.back() != Token::LEFT_BRACE)
             {
                 if (values.size() < 2)
@@ -195,13 +206,18 @@ bool Evaluate(std::vector<Token>& tokens, uint64_t& result)
                 Token::Type op = ops.back();
                 ops.pop_back();
 
-                uint64_t res = ApplyOp(val1, val2, op);
+                uint64_t res;
+                if (!ApplyOp(val1, val2, op, res))
+                    return false;
                 values.push_back(res);
             }
 
             // pop opening brace.
-            if(ops.size() != 0)
-                ops.pop_back();
+            if(ops.size() == 0)
+                return false;
+
+            assert(ops.back() == Token::LEFT_BRACE);
+            ops.pop_back();
         }
         // Current token is an operator.
         else
@@ -210,7 +226,8 @@ bool Evaluate(std::vector<Token>& tokens, uint64_t& result)
             // precedence to current token, which
             // is an operator. Apply operator on top
             // of 'ops' to top two elements in values stack.
-            while((ops.size() != 0) &&
+            // "operator" can include brace which has lower precs
+            while(!ops.empty() &&
                   Precedence(ops.back()) >= Precedence(tokens[i].type))
             {
                 if (values.size() < 2)
@@ -224,7 +241,10 @@ bool Evaluate(std::vector<Token>& tokens, uint64_t& result)
                 Token::Type op = ops.back();
                 ops.pop_back();
 
-                values.push_back(ApplyOp(val1, val2, op));
+                uint64_t res;
+                if (!ApplyOp(val1, val2, op, res))
+                    return false;
+                values.push_back(res);
             }
 
             // Push current token to 'ops'.
@@ -235,7 +255,8 @@ bool Evaluate(std::vector<Token>& tokens, uint64_t& result)
     // Entire expression has been parsed at this
     // point, apply remaining ops to remaining
     // values.
-    while(!ops.empty()){
+    while(!ops.empty())
+    {
         if (values.size() < 2)
             return false;
 
@@ -248,7 +269,10 @@ bool Evaluate(std::vector<Token>& tokens, uint64_t& result)
         Token::Type op = ops.back();
         ops.pop_back();
 
-        values.push_back(ApplyOp(val1, val2, op));
+        uint64_t res;
+        if (!ApplyOp(val1, val2, op, res))
+            return false;
+        values.push_back(res);
     }
     result = values.back();
     return true;
