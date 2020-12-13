@@ -27,6 +27,18 @@ bool StringParsers::ParseHexChar(char c, uint8_t& result)
 }
 
 //-----------------------------------------------------------------------------
+static bool ParseDecChar(char c, uint8_t& result)
+{
+    if (c >= '0' && c <= '9')
+    {
+        result = (uint8_t)(c - '0');
+        return true;
+    }
+    result = 0;
+    return false;
+}
+
+//-----------------------------------------------------------------------------
 bool StringParsers::ParseHexString(const char *pText, uint32_t& result)
 {
     result = 0;
@@ -52,7 +64,12 @@ struct Token
         CONSTANT,
         ADD,
         SUB,
+        MUL,
+        DIV,
+        LEFT_BRACE,
+        RIGHT_BRACE
     };
+
     uint64_t    val;        // for constants
     Type        type;
 };
@@ -106,6 +123,145 @@ static bool IsRegisterName(const char* name, int& regId)
     return false;
 }
 
+uint64_t ApplyOp(uint64_t val1, uint64_t val2, Token::Type op)
+{
+    if (op == Token::ADD)
+        return val1 + val2;
+    if (op == Token::SUB)
+        return val1 - val2;
+    if (op == Token::MUL)
+        return val1 * val2;
+    if (op == Token::DIV)
+        return val1 / val2;
+    assert(0);
+    return 0;
+}
+
+// Bigger the number, higher the precedence
+static int Precedence(Token::Type type)
+{
+    switch (type) {
+    case Token::ADD: case Token::SUB:
+        return 1;
+    case Token::MUL: case Token::DIV:
+        return 2;
+    case Token::CONSTANT:
+        assert(0);
+        return 0;
+    default:
+        break;
+    }
+    // Braces?
+    return 0;
+}
+
+//-----------------------------------------------------------------------------
+// Straight port of https://www.geeksforgeeks.org/expression-evaluation/
+bool Evaluate(std::vector<Token>& tokens, uint64_t& result)
+{
+    // stack to store integer values.
+    std::vector<uint64_t> values;
+
+    // stack to store operators.
+    std::vector<Token::Type> ops;
+
+    for(size_t i = 0; i < tokens.size(); i++)
+    {
+        // Current token is an opening
+        // brace, push it to 'ops'
+        if (tokens[i].type == Token::LEFT_BRACE)
+        {
+            ops.push_back(tokens[i].type);
+        }
+        else if (tokens[i].type == Token::CONSTANT)
+        {
+            values.push_back(tokens[i].val);
+        }
+
+        // Closing brace encountered, solve
+        // entire brace.
+        else if(tokens[i].type == Token::RIGHT_BRACE)
+        {
+            while(!ops.empty() && ops.back() != Token::LEFT_BRACE)
+            {
+                if (values.size() < 2)
+                    return false;
+                uint64_t val2 = values.back();
+                values.pop_back();
+
+                uint64_t val1 = values.back();
+                values.pop_back();
+
+                Token::Type op = ops.back();
+                ops.pop_back();
+
+                uint64_t res = ApplyOp(val1, val2, op);
+                values.push_back(res);
+            }
+
+            // pop opening brace.
+            if(ops.size() != 0)
+                ops.pop_back();
+        }
+        // Current token is an operator.
+        else
+        {
+            // While top of 'ops' has same or greater
+            // precedence to current token, which
+            // is an operator. Apply operator on top
+            // of 'ops' to top two elements in values stack.
+            while((ops.size() != 0) &&
+                  Precedence(ops.back()) >= Precedence(tokens[i].type))
+            {
+                if (values.size() < 2)
+                    return false;
+                uint64_t val2 = values.back();
+                values.pop_back();
+
+                uint64_t val1 = values.back();
+                values.pop_back();
+
+                Token::Type op = ops.back();
+                ops.pop_back();
+
+                values.push_back(ApplyOp(val1, val2, op));
+            }
+
+            // Push current token to 'ops'.
+            ops.push_back(tokens[i].type);
+        }
+    }
+
+    // Entire expression has been parsed at this
+    // point, apply remaining ops to remaining
+    // values.
+    while(!ops.empty()){
+        if (values.size() < 2)
+            return false;
+
+        uint64_t val2 = values.back();
+        values.pop_back();
+
+        uint64_t val1 = values.back();
+        values.pop_back();
+
+        Token::Type op = ops.back();
+        ops.pop_back();
+
+        values.push_back(ApplyOp(val1, val2, op));
+    }
+    result = values.back();
+    return true;
+}
+
+void AddOperator(std::vector<Token>& tokens, Token::Type type)
+{
+    Token t;
+    t.type = type;
+    t.val = 0;
+    tokens.push_back(t);
+}
+
 //-----------------------------------------------------------------------------
 bool StringParsers::ParseExpression(const char *pText, uint32_t &result, const SymbolTable& syms, const Registers& regs)
 {
@@ -131,6 +287,23 @@ bool StringParsers::ParseExpression(const char *pText, uint32_t &result, const S
             {
                 t.val <<= 4;
                 t.val |= ch;
+                ++pText;
+            }
+            tokens.push_back(t);
+            continue;
+        }
+        else if (IsDecimalDigit(head))
+        {
+            // Hex constant
+            Token t;
+            t.type = Token::CONSTANT;
+            t.val = 0;
+            uint8_t ch;
+            --pText;        // go back to the first char
+            while (ParseDecChar(*pText, ch))
+            {
+                t.val *= 10;
+                t.val += ch;
                 ++pText;
             }
             tokens.push_back(t);
@@ -168,19 +341,33 @@ bool StringParsers::ParseExpression(const char *pText, uint32_t &result, const S
         }
         else if (head == '+')
         {
-             Token t;
-             t.type = Token::ADD;
-             t.val = 0;
-             tokens.push_back(t);
-             continue;
+            AddOperator(tokens, Token::ADD);
+            continue;
         }
         else if (head == '-')
         {
-             Token t;
-             t.type = Token::SUB;
-             t.val = 0;
-             tokens.push_back(t);
-             continue;
+            AddOperator(tokens, Token::SUB);
+            continue;
+        }
+        else if (head == '*')
+        {
+            AddOperator(tokens, Token::MUL);
+            continue;
+        }
+        else if (head == '/')
+        {
+            AddOperator(tokens, Token::DIV);
+            continue;
+        }
+        else if (head == '(')
+        {
+            AddOperator(tokens, Token::LEFT_BRACE);
+            continue;
+        }
+        else if (head == ')')
+        {
+            AddOperator(tokens, Token::RIGHT_BRACE);
+            continue;
         }
         // Couldn't match
         return false;
@@ -188,8 +375,13 @@ bool StringParsers::ParseExpression(const char *pText, uint32_t &result, const S
 
     if (tokens.size() != 0)
     {
-        result = tokens[0].val;
-        return true;
+        uint64_t res2;
+        bool success = Evaluate(tokens, res2);
+        if (success)
+        {
+            result = (uint32_t)res2;
+            return success;
+        }
     }
     return false;
 }
