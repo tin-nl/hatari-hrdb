@@ -138,17 +138,18 @@ void DisasmTableModel::SetAddress(uint32_t addr)
     emit addressChanged(m_addr);
 }
 
-void DisasmTableModel::SetAddress(std::string addrStr)
+bool DisasmTableModel::SetAddress(std::string addrStr)
 {
     uint32_t addr;
     if (!StringParsers::ParseExpression(addrStr.c_str(), addr,
                                        m_pTargetModel->GetSymbolTable(), m_pTargetModel->GetRegs()))
     {
-        return;
+        return false;
     }
     uint32_t size = m_rowCount * 10 + 100;
     m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, addr, size);
     m_addr = kInvalid;    // flag that the incoming address should be used
+    return true;
 }
 
 void DisasmTableModel::MoveUp()
@@ -382,7 +383,8 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     // Listen for start/stop, so we can update our memory request
     connect(m_pTableView,   &QTableView::clicked,                 this, &DisasmWidget::cellClickedSlot);
     connect(m_pTableModel,  &DisasmTableModel::addressChanged,    this, &DisasmWidget::UpdateTextBox);
-    connect(m_pLineEdit,    &QLineEdit::returnPressed,            this, &DisasmWidget::textEditChangedSlot);
+    connect(m_pLineEdit,    &QLineEdit::returnPressed,            this, &DisasmWidget::returnPressedSlot);
+    connect(m_pLineEdit,    &QLineEdit::textEdited,               this, &DisasmWidget::textChangedSlot);
 
     new QShortcut(QKeySequence(tr("Down", "Next instructions")), this, SLOT(keyDownPressed()));
     new QShortcut(QKeySequence(tr("Up",   "Prev instructions")), this, SLOT(keyUpPressed()));
@@ -417,9 +419,30 @@ void DisasmWidget::keyPageUpPressed()
     m_pTableModel->PageUp();
 }
 
-void DisasmWidget::textEditChangedSlot()
+void DisasmWidget::returnPressedSlot()
 {
-    m_pTableModel->SetAddress(m_pLineEdit->text().toStdString());
+    QColor col = m_pTableModel->SetAddress(m_pLineEdit->text().toStdString()) ?
+                      Qt::white : Qt::red;
+    QPalette pal = m_pLineEdit->palette();
+    pal.setColor(QPalette::Base, col);
+    m_pLineEdit-> setAutoFillBackground(true);
+    m_pLineEdit->setPalette(pal);
+}
+
+void DisasmWidget::textChangedSlot()
+{
+    uint32_t addr;
+    QColor col = Qt::green;
+    if (!StringParsers::ParseExpression(m_pLineEdit->text().toStdString().c_str(), addr,
+                                       m_pTargetModel->GetSymbolTable(), m_pTargetModel->GetRegs()))
+    {
+        col = Qt::red;
+    }
+
+    QPalette pal = m_pLineEdit->palette();
+    pal.setColor(QPalette::Base, col);
+    m_pLineEdit-> setAutoFillBackground(true);
+    m_pLineEdit->setPalette(pal);
 }
 
 void DisasmWidget::resizeEvent(QResizeEvent* event)

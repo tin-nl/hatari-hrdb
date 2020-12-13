@@ -37,7 +37,7 @@ public:
     // So I expect we can emit that if we see the target has changed
 
     uint32_t GetAddress() const { return m_addr; }
-    void SetAddress(std::string addr);
+    bool SetAddress(std::string addr);
     void MoveUp();
     void MoveDown();
     void PageUp();
@@ -89,7 +89,8 @@ protected slots:
     void keyUpPressed();
     void keyPageDownPressed();
     void keyPageUpPressed();
-    void textEditChangedSlot();
+    void returnPressedSlot();
+    void textChangedSlot();
 
     // override -- this doesn't trigger at the start?
     virtual void resizeEvent(QResizeEvent*);
