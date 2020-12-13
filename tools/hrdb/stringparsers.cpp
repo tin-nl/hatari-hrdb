@@ -1,4 +1,5 @@
 #include "stringparsers.h"
+#include <vector>
 
 //-----------------------------------------------------------------------------
 bool StringParsers::ParseHexChar(char c, uint8_t& result)
@@ -41,17 +42,54 @@ bool StringParsers::ParseHexString(const char *pText, uint32_t& result)
     return true;
 }
 
+struct Token
+{
+    enum Type
+    {
+        CONSTANT,
+        OPERATOR,
+    };
+    Type        type;
+    uint64_t    val;        // for constants
+};
+
+static bool IsWhitespace(char c)
+{
+    return c == ' ' || c == '\t';
+}
+
 //-----------------------------------------------------------------------------
 bool StringParsers::ParseExpression(const char *pText, uint32_t &result)
 {
-
-    while (*pText != 0)
+    std::vector<Token> tokens;
+    for (;*pText != 0; ++pText)
     {
+        // Decide on next token type
+        if (IsWhitespace(*pText))
+            continue;
+
         if (*pText == '$')
         {
-            return ParseHexString(pText + 1, result);
+            // Hex constant
+            Token t;
+            t.type = Token::CONSTANT;
+            t.val = 0;
+            uint8_t ch;
+            ++pText;    // skip $
+            while (ParseHexChar(*pText, ch))
+            {
+                t.val <<= 4;
+                t.val |= ch;
+                ++pText;
+            }
+            tokens.push_back(t);
         }
-        ++pText;
+    }
+
+    if (tokens.size() != 0)
+    {
+        result = tokens[0].val;
+        return true;
     }
     return false;
 }
