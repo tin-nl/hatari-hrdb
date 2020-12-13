@@ -348,11 +348,12 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     QFontMetrics fm(monoFont);
 
     // This is across the top
+    int charWidth = fm.width("W");
     m_pTableView->horizontalHeader()->setMinimumSectionSize(12);
-    m_pTableView->setColumnWidth(DisasmTableModel::kColSymbol, 10*15);
-    m_pTableView->setColumnWidth(DisasmTableModel::kColAddress, 10*8);      // Windows needs more
-    m_pTableView->setColumnWidth(DisasmTableModel::kColBreakpoint, 32);
-    m_pTableView->setColumnWidth(DisasmTableModel::kColDisasm, 300);
+    m_pTableView->setColumnWidth(DisasmTableModel::kColSymbol, charWidth * 15);
+    m_pTableView->setColumnWidth(DisasmTableModel::kColAddress, charWidth * 9);      // Windows needs more
+    m_pTableView->setColumnWidth(DisasmTableModel::kColBreakpoint, charWidth * 4);
+    m_pTableView->setColumnWidth(DisasmTableModel::kColDisasm, charWidth * 30);
     m_pTableView->setColumnWidth(DisasmTableModel::kColComments, 300);
 
     // Down the side

@@ -22,7 +22,6 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     QVBoxLayout *layout = new QVBoxLayout;
     auto pGroupBox = new QGroupBox(this);
 
-
     m_pLineEdit = new QLineEdit(this);
     m_pTableView = new QTableView(this);
 
@@ -33,10 +32,11 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     m_pTableView->setFont(monoFont);
     QFontMetrics fm(monoFont);
 
-    m_pTableView->horizontalHeader()->setMinimumSectionSize(0);
     m_pTableView->horizontalHeader()->hide();
-    m_pTableView->setColumnWidth(0, 9*8);
-    m_pTableView->setColumnWidth(1, 500);
+
+    int charWidth = fm.width("W");
+    m_pTableView->setColumnWidth(0, charWidth * 9);
+    m_pTableView->setColumnWidth(1, charWidth * 16 * 3);
 
     // Down the side
     m_pTableView->verticalHeader()->hide();
@@ -75,7 +75,7 @@ void MemoryViewTableModel::SetAddress(uint32_t address)
 {
 
     m_address = address;
-    m_pDispatcher->RequestMemory(MemorySlot::kMemoryView, m_address, 100);
+    m_pDispatcher->RequestMemory(MemorySlot::kMemoryView, m_address, 256);
 }
 
 int MemoryViewTableModel::rowCount(const QModelIndex &parent) const
@@ -156,7 +156,7 @@ void MemoryViewTableModel::startStopChangedSlot()
     // Request new memory for the view
     if (!m_pTargetModel->IsRunning())
     {
-        m_pDispatcher->RequestMemory(MemorySlot::kMemoryView, m_address, 100);
+        m_pDispatcher->RequestMemory(MemorySlot::kMemoryView, m_address, 256);
     }
 }
 
