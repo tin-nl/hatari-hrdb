@@ -315,7 +315,9 @@ void DisasmTableModel::SetRowCount(int count)
 void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_t address, QTextStream& ref) const
 {
     uint32_t ea;
-    if (Disassembler::calc_fixed_ea(op, regs, address, ea))
+
+    // Only do a full analysis if this is the PC and therefore the registers are valid...
+    if (Disassembler::calc_fixed_ea(op, address == m_pTargetModel->GetPC(), regs, address, ea))
     {
         ea &= 0xffffff; // mask for ST hardware range
         ref << "$" << QString::asprintf("%x", ea);

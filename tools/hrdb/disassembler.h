@@ -36,7 +36,9 @@ public:
 
     static int decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t address, uint32_t maxLines);
     static void print(const instruction& inst, /*const symbols& symbols, */ uint32_t inst_address, QTextStream& ref);
-    static bool calc_fixed_ea(const operand &operand, const Registers& regs, uint32_t inst_address, uint32_t& ea);
+
+    // Find out the effective address of branch/jump, or for indirect addressing if "useRegs" is set.
+    static bool calc_fixed_ea(const operand &operand, bool useRegs, const Registers& regs, uint32_t inst_address, uint32_t& ea);
 };
 
 class DisAnalyse

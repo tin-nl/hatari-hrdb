@@ -173,6 +173,9 @@ bool calc_relative_address(const operand& op, uint32_t inst_address, uint32_t& t
         // The base PC is always +2 from the instruction address, since
         // the 68000 has already fetched the header word by then
         target_address = inst_address + 2 + disp;
+
+        // Now apply the register offset
+
         return true;
     }
     if (op.type == RELATIVE_BRANCH)
@@ -286,7 +289,9 @@ void print(const operand& operand, uint32_t inst_address, QTextStream& ref)
             return;
         case OpType::INDIRECT_INDEX:
             ref << operand.indirect_index.disp << "(a" << operand.indirect_index.a_reg <<
-                   ",d" << operand.indirect_index.d_reg << ")";
+                   ",d" << operand.indirect_index.d_reg <<
+                   (operand.indirect_index.is_long ? ".l" : ".w") <<
+                   ")";
             return;
         case OpType::ABSOLUTE_WORD:
             ref << to_abs_word(operand.absolute_word.wordaddr) << ".w";
@@ -298,7 +303,8 @@ void print(const operand& operand, uint32_t inst_address, QTextStream& ref)
             ref << operand.pc_disp.disp << "(pc)";
             return;
         case OpType::PC_DISP_INDEX:
-            ref << operand.pc_disp_index.disp << "(pc,d" << operand.pc_disp_index.d_reg << ")";
+            ref << operand.pc_disp_index.disp << "(pc,d" << operand.pc_disp_index.d_reg <<
+                   (operand.pc_disp_index.is_long ? ".l" : ".w") << ")";
             return;
         case OpType::MOVEM_REG:
             print_movem_mask(operand.movem_reg.reg_mask, ref);
@@ -362,61 +368,91 @@ void Disassembler::print(const instruction& inst, /*const symbols& symbols, */ u
     }
 }
 
-bool Disassembler::calc_fixed_ea(const operand &operand, const Registers& regs, uint32_t inst_address, uint32_t& ea)
+bool Disassembler::calc_fixed_ea(const operand &operand, bool useRegs, const Registers& regs, uint32_t inst_address, uint32_t& ea)
 {
     switch (operand.type)
     {
-        case OpType::D_DIRECT:
+    case OpType::D_DIRECT:
+        return false;
+    case OpType::A_DIRECT:
+        return false;
+    case OpType::INDIRECT:
+        if (!useRegs)
             return false;
-        case OpType::A_DIRECT:
+        ea = regs.GetAReg(operand.indirect.reg);
+        return true;
+    case OpType::INDIRECT_POSTINC:
+        if (!useRegs)
             return false;
-        case OpType::INDIRECT:
-            ea = regs.GetAReg(operand.indirect.reg);
-            return true;
-        case OpType::INDIRECT_POSTINC:
-            ea = regs.GetAReg(operand.indirect_postinc.reg);
-            return true;
-        case OpType::INDIRECT_PREDEC:
-            ea = regs.GetAReg(operand.indirect_predec.reg);
-            return true;
-        case OpType::INDIRECT_DISP:
-            ea = regs.GetAReg(operand.indirect_disp.reg) + operand.indirect_disp.disp;
-            return true;
-        case OpType::INDIRECT_INDEX:
-            return false; // TODO
-            // ea = regs.GetAReg(operand.indirect_index.reg) + operand.indirect_index.reg;
-        case OpType::ABSOLUTE_WORD:
-            ea = operand.absolute_word.wordaddr;
-            if (ea & 0x8000)
-                ea |= 0xffff0000;     // extend to full EA
-            return true;
-        case OpType::ABSOLUTE_LONG:
-            ea = operand.absolute_long.longaddr;
-            return true;
-        case OpType::PC_DISP:
-            calc_relative_address(operand, inst_address, ea);
-            return true;
-        case OpType::PC_DISP_INDEX:
+        ea = regs.GetAReg(operand.indirect_postinc.reg);
+        return true;
+    case OpType::INDIRECT_PREDEC:
+        if (!useRegs)
             return false;
-        case OpType::MOVEM_REG:
+        ea = regs.GetAReg(operand.indirect_predec.reg);
+        return true;
+    case OpType::INDIRECT_DISP:
+        if (!useRegs)
             return false;
-        case OpType::RELATIVE_BRANCH:
-            calc_relative_address(operand, inst_address, ea);
-            return true;
-        case OpType::IMMEDIATE:
+        ea = regs.GetAReg(operand.indirect_disp.reg) + operand.indirect_disp.disp;
+        return true;
+    case OpType::INDIRECT_INDEX:
+    {
+        if (!useRegs)
             return false;
-        case OpType::SR:
+        uint32_t a_reg = regs.GetAReg(operand.indirect_index.a_reg);
+        uint32_t d_reg = regs.GetDReg(operand.indirect_index.d_reg);
+        int8_t disp = operand.indirect_index.disp;
+        if (operand.indirect_index.is_long)
+            ea = a_reg + d_reg + disp;
+        else
+            ea = a_reg + (int16_t)(d_reg & 0xffff) + disp;
+        return true;
+    }
+    case OpType::ABSOLUTE_WORD:
+        ea = operand.absolute_word.wordaddr;
+        if (ea & 0x8000)
+            ea |= 0xffff0000;     // extend to full EA
+        return true;
+    case OpType::ABSOLUTE_LONG:
+        ea = operand.absolute_long.longaddr;
+        return true;
+    case OpType::PC_DISP:
+        calc_relative_address(operand, inst_address, ea);
+        return true;
+    case OpType::PC_DISP_INDEX:
+    {
+        if (!useRegs)
             return false;
-        case OpType::USP:
-            ea = regs.m_value[Registers::USP];
-            return true;
-        case OpType::CCR:
+        // This generates the n(pc) part
+        calc_relative_address(operand, inst_address, ea);
+        uint32_t d_reg = regs.GetDReg(operand.pc_disp_index.d_reg);
+        if (operand.pc_disp_index.is_long)
+            ea += d_reg;
+        else
+            ea += (int16_t)(d_reg & 0xffff);
+        return true;
+    }
+    case OpType::MOVEM_REG:
+        return false;
+    case OpType::RELATIVE_BRANCH:
+        calc_relative_address(operand, inst_address, ea);
+        return true;
+    case OpType::IMMEDIATE:
+        return false;
+    case OpType::SR:
+        return false;
+    case OpType::USP:
+        if (!useRegs)
             return false;
-        default:
-            return false;
+        ea = regs.m_value[Registers::USP];
+        return true;
+    case OpType::CCR:
+        return false;
+    default:
+        return false;
     }
 }
-
 bool DisAnalyse::isSubroutine(const instruction &inst)
 {
     switch (inst.opcode)
