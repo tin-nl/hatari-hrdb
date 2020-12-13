@@ -50,10 +50,11 @@ struct Token
     enum Type
     {
         CONSTANT,
-        OPERATOR,
+        ADD,
+        SUB,
     };
-    Type        type;
     uint64_t    val;        // for constants
+    Type        type;
 };
 
 static bool IsWhitespace(char c)
@@ -65,7 +66,6 @@ static bool IsDecimalDigit(char c)
 {
     return c >= '0' && c <= '9';
 }
-
 
 static bool IsAlphaLower(char c)
 {
@@ -84,12 +84,12 @@ static bool IsAlpha(char c)
 
 static bool IsSymbolStart(char c)
 {
-    return IsAlphaLower(c) || IsAlphaUpper(c) || IsDecimalDigit(c) || c == '_';
+    return IsAlpha(c) || c == '_';
 }
 
 static bool IsSymbolMain(char c)
 {
-    return IsAlphaLower(c) || IsAlphaUpper(c) || IsDecimalDigit(c) || c == '_';
+    return IsAlpha(c) || IsDecimalDigit(c) || c == '_';
 }
 
 static bool IsRegisterName(const char* name, int& regId)
@@ -110,23 +110,23 @@ static bool IsRegisterName(const char* name, int& regId)
 bool StringParsers::ParseExpression(const char *pText, uint32_t &result, const SymbolTable& syms, const Registers& regs)
 {
     std::vector<Token> tokens;
-    for (;*pText != 0;)
+    while (*pText != 0)
     {
+        char head = *pText++;
         // Decide on next token type
-        if (IsWhitespace(*pText))
+        if (IsWhitespace(head))
         {
             ++pText;
             continue;
         }
 
-        if (*pText == '$')
+        if (head == '$')
         {
             // Hex constant
             Token t;
             t.type = Token::CONSTANT;
             t.val = 0;
             uint8_t ch;
-            ++pText;    // skip $
             while (ParseHexChar(*pText, ch))
             {
                 t.val <<= 4;
@@ -136,11 +136,11 @@ bool StringParsers::ParseExpression(const char *pText, uint32_t &result, const S
             tokens.push_back(t);
             continue;
         }
-        else if (IsSymbolStart(*pText))
+        else if (IsSymbolStart(head))
         {
             // Possible symbol
             std::string name;
-            name += *pText++;
+            name += head;
             while (IsSymbolMain(*pText))
                 name += *pText++;
 
@@ -166,6 +166,23 @@ bool StringParsers::ParseExpression(const char *pText, uint32_t &result, const S
                 continue;
             }
         }
+        else if (head == '+')
+        {
+             Token t;
+             t.type = Token::ADD;
+             t.val = 0;
+             tokens.push_back(t);
+             continue;
+        }
+        else if (head == '-')
+        {
+             Token t;
+             t.type = Token::SUB;
+             t.val = 0;
+             tokens.push_back(t);
+             continue;
+        }
+        // Couldn't match
         return false;
     }
 
