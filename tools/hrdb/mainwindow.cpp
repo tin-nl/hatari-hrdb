@@ -275,7 +275,7 @@ void MainWindow::PopulateRegisters()
     ref << DispReg32(Registers::PC, m_prevRegs, regs) << "   ";
     if (m_disasm.lines.size() > 0)
         Disassembler::print(m_disasm.lines[0].inst, m_disasm.lines[0].address, ref);
-    ref << "     ;" << FindSymbol(regs.m_value[Registers::PC]);
+    ref << "     ;" << FindSymbol(regs.m_value[Registers::PC] & 0xffffff);
     ref << "<br>";
 
     ref << DispReg16(Registers::SR, m_prevRegs, regs) << "   ";
@@ -294,14 +294,14 @@ void MainWindow::PopulateRegisters()
 	ref << DispSR(m_prevRegs, regs, 1, "V");
 	ref << DispSR(m_prevRegs, regs, 0, "C");
     ref << "<br><br>";
-    ref << DispReg32(Registers::D0, m_prevRegs, regs) << " " << DispReg32(Registers::A0, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A0]) << "<br>";
-    ref << DispReg32(Registers::D1, m_prevRegs, regs) << " " << DispReg32(Registers::A1, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A1]) << "<br>";
-    ref << DispReg32(Registers::D2, m_prevRegs, regs) << " " << DispReg32(Registers::A2, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A2]) << "<br>";
-    ref << DispReg32(Registers::D3, m_prevRegs, regs) << " " << DispReg32(Registers::A3, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A3]) << "<br>";
-    ref << DispReg32(Registers::D4, m_prevRegs, regs) << " " << DispReg32(Registers::A4, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A4]) << "<br>";
-    ref << DispReg32(Registers::D5, m_prevRegs, regs) << " " << DispReg32(Registers::A5, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A5]) << "<br>";
-    ref << DispReg32(Registers::D6, m_prevRegs, regs) << " " << DispReg32(Registers::A6, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A6]) << "<br>";
-    ref << DispReg32(Registers::D7, m_prevRegs, regs) << " " << DispReg32(Registers::A7, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A7]) << "<br>";
+    ref << DispReg32(Registers::D0, m_prevRegs, regs) << " " << DispReg32(Registers::A0, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A0] & 0xffffff) << "<br>";
+    ref << DispReg32(Registers::D1, m_prevRegs, regs) << " " << DispReg32(Registers::A1, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A1] & 0xffffff) << "<br>";
+    ref << DispReg32(Registers::D2, m_prevRegs, regs) << " " << DispReg32(Registers::A2, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A2] & 0xffffff) << "<br>";
+    ref << DispReg32(Registers::D3, m_prevRegs, regs) << " " << DispReg32(Registers::A3, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A3] & 0xffffff) << "<br>";
+    ref << DispReg32(Registers::D4, m_prevRegs, regs) << " " << DispReg32(Registers::A4, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A4] & 0xffffff) << "<br>";
+    ref << DispReg32(Registers::D5, m_prevRegs, regs) << " " << DispReg32(Registers::A5, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A5] & 0xffffff) << "<br>";
+    ref << DispReg32(Registers::D6, m_prevRegs, regs) << " " << DispReg32(Registers::A6, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A6] & 0xffffff) << "<br>";
+    ref << DispReg32(Registers::D7, m_prevRegs, regs) << " " << DispReg32(Registers::A7, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A7] & 0xffffff) << "<br>";
 
     ref << "</font>";
     /*
