@@ -70,6 +70,8 @@ private:
     // Address of the top line of text that was requested
     uint32_t m_addr;            // Most recent address request
     uint64_t m_requestId;       // Most recent memory request
+
+    static const uint32_t kInvalid = 0xffffffff;
 };
 
 class DisasmWidget : public QDockWidget
@@ -89,10 +91,12 @@ protected slots:
     void keyPageUpPressed();
     void textEditChangedSlot();
 
-    // override
+    // override -- this doesn't trigger at the start?
     virtual void resizeEvent(QResizeEvent*);
 
 private:
+    void UpdateTextBox();
+
     QLineEdit*      m_pLineEdit;
     QTableView*     m_pTableView;
     DisasmTableModel* m_pTableModel;

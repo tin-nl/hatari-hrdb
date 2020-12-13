@@ -20,7 +20,7 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     m_memory(0, 0),
     m_rowCount(25),
     m_addr(0),
-    m_requestId(-1)
+    m_requestId(0)
 {
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmTableModel::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &DisasmTableModel::memoryChangedSlot);
@@ -131,8 +131,9 @@ QVariant DisasmTableModel::headerData(int section, Qt::Orientation orientation, 
 void DisasmTableModel::SetAddress(uint32_t addr)
 {
     // Request memory for this region and save the address.
-    std::string size = std::to_string((m_rowCount * 10) + 100);
-    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, (addr - 100), 300);
+    uint32_t lowAddr = (addr > 100) ? addr - 100 : 0;
+    uint32_t size = ((m_rowCount * 10) + 100);
+    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, lowAddr, size);
     m_addr = addr;
     emit addressChanged(m_addr);
 }
@@ -144,10 +145,9 @@ void DisasmTableModel::SetAddress(std::string addrStr)
     {
         return;
     }
-
     uint32_t size = m_rowCount * 10 + 100;
     m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, addr, size);
-    m_addr = -1;    // flag that the incoming address should be used
+    m_addr = kInvalid;    // flag that the incoming address should be used
 }
 
 void DisasmTableModel::MoveUp()
@@ -156,7 +156,10 @@ void DisasmTableModel::MoveUp()
         return; // not up to date
 
     // TODO we should actually disassemble upwards to see if something sensible appears
-    SetAddress(m_addr - 2);
+    if (m_addr > 2)
+        SetAddress(m_addr - 2);
+    else
+        SetAddress(0);
 }
 
 void DisasmTableModel::MoveDown()
@@ -187,7 +190,10 @@ void DisasmTableModel::PageUp()
         return; // not up to date
 
     // TODO we should actually disassemble upwards to see if something sensible appears
-    SetAddress(m_addr - 20);
+    if (m_addr > 20)
+        SetAddress(m_addr - 20);
+    else
+        SetAddress(0);
 }
 
 void DisasmTableModel::PageDown()
@@ -225,7 +231,7 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     if (!pMemOrig)
         return;
 
-    if (m_addr == -1)
+    if (m_addr == kInvalid)
     {
         m_addr = pMemOrig->GetAddress();
         emit addressChanged(m_addr);
@@ -343,6 +349,10 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableView = new QTableView(this);
     m_pTableView->setModel(m_pTableModel);
 
+    //QWidget* pTempWidget = new QTableSc(this);
+    //pTempWidget->setEnabled(true);
+    //m_pTableView->setViewport(pTempWidget);
+
     const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     m_pTableView->setFont(monoFont);
     QFontMetrics fm(monoFont);
@@ -370,6 +380,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
     // Listen for start/stop, so we can update our memory request
     connect(m_pTableView,   &QTableView::clicked,                 this, &DisasmWidget::cellClickedSlot);
+    connect(m_pTableModel,  &DisasmTableModel::addressChanged,    this, &DisasmWidget::UpdateTextBox);
     connect(m_pLineEdit,    &QLineEdit::returnPressed,            this, &DisasmWidget::textEditChangedSlot);
 
     new QShortcut(QKeySequence(tr("Down", "Next instructions")), this, SLOT(keyDownPressed()));
@@ -377,7 +388,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     new QShortcut(QKeySequence(QKeySequence::MoveToNextPage),     this, SLOT(keyPageDownPressed()));
     new QShortcut(QKeySequence(QKeySequence::MoveToPreviousPage), this, SLOT(keyPageUpPressed()));
 
-//    this->resizeEvent(nullptr);
+    this->resizeEvent(nullptr);
 }
 
 void DisasmWidget::cellClickedSlot(const QModelIndex &index)
@@ -410,15 +421,24 @@ void DisasmWidget::textEditChangedSlot()
     m_pTableModel->SetAddress(m_pLineEdit->text().toStdString());
 }
 
-void DisasmWidget::resizeEvent(QResizeEvent*)
+void DisasmWidget::resizeEvent(QResizeEvent* event)
 {
-//    m_pTableView->resizeRowsToContents();
-    // If we add these, rows get bigger??????
+    QDockWidget::resizeEvent(event);
+
+    // It seems that viewport is updated without this even being called,
+    // which means that on startup, "h" == 0.
+
     /*
     int h = m_pTableView->viewport()->size().height();
     int rowh = m_pTableView->rowHeight(0);
     if (rowh != 0)
         m_pTableModel->SetRowCount(h / rowh);
-        */
+    */
+}
+
+void DisasmWidget::UpdateTextBox()
+{
+    uint32_t addr = m_pTableModel->GetAddress();
+    m_pLineEdit->setText(QString::asprintf("$%x", addr));
 }
 
