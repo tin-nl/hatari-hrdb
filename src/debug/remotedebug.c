@@ -234,7 +234,6 @@ static int RemoteDebug_bp(int nArgc, char *psArgs[], int fd)
 	if (nArgc >= arg + 1)
 	{
 		// Pass to standard simple function
-		printf("* arg = \"%s\"\n", psArgs[arg]);
 		if (BreakCond_Command(psArgs[arg], false))
 		{
 			send_str(fd, "OK");
@@ -394,7 +393,6 @@ static int RemoteDebug_Parse(const char *input_orig, int fd)
 		/* Single arg to pass through to some internal calls,
 		   for example breakpoint parsing
 		*/
-		printf("input: %s", input2);
 		psArgs[1] = input + strlen(psArgs[0]) + 1;
 		nArgc = 2;
 	}
@@ -422,6 +420,7 @@ static void SetNonBlocking(SOCKET socket, u_long nonblock)
 	u_long mode = nonblock;  // 0 to enable blocking socket
 	ioctlsocket(socket, FIONBIO, &mode);
 }
+#define GET_SOCKET_ERROR		WSAGetLastError()
 #endif
 #if HAVE_UNIX_DOMAIN_SOCKETS
 static void SetNonBlocking(int socket, u_long nonblock)
@@ -434,6 +433,7 @@ static void SetNonBlocking(int socket, u_long nonblock)
 		on &= ~O_NONBLOCK;
 	fcntl(socket, F_SETFL, on);
 }
+#define GET_SOCKET_ERROR		errno
 #endif
 
 typedef struct RemoteDebugState
@@ -472,7 +472,6 @@ static void RemoteDebug_ProcessBuffer(RemoteDebugState* state)
 		const char* pCmd = state->cmd_buf;
 
 		// Process this command
-		printf("Received: %s\n", pCmd);
 		cmd_ret = RemoteDebug_Parse(pCmd, state->AcceptedFD);
 
 		if (cmd_ret != 0)
@@ -504,7 +503,6 @@ static bool RemoteDebug_BreakLoop(void)
 	RemoteDebugState* state;
 
 	// TODO set socket as blocking
-	printf("RemoteDebug_BreakLoop\n");
 	state = &g_rdbState;
 
 	// NO CHECK cope with no connection!
@@ -560,7 +558,6 @@ static bool RemoteDebug_BreakLoop(void)
 	// Clear any break request that might have been set
 	bRemoteBreakRequest = false;
 
-	printf("RemoteDebug_CheckUpdates complete, restarting\n");
 	RemoteDebug_NotifyState(state->AcceptedFD);
 
 	SetNonBlocking(state->AcceptedFD, 1);
@@ -589,7 +586,7 @@ static int RemoteDebugState_InitServer(RemoteDebugState* state)
 	sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
 	if (bind(state->SocketFD,(struct sockaddr *)&sa, sizeof sa) == -1) {
-		fprintf(stderr, "Failed to bind socket\n");
+		fprintf(stderr, "Failed to bind socket (%d)\n", GET_SOCKET_ERROR);
 		close(state->SocketFD);
 		state->SocketFD =-1;
 		return 1;
