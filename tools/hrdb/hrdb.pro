@@ -48,6 +48,8 @@ HEADERS += \
     stringsplitter.h \
     symboltable.h \
     registers.h
+    
+RESOURCES     = hrdb.qrc    
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

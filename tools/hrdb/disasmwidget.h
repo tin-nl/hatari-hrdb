@@ -72,6 +72,7 @@ private:
     uint32_t m_addr;            // Most recent address request
     uint64_t m_requestId;       // Most recent memory request
 
+    QPixmap m_breakpoint10Pixmap;
     static const uint32_t kInvalid = 0xffffffff;
 };
 

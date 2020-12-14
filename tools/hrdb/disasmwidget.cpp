@@ -22,6 +22,8 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     m_addr(0),
     m_requestId(0)
 {
+    m_breakpoint10Pixmap = QPixmap(":/images/breakpoint10.png");
+
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmTableModel::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &DisasmTableModel::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::breakpointsChangedSignal, this, &DisasmTableModel::breakpointsChangedSlot);
@@ -70,17 +72,8 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
         else if (index.column() == kColBreakpoint)
         {
             uint32_t pc = m_pTargetModel->GetPC();
-            QString bps;
-            uint32_t addr = m_disasm.lines[row].address;
-            for (size_t i = 0; i < m_breakpoints.m_breakpoints.size(); ++i)
-            {
-                if (m_breakpoints.m_breakpoints[i].m_pcHack == addr)
-                    bps += "*";
-            }
-
             if (pc == m_disasm.lines[row].address)
-                bps += ">";
-            return bps;
+                return QString(">");
         }
         else if (index.column() == kColDisasm)
         {
@@ -100,6 +93,23 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
                 ref << "  ";
             printEA(m_disasm.lines[row].inst.op1, regs, m_disasm.lines[row].address, ref);
             return str;
+        }
+    }
+    else if (role == Qt::DecorationRole)
+    {
+        if (row >= m_disasm.lines.size())
+            return QVariant();
+
+        if (index.column() == kColBreakpoint)
+        {
+            uint32_t addr = m_disasm.lines[row].address;
+            for (size_t i = 0; i < m_breakpoints.m_breakpoints.size(); ++i)
+            {
+                if (m_breakpoints.m_breakpoints[i].m_pcHack == addr)
+                {
+                    return m_breakpoint10Pixmap;
+                }
+            }
         }
     }
     return QVariant(); // invalid item
@@ -289,6 +299,9 @@ void DisasmTableModel::CalcDisasm()
 void DisasmTableModel::ToggleBreakpoint(const QModelIndex& index)
 {
     // set a breakpoint
+    if (index.row() >= m_disasm.lines.size())
+        return;
+
     uint32_t addr = m_disasm.lines[index.row()].address;
     bool removed = false;
 
