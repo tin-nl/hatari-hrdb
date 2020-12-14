@@ -112,6 +112,11 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
             }
         }
     }
+    else if (role == Qt::BackgroundColorRole)
+    {
+        if (row == 0 && !m_pTargetModel->IsRunning())
+            return QVariant(QColor(Qt::yellow));
+    }
     return QVariant(); // invalid item
 }
 
@@ -292,7 +297,6 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
 
     // Clear the request, to say we are up to date
     m_requestId = 0;
-
     emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
 }
 
@@ -325,13 +329,13 @@ void DisasmTableModel::CalcDisasm()
     Disassembler::decode_buf(disasmBuf, m_disasm, m_addr, m_rowCount);
 }
 
-void DisasmTableModel::ToggleBreakpoint(const QModelIndex& index)
+void DisasmTableModel::ToggleBreakpoint(int row)
 {
     // set a breakpoint
-    if (index.row() >= m_disasm.lines.size())
+    if (row >= m_disasm.lines.size())
         return;
 
-    uint32_t addr = m_disasm.lines[index.row()].address;
+    uint32_t addr = m_disasm.lines[row].address;
     bool removed = false;
 
     const Breakpoints& bp = m_pTargetModel->GetBreakpoints();
@@ -342,14 +346,14 @@ void DisasmTableModel::ToggleBreakpoint(const QModelIndex& index)
             QString cmd = QString::asprintf("bpdel %d", i + 1);
             m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
             removed = true;
+            m_pDispatcher->SendCommandPacket("bplist");
         }
     }
     if (!removed)
     {
-        QString cmd = QString::asprintf("bp pc = %d", addr);
-        m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
+        QString cmd = QString::asprintf("pc = %d", addr);
+        m_pDispatcher->SetBreakpoint(cmd.toStdString().c_str());
     }
-    m_pDispatcher->SendCommandPacket("bplist");
 }
 
 void DisasmTableModel::SetRowCount(int count)
@@ -420,8 +424,9 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableView->verticalHeader()->hide();
     m_pTableView->verticalHeader()->setDefaultSectionSize(fm.height());
 
+    // We don't allow selection. The active key always happens on row 0
     m_pTableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
-    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
+    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::NoSelection);
     m_pTableView->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
     layout->addWidget(m_pLineEdit);
     layout->addWidget(m_pTableView);
@@ -434,11 +439,12 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     connect(m_pLineEdit,    &QLineEdit::returnPressed,            this, &DisasmWidget::returnPressedSlot);
     connect(m_pLineEdit,    &QLineEdit::textEdited,               this, &DisasmWidget::textChangedSlot);
 
-    new QShortcut(QKeySequence(tr("Down", "Next instructions")), this, SLOT(keyDownPressed()));
-    new QShortcut(QKeySequence(tr("Up",   "Prev instructions")), this, SLOT(keyUpPressed()));
+    new QShortcut(QKeySequence(tr("Down", "Next instructions")),  this, SLOT(keyDownPressed()));
+    new QShortcut(QKeySequence(tr("Up",   "Prev instructions")),  this, SLOT(keyUpPressed()));
     new QShortcut(QKeySequence(QKeySequence::MoveToNextPage),     this, SLOT(keyPageDownPressed()));
     new QShortcut(QKeySequence(QKeySequence::MoveToPreviousPage), this, SLOT(keyPageUpPressed()));
     new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
+    new QShortcut(QKeySequence(tr("F9", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
 
 
     this->resizeEvent(nullptr);
@@ -448,7 +454,7 @@ void DisasmWidget::cellClickedSlot(const QModelIndex &index)
 {
     if (index.column() != DisasmTableModel::kColBreakpoint)
         return;
-    m_pTableModel->ToggleBreakpoint(index);
+    m_pTableModel->ToggleBreakpoint(index.row());
 }
 
 void DisasmWidget::keyDownPressed()
@@ -473,11 +479,13 @@ void DisasmWidget::keyPageUpPressed()
 void DisasmWidget::runToCursor()
 {
     // How do we get the selected row
-    QModelIndexList indices = m_pTableView->selectionModel()->selectedIndexes();
-    if (indices.size() != 0)
-    {
-        m_pTableModel->RunToRow(indices[0].row());
-    }
+    m_pTableModel->RunToRow(0);
+}
+
+void DisasmWidget::toggleBreakpoint()
+{
+    // How do we get the selected row
+    m_pTableModel->ToggleBreakpoint(0);
 }
 
 void DisasmWidget::returnPressedSlot()

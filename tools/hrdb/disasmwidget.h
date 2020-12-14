@@ -43,7 +43,7 @@ public:
     void PageUp();
     void PageDown();
     void RunToRow(int row);
-    void ToggleBreakpoint(const QModelIndex &index);
+    void ToggleBreakpoint(int row);
     void SetRowCount(int count);
 
 signals:
@@ -92,6 +92,7 @@ protected slots:
     void keyPageDownPressed();
     void keyPageUpPressed();
     void runToCursor();
+    void toggleBreakpoint();
     void returnPressedSlot();
     void textChangedSlot();
 
