@@ -113,9 +113,13 @@ static bool IsRegisterName(const char* name, int& regId)
 {
     for (int i = 0; i < Registers::REG_COUNT; ++i)
     {
+#ifdef WIN32
+        if (_stricmp(name, Registers::s_names[i]) != 0)
+            continue;
+#else
         if (strcasecmp(name, Registers::s_names[i]) != 0)
             continue;
-
+#endif
         regId = i;
         return true;
     }

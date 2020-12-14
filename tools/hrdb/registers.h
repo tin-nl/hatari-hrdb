@@ -4,8 +4,9 @@
 #include <stdint.h>
 #include <assert.h>
 
-struct Registers
+class Registers
 {
+public:
     Registers();
 
     uint32_t GetDReg(uint32_t index) const
