@@ -167,7 +167,36 @@ void DisasmTableModel::MoveUp()
     if (m_requestId != 0)
         return; // not up to date
 
-    // TODO we should actually disassemble upwards to see if something sensible appears
+    // Disassemble upwards to see if something sensible appears.
+    // Stop at the first valid instruction opcode.
+    // Max instruction size is 10 bytes.
+    if (m_requestId == 0)
+    {
+        for (uint32_t off = 2; off <= 10; off += 2)
+        {
+            uint32_t targetAddr = m_addr - off;
+            // Check valid memory
+            if (m_memory.GetAddress() > targetAddr ||
+                m_memory.GetAddress() + m_memory.GetSize() <= targetAddr)
+            {
+                continue;
+            }
+            // Get memory buffer for this range
+            uint32_t offset = targetAddr - m_memory.GetAddress();
+            uint32_t size = m_memory.GetSize() - offset;
+            buffer_reader disasmBuf(m_memory.GetData() + offset, size);
+            instruction inst;
+            if (Disassembler::decode_inst(disasmBuf, inst) == 0)
+            {
+                if (inst.opcode != Opcode::NONE)
+                {
+                    SetAddress(targetAddr);
+                    return;
+                }
+            }
+        }
+    }
+
     if (m_addr > 2)
         SetAddress(m_addr - 2);
     else

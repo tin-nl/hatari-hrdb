@@ -128,6 +128,12 @@ const char* instruction_names[Opcode::COUNT] =
     "unlk"
 };
 
+
+int Disassembler::decode_inst(buffer_reader& buf, instruction& inst)
+{
+    return decode(buf, inst);
+}
+
 int Disassembler::decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t address, uint32_t maxLines)
 {
     while (buf.get_remain() >= 2)
