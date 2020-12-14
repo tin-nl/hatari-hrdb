@@ -47,6 +47,13 @@ uint64_t Dispatcher::RequestMemory(MemorySlot slot, uint32_t address, uint32_t s
     return SendCommandShared(slot, command);
 }
 
+uint64_t Dispatcher::RunToPC(uint32_t next_pc)
+{
+    QString str = QString::asprintf("bp pc = $%x : once", next_pc);
+    SendCommandPacket(str.toStdString().c_str());
+    return SendCommandPacket("run");
+}
+
 uint64_t Dispatcher::SetBreakpoint(std::string expression)
 {
     std::string command = std::string("bp " + expression);

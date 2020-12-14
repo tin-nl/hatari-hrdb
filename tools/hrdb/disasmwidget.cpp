@@ -210,6 +210,14 @@ void DisasmTableModel::PageDown()
     }
 }
 
+void DisasmTableModel::RunToRow(int row)
+{
+    if (row >= 0 && row < m_disasm.lines.size())
+    {
+        m_pDispatcher->RunToPC(m_disasm.lines[row].address);
+    }
+}
+
 void DisasmTableModel::startStopChangedSlot()
 {
     // Request new memory for the view
@@ -388,6 +396,8 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     new QShortcut(QKeySequence(tr("Up",   "Prev instructions")), this, SLOT(keyUpPressed()));
     new QShortcut(QKeySequence(QKeySequence::MoveToNextPage),     this, SLOT(keyPageDownPressed()));
     new QShortcut(QKeySequence(QKeySequence::MoveToPreviousPage), this, SLOT(keyPageUpPressed()));
+    new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
+
 
     this->resizeEvent(nullptr);
 }
@@ -412,9 +422,20 @@ void DisasmWidget::keyPageDownPressed()
 {
     m_pTableModel->PageDown();
 }
+
 void DisasmWidget::keyPageUpPressed()
 {
     m_pTableModel->PageUp();
+}
+
+void DisasmWidget::runToCursor()
+{
+    // How do we get the selected row
+    QModelIndexList indices = m_pTableView->selectionModel()->selectedIndexes();
+    if (indices.size() != 0)
+    {
+        m_pTableModel->RunToRow(indices[0].row());
+    }
 }
 
 void DisasmWidget::returnPressedSlot()

@@ -24,6 +24,8 @@ public:
     // Allows strings so expressions can evaluate
     uint64_t RequestMemory(MemorySlot slot, uint32_t address, uint32_t size);
 
+    uint64_t RunToPC(uint32_t pc);
+
     uint64_t SetBreakpoint(std::string expression);
 
 private slots:

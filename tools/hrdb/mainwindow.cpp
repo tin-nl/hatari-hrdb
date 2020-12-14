@@ -80,17 +80,10 @@ MainWindow::MainWindow(QWidget *parent)
     createActions();
     createMenus();
 	// Keyboard shortcuts
-	new QShortcut(QKeySequence(tr("F5", "Start/Stop")),
-					this,
-					SLOT(startStopClicked()));
+    new QShortcut(QKeySequence(tr("F5", "Start/Stop")), 		this, 			SLOT(startStopClicked()));
 
-    new QShortcut(QKeySequence(tr("F10", "Next")),
-					this,
-                    SLOT(nextClicked()));
-
-    new QShortcut(QKeySequence(tr("F11", "Step")),
-                    this,
-                    SLOT(singleStepClicked()));
+    new QShortcut(QKeySequence(tr("F10", "Next")),				this,           SLOT(nextClicked()));
+    new QShortcut(QKeySequence(tr("F11", "Step")),              this,           SLOT(singleStepClicked()));
 
     // Try initial connect
     Connect();
@@ -209,9 +202,7 @@ void MainWindow::nextClicked()
     if (shouldStepOver)
     {
         uint32_t next_pc = nextInst.inst.byte_count + nextInst.address;
-        QString str = QString::asprintf("bp pc = $%x : once", next_pc);
-        m_pDispatcher->SendCommandPacket(str.toStdString().c_str());
-        m_pDispatcher->SendCommandPacket("run");
+        m_pDispatcher->RunToPC(next_pc);
     }
     else
     {
