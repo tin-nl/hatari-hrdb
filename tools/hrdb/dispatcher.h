@@ -43,6 +43,8 @@ private:
 	void ReceiveNotification(const RemoteNotification& notification);
     void ReceivePacket(const char* response);
 
+    void DeletePending();
+
 	std::deque<RemoteCommand*>		m_sentCommands;
 	QTcpSocket*						m_pTcpSocket;
 	TargetModel*					m_pTargetModel;

@@ -38,7 +38,7 @@ Dispatcher::Dispatcher(QTcpSocket* tcpSocket, TargetModel* pTargetModel) :
 
 Dispatcher::~Dispatcher()
 {
-    // NO CHECK delete all pending commands
+    DeletePending();
 }
 
 uint64_t Dispatcher::RequestMemory(MemorySlot slot, uint32_t address, uint32_t size)
@@ -105,7 +105,18 @@ void Dispatcher::ReceivePacket(const char* response)
 	{
 		std::cout << "No pending command??" << std::endl;
 	}
-	
+
+}
+
+void Dispatcher::DeletePending()
+{
+    std::deque<RemoteCommand*>::iterator it = m_sentCommands.begin();
+    while (it != m_sentCommands.end())
+    {
+        delete *it;
+        ++it;
+    }
+    m_sentCommands.clear();
 }
 
 void Dispatcher::connected()
@@ -120,8 +131,8 @@ void Dispatcher::connected()
 void Dispatcher::disconnected()
 {
     m_pTargetModel->SetConnected(0);
-    // THIS HAPPENS ON THE EVENT LOOP
-    printf("Host disconnected\n");
+    // Clear pending commands so that incoming responses are not confused with the first connection
+    DeletePending();
 }
 
 void Dispatcher::readyRead()
