@@ -76,6 +76,22 @@ private:
     static const uint32_t kInvalid = 0xffffffff;
 };
 
+class DisasmTableView : public QTableView
+{
+public:
+    DisasmTableView(QWidget* parent, DisasmTableModel* pModel);
+private:
+    virtual void contextMenuEvent(QContextMenuEvent *event);
+    void runToCursorRightClick();
+
+    DisasmTableModel*     m_pModel;
+    // Actions
+    QAction*              m_pRunUntilAction;
+
+    // Remembers which row we right-clicked on
+    int                   m_rightClickRow;
+};
+
 class DisasmWidget : public QDockWidget
 {
     Q_OBJECT
@@ -96,16 +112,16 @@ protected slots:
     void returnPressedSlot();
     void textChangedSlot();
 
+private:
     // override -- this doesn't trigger at the start?
     virtual void resizeEvent(QResizeEvent*);
 
-private:
     void UpdateTextBox();
 
     QLineEdit*      m_pLineEdit;
     QTableView*     m_pTableView;
-    DisasmTableModel* m_pTableModel;
 
+    DisasmTableModel* m_pTableModel;
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
 };

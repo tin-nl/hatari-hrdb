@@ -7,12 +7,14 @@
 #include <QHeaderView>
 #include <QShortcut>
 #include <QFontDatabase>
+#include <QMenu>
+#include <QContextMenuEvent>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
 #include "stringparsers.h"
 
-// ============================================================================
+//-----------------------------------------------------------------------------
 DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher) :
     QAbstractTableModel(parent),
     m_pTargetModel(pTargetModel),
@@ -387,20 +389,56 @@ void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_
     };
 }
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+DisasmTableView::DisasmTableView(QWidget* parent, DisasmTableModel* pModel) :
+    QTableView (parent),
+    m_pModel(pModel)
+{
+    // Actions
+    m_rightClickRow = -1;
+    m_pRunUntilAction = new QAction(tr("Run to here"), this);
+    //m_pRunUntilAction->setStatusTip(tr("Cut the current selection's contents to the "
+    //                        "clipboard"));
+    connect(m_pRunUntilAction, &QAction::triggered, this, &DisasmTableView::runToCursorRightClick);
+}
+
+void DisasmTableView::contextMenuEvent(QContextMenuEvent *event)
+{
+    QModelIndex index = this->indexAt(event->pos());
+    if (!index.isValid())
+        return;
+
+    m_rightClickRow = index.row();
+    QMenu menu(this);
+    menu.addAction(m_pRunUntilAction);
+    menu.exec(event->globalPos());
+}
+
+void DisasmTableView::runToCursorRightClick()
+{
+    m_pModel->RunToRow(m_rightClickRow);
+    m_rightClickRow = -1;
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
 DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher) :
     QDockWidget(parent),
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher)
 {
+    // Create model early
+    m_pTableModel = new DisasmTableModel(this, pTargetModel, pDispatcher);
+
     this->setWindowTitle("Disassembly");
     QVBoxLayout *layout = new QVBoxLayout;
     auto pGroupBox = new QGroupBox(this);
 
     m_pLineEdit = new QLineEdit(this);
 
-    // Create model early
-    m_pTableModel = new DisasmTableModel(this, pTargetModel, pDispatcher);
-    m_pTableView = new QTableView(this);
+    m_pTableView = new DisasmTableView(this, m_pTableModel);
     m_pTableView->setModel(m_pTableModel);
 
     //QWidget* pTempWidget = new QTableSc(this);
@@ -445,8 +483,6 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     new QShortcut(QKeySequence(QKeySequence::MoveToPreviousPage), this, SLOT(keyPageUpPressed()));
     new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
     new QShortcut(QKeySequence(tr("F9", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
-
-
     this->resizeEvent(nullptr);
 }
 
@@ -534,4 +570,3 @@ void DisasmWidget::UpdateTextBox()
     uint32_t addr = m_pTableModel->GetAddress();
     m_pLineEdit->setText(QString::asprintf("$%x", addr));
 }
-
