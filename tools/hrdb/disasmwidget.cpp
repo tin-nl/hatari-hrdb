@@ -21,7 +21,8 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     m_pDispatcher(pDispatcher),
     m_memory(0, 0),
     m_rowCount(25),
-    m_addr(0),
+    m_requestedAddress(0),
+    m_logicalAddr(0),
     m_requestId(0)
 {
     m_breakpoint10Pixmap = QPixmap(":/images/breakpoint10.png");
@@ -148,11 +149,18 @@ QVariant DisasmTableModel::headerData(int section, Qt::Orientation orientation, 
 void DisasmTableModel::SetAddress(uint32_t addr)
 {
     // Request memory for this region and save the address.
+    m_logicalAddr = addr;
+    RequestMemory();
+    emit addressChanged(m_logicalAddr);
+}
+
+// Request enough memory based on m_rowCount and m_logicalAddr
+void DisasmTableModel::RequestMemory()
+{
+    uint32_t addr = m_logicalAddr;
     uint32_t lowAddr = (addr > 100) ? addr - 100 : 0;
     uint32_t size = ((m_rowCount * 10) + 100);
     m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, lowAddr, size);
-    m_addr = addr;
-    emit addressChanged(m_addr);
 }
 
 bool DisasmTableModel::SetAddress(std::string addrStr)
@@ -163,9 +171,8 @@ bool DisasmTableModel::SetAddress(std::string addrStr)
     {
         return false;
     }
-    uint32_t size = m_rowCount * 10 + 100;
-    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, addr, size);
-    m_addr = kInvalid;    // flag that the incoming address should be used
+
+    SetAddress(addr);
     return true;
 }
 
@@ -181,7 +188,7 @@ void DisasmTableModel::MoveUp()
     {
         for (uint32_t off = 2; off <= 10; off += 2)
         {
-            uint32_t targetAddr = m_addr - off;
+            uint32_t targetAddr = m_logicalAddr - off;
             // Check valid memory
             if (m_memory.GetAddress() > targetAddr ||
                 m_memory.GetAddress() + m_memory.GetSize() <= targetAddr)
@@ -204,8 +211,8 @@ void DisasmTableModel::MoveUp()
         }
     }
 
-    if (m_addr > 2)
-        SetAddress(m_addr - 2);
+    if (m_logicalAddr > 2)
+        SetAddress(m_logicalAddr - 2);
     else
         SetAddress(0);
 }
@@ -220,7 +227,7 @@ void DisasmTableModel::MoveDown()
         // Find our current line in disassembly
         for (size_t i = 0; i < m_disasm.lines.size(); ++i)
         {
-            if (m_disasm.lines[i].address == m_addr)
+            if (m_disasm.lines[i].address == m_logicalAddr)
             {
                 // This will go off and request the memory itself
                 SetAddress(m_disasm.lines[i].GetEnd());
@@ -238,8 +245,8 @@ void DisasmTableModel::PageUp()
         return; // not up to date
 
     // TODO we should actually disassemble upwards to see if something sensible appears
-    if (m_addr > 20)
-        SetAddress(m_addr - 20);
+    if (m_logicalAddr > 20)
+        SetAddress(m_logicalAddr - 20);
     else
         SetAddress(0);
 }
@@ -287,10 +294,10 @@ void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     if (!pMemOrig)
         return;
 
-    if (m_addr == kInvalid)
+    if (m_logicalAddr == kInvalid)
     {
-        m_addr = pMemOrig->GetAddress();
-        emit addressChanged(m_addr);
+        m_logicalAddr = pMemOrig->GetAddress();
+        emit addressChanged(m_logicalAddr);
     }
 
     // Cache it for later
@@ -318,17 +325,17 @@ void DisasmTableModel::symbolTableChangedSlot(uint64_t commandId)
 void DisasmTableModel::CalcDisasm()
 {
     // Make sure the data we get back matches our expectations...
-    if (m_addr < m_memory.GetAddress())
+    if (m_logicalAddr < m_memory.GetAddress())
         return;
-    if (m_addr >= m_memory.GetAddress() + m_memory.GetSize())
+    if (m_logicalAddr >= m_memory.GetAddress() + m_memory.GetSize())
         return;
 
     // Work out where we need to start disassembling from
-    uint32_t offset = m_addr - m_memory.GetAddress();
+    uint32_t offset = m_logicalAddr - m_memory.GetAddress();
     uint32_t size = m_memory.GetSize() - offset;
     buffer_reader disasmBuf(m_memory.GetData() + offset, size);
     m_disasm.lines.clear();
-    Disassembler::decode_buf(disasmBuf, m_disasm, m_addr, m_rowCount);
+    Disassembler::decode_buf(disasmBuf, m_disasm, m_logicalAddr, m_rowCount);
 }
 
 void DisasmTableModel::ToggleBreakpoint(int row)
@@ -367,6 +374,11 @@ void DisasmTableModel::SetRowCount(int count)
 
         // Do we need more data?
         CalcDisasm();
+        if (m_disasm.lines.size() < m_rowCount)
+        {
+            // We need more memory
+            RequestMemory();
+        }
 
         emit endResetModel();
     }
@@ -480,6 +492,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     connect(m_pTableModel,  &DisasmTableModel::addressChanged,    this, &DisasmWidget::UpdateTextBox);
     connect(m_pLineEdit,    &QLineEdit::returnPressed,            this, &DisasmWidget::returnPressedSlot);
     connect(m_pLineEdit,    &QLineEdit::textEdited,               this, &DisasmWidget::textChangedSlot);
+    connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmWidget::RecalcRowCount);
 
     new QShortcut(QKeySequence(tr("Down", "Next instructions")),  this, SLOT(keyDownPressed()));
     new QShortcut(QKeySequence(tr("Up",   "Prev instructions")),  this, SLOT(keyUpPressed()));
@@ -557,18 +570,21 @@ void DisasmWidget::textChangedSlot()
 void DisasmWidget::resizeEvent(QResizeEvent* event)
 {
     QDockWidget::resizeEvent(event);
-
-    // It seems that viewport is updated without this even being called,
-    // which means that on startup, "h" == 0.
-
-    int h = m_pTableView->viewport()->size().height();
-    int rowh = m_pTableView->rowHeight(0);
-    if (rowh != 0)
-        m_pTableModel->SetRowCount(h / rowh);
+    RecalcRowCount();
 }
 
 void DisasmWidget::UpdateTextBox()
 {
     uint32_t addr = m_pTableModel->GetAddress();
     m_pLineEdit->setText(QString::asprintf("$%x", addr));
+}
+
+void DisasmWidget::RecalcRowCount()
+{
+    // It seems that viewport is updated without this even being called,
+    // which means that on startup, "h" == 0.
+    int h = m_pTableView->viewport()->size().height();
+    int rowh = m_pTableView->rowHeight(0);
+    if (rowh != 0)
+        m_pTableModel->SetRowCount(h / rowh);
 }

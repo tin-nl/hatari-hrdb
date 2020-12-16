@@ -36,7 +36,7 @@ public:
     // "The model emits signals to indicate changes. For example, dataChanged() is emitted whenever items of data made available by the model are changed"
     // So I expect we can emit that if we see the target has changed
 
-    uint32_t GetAddress() const { return m_addr; }
+    uint32_t GetAddress() const { return m_logicalAddr; }
     bool SetAddress(std::string addr);
     void MoveUp();
     void MoveDown();
@@ -57,6 +57,7 @@ private slots:
 
 private:
     void SetAddress(uint32_t addr);
+    void RequestMemory();
     void CalcDisasm();
     void printEA(const operand &op, const Registers &regs, uint32_t address, QTextStream &ref) const;
     TargetModel* m_pTargetModel;
@@ -69,8 +70,10 @@ private:
     int         m_rowCount;
 
     // Address of the top line of text that was requested
-    uint32_t m_addr;            // Most recent address request
-    uint64_t m_requestId;       // Most recent memory request
+
+    uint32_t m_requestedAddress;    // Most recent address requested
+    uint32_t m_logicalAddr;    // Most recent address that can be shown
+    uint64_t m_requestId;           // Most recent memory request
 
     QPixmap m_breakpoint10Pixmap;
     static const uint32_t kInvalid = 0xffffffff;
@@ -117,6 +120,7 @@ private:
     virtual void resizeEvent(QResizeEvent*);
 
     void UpdateTextBox();
+    void RecalcRowCount();
 
     QLineEdit*      m_pLineEdit;
     QTableView*     m_pTableView;
