@@ -362,9 +362,13 @@ void DisasmTableModel::SetRowCount(int count)
 {
     if (count != m_rowCount)
     {
+        emit beginResetModel();
         m_rowCount = count;
+
+        // Do we need more data?
         CalcDisasm();
-        emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
+
+        emit endResetModel();
     }
 }
 
@@ -557,12 +561,10 @@ void DisasmWidget::resizeEvent(QResizeEvent* event)
     // It seems that viewport is updated without this even being called,
     // which means that on startup, "h" == 0.
 
-    /*
     int h = m_pTableView->viewport()->size().height();
     int rowh = m_pTableView->rowHeight(0);
     if (rowh != 0)
         m_pTableModel->SetRowCount(h / rowh);
-    */
 }
 
 void DisasmWidget::UpdateTextBox()
