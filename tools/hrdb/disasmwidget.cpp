@@ -256,10 +256,10 @@ void DisasmTableModel::PageDown()
     if (m_requestId != 0)
         return; // not up to date
 
-    if (m_disasm.lines.size() > 9)
+    if (m_disasm.lines.size() > 0)
     {
         // This will go off and request the memory itself
-        SetAddress(m_disasm.lines[9].GetEnd());
+        SetAddress(m_disasm.lines.back().GetEnd());
     }
 }
 
@@ -437,6 +437,39 @@ void DisasmTableView::runToCursorRightClick()
     m_rightClickRow = -1;
 }
 
+QModelIndex DisasmTableView::moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers)
+{
+    QModelIndex i = this->currentIndex();
+
+    // Do the override/refill behaviour if we need to scroll our virtual area
+    if (cursorAction == QAbstractItemView::CursorAction::MoveUp &&
+        i.row() == 0)
+    {
+        m_pModel->MoveUp();
+        return i;
+    }
+    else if (cursorAction == QAbstractItemView::CursorAction::MoveDown &&
+             i.row() >= m_pModel->GetRowCount() - 1)
+    {
+        m_pModel->MoveDown();
+        return i;
+    }
+    else if (cursorAction == QAbstractItemView::CursorAction::MovePageUp &&
+             i.row() == 0)
+    {
+        m_pModel->PageUp();
+        return i;
+    }
+    else if (cursorAction == QAbstractItemView::CursorAction::MovePageDown &&
+             i.row() >= m_pModel->GetRowCount() - 1)
+    {
+        m_pModel->PageDown();
+        return i;
+    }
+
+    return QTableView::moveCursor(cursorAction, modifiers);
+}
+
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
@@ -480,7 +513,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
     // We don't allow selection. The active key always happens on row 0
     m_pTableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
-    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::NoSelection);
+    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
     m_pTableView->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
     layout->addWidget(m_pLineEdit);
     layout->addWidget(m_pTableView);
@@ -494,10 +527,10 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     connect(m_pLineEdit,    &QLineEdit::textEdited,               this, &DisasmWidget::textChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmWidget::RecalcRowCount);
 
-    new QShortcut(QKeySequence(tr("Down", "Next instructions")),  this, SLOT(keyDownPressed()));
-    new QShortcut(QKeySequence(tr("Up",   "Prev instructions")),  this, SLOT(keyUpPressed()));
-    new QShortcut(QKeySequence(QKeySequence::MoveToNextPage),     this, SLOT(keyPageDownPressed()));
-    new QShortcut(QKeySequence(QKeySequence::MoveToPreviousPage), this, SLOT(keyPageUpPressed()));
+    //new QShortcut(QKeySequence(tr("Down", "Next instructions")),  this, SLOT(keyDownPressed()));
+    //new QShortcut(QKeySequence(tr("Up",   "Prev instructions")),  this, SLOT(keyUpPressed()));
+    //new QShortcut(QKeySequence(QKeySequence::MoveToNextPage),     this, SLOT(keyPageDownPressed()));
+    //new QShortcut(QKeySequence(QKeySequence::MoveToPreviousPage), this, SLOT(keyPageUpPressed()));
     new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
     new QShortcut(QKeySequence(tr("F9", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
     this->resizeEvent(nullptr);

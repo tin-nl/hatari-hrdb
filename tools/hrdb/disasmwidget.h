@@ -37,6 +37,8 @@ public:
     // So I expect we can emit that if we see the target has changed
 
     uint32_t GetAddress() const { return m_logicalAddr; }
+    int GetRowCount() const     { return m_rowCount; }
+
     bool SetAddress(std::string addr);
     void MoveUp();
     void MoveDown();
@@ -83,6 +85,8 @@ class DisasmTableView : public QTableView
 {
 public:
     DisasmTableView(QWidget* parent, DisasmTableModel* pModel);
+protected:
+    QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers);
 private:
     virtual void contextMenuEvent(QContextMenuEvent *event);
     void runToCursorRightClick();
