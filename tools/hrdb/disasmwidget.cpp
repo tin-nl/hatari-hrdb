@@ -426,6 +426,9 @@ DisasmTableView::DisasmTableView(QWidget* parent, DisasmTableModel* pModel) :
 
     new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
     new QShortcut(QKeySequence(tr("F9", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
+
+    // This table gets the focus from the parent docking widget
+    setFocus();
 }
 
 void DisasmTableView::contextMenuEvent(QContextMenuEvent *event)
