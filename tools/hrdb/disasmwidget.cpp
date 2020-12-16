@@ -417,12 +417,17 @@ void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_
 //-----------------------------------------------------------------------------
 DisasmTableView::DisasmTableView(QWidget* parent, DisasmTableModel* pModel) :
     QTableView (parent),
-    m_pModel(pModel)
+    m_pModel(pModel),
+    m_rightClickMenu(this),
+    m_rightClickRow(-1)
 {
-    // Actions
-    m_rightClickRow = -1;
+    // Actions for right-click menu
     m_pRunUntilAction = new QAction(tr("Run to here"), this);
     connect(m_pRunUntilAction, &QAction::triggered, this, &DisasmTableView::runToCursorRightClick);
+    m_pBreakpointAction = new QAction(tr("Toggle Breakpoint"), this);
+    connect(m_pBreakpointAction, &QAction::triggered, this, &DisasmTableView::toggleBreakpointRightClick);
+    m_rightClickMenu.addAction(m_pRunUntilAction);
+    m_rightClickMenu.addAction(m_pBreakpointAction);
 
     new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
     new QShortcut(QKeySequence(tr("F9", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
@@ -438,14 +443,19 @@ void DisasmTableView::contextMenuEvent(QContextMenuEvent *event)
         return;
 
     m_rightClickRow = index.row();
-    QMenu menu(this);
-    menu.addAction(m_pRunUntilAction);
-    menu.exec(event->globalPos());
+    m_rightClickMenu.exec(event->globalPos());
+
 }
 
 void DisasmTableView::runToCursorRightClick()
 {
     m_pModel->RunToRow(m_rightClickRow);
+    m_rightClickRow = -1;
+}
+
+void DisasmTableView::toggleBreakpointRightClick()
+{
+    m_pModel->ToggleBreakpoint(m_rightClickRow);
     m_rightClickRow = -1;
 }
 

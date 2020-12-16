@@ -3,6 +3,7 @@
 
 #include <QDockWidget>
 #include <QTableView>
+#include <QMenu>
 #include "disassembler.h"
 #include "breakpoint.h"
 #include "memory.h"
@@ -97,10 +98,13 @@ private:
     virtual void contextMenuEvent(QContextMenuEvent *event);
 
     void runToCursorRightClick();
+    void toggleBreakpointRightClick();
 
     DisasmTableModel*     m_pModel;
     // Actions
     QAction*              m_pRunUntilAction;
+    QAction*              m_pBreakpointAction;
+    QMenu                 m_rightClickMenu;
 
     // Remembers which row we right-clicked on
     int                   m_rightClickRow;
