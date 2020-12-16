@@ -83,12 +83,19 @@ private:
 
 class DisasmTableView : public QTableView
 {
+    Q_OBJECT
 public:
     DisasmTableView(QWidget* parent, DisasmTableModel* pModel);
+
+public slots:
+    void runToCursor();
+    void toggleBreakpoint();
+
 protected:
     QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers);
 private:
     virtual void contextMenuEvent(QContextMenuEvent *event);
+
     void runToCursorRightClick();
 
     DisasmTableModel*     m_pModel;
@@ -114,8 +121,6 @@ protected slots:
     void keyUpPressed();
     void keyPageDownPressed();
     void keyPageUpPressed();
-    void runToCursor();
-    void toggleBreakpoint();
     void returnPressedSlot();
     void textChangedSlot();
 

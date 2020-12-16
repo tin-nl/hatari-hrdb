@@ -53,37 +53,39 @@ int DisasmTableModel::columnCount(const QModelIndex &parent) const
 
 QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
 {
+    // Always empty if we have no disassembly ready
     uint32_t row = (uint32_t)index.row();
+    if (row >= m_disasm.lines.size())
+        return QVariant();
+
+    const Disassembler::line& line = m_disasm.lines[row];
     if (role == Qt::DisplayRole)
     {
-        if (row >= m_disasm.lines.size())
-            return QVariant();
-
         if (index.column() == kColSymbol)
         {
-            uint32_t addr = m_disasm.lines[row].address;
+            uint32_t addr = line.address;
             Symbol sym;
             if (m_pTargetModel->GetSymbolTable().Find(addr, sym))
                 return QString::fromStdString(sym.name) + ":";
         }
         else if (index.column() == kColAddress)
         {
-            uint32_t addr = m_disasm.lines[row].address;
+            uint32_t addr = line.address;
             QString addrStr = QString::asprintf("%08x", addr);
             return addrStr;
         }
         else if (index.column() == kColBreakpoint)
         {
             uint32_t pc = m_pTargetModel->GetPC();
-            if (pc == m_disasm.lines[row].address)
+            if (pc == line.address)
                 return QString(">");
         }
         else if (index.column() == kColDisasm)
         {
             QString str;
             QTextStream ref(&str);
-            Disassembler::print(m_disasm.lines[row].inst,
-                    m_disasm.lines[row].address, ref);
+            Disassembler::print(line.inst,
+                    line.address, ref);
             return str;
         }
         else if (index.column() == kColComments)
@@ -91,10 +93,10 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
             QString str;
             QTextStream ref(&str);
             Registers regs = m_pTargetModel->GetRegs();
-            printEA(m_disasm.lines[row].inst.op0, regs, m_disasm.lines[row].address, ref);
+            printEA(line.inst.op0, regs, line.address, ref);
             if (str.size() != 0)
                 ref << "  ";
-            printEA(m_disasm.lines[row].inst.op1, regs, m_disasm.lines[row].address, ref);
+            printEA(line.inst.op1, regs, line.address, ref);
             return str;
         }
     }
@@ -105,7 +107,7 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
 
         if (index.column() == kColBreakpoint)
         {
-            uint32_t addr = m_disasm.lines[row].address;
+            uint32_t addr = line.address;
             for (size_t i = 0; i < m_breakpoints.m_breakpoints.size(); ++i)
             {
                 if (m_breakpoints.m_breakpoints[i].m_pcHack == addr)
@@ -117,8 +119,12 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
     }
     else if (role == Qt::BackgroundColorRole)
     {
-        if (row == 0 && !m_pTargetModel->IsRunning())
-            return QVariant(QColor(Qt::yellow));
+        // Highlight the PC line
+        if (!m_pTargetModel->IsRunning())
+        {
+            if (line.address == m_pTargetModel->GetPC())
+                return QVariant(QColor(Qt::yellow));
+        }
     }
     return QVariant(); // invalid item
 }
@@ -267,7 +273,8 @@ void DisasmTableModel::RunToRow(int row)
 {
     if (row >= 0 && row < m_disasm.lines.size())
     {
-        m_pDispatcher->RunToPC(m_disasm.lines[row].address);
+        Disassembler::line& line = m_disasm.lines[row];
+        m_pDispatcher->RunToPC(line.address);
     }
 }
 
@@ -344,7 +351,8 @@ void DisasmTableModel::ToggleBreakpoint(int row)
     if (row >= m_disasm.lines.size())
         return;
 
-    uint32_t addr = m_disasm.lines[row].address;
+    Disassembler::line& line = m_disasm.lines[row];
+    uint32_t addr = line.address;
     bool removed = false;
 
     const Breakpoints& bp = m_pTargetModel->GetBreakpoints();
@@ -414,9 +422,10 @@ DisasmTableView::DisasmTableView(QWidget* parent, DisasmTableModel* pModel) :
     // Actions
     m_rightClickRow = -1;
     m_pRunUntilAction = new QAction(tr("Run to here"), this);
-    //m_pRunUntilAction->setStatusTip(tr("Cut the current selection's contents to the "
-    //                        "clipboard"));
     connect(m_pRunUntilAction, &QAction::triggered, this, &DisasmTableView::runToCursorRightClick);
+
+    new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
+    new QShortcut(QKeySequence(tr("F9", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
 }
 
 void DisasmTableView::contextMenuEvent(QContextMenuEvent *event)
@@ -435,6 +444,20 @@ void DisasmTableView::runToCursorRightClick()
 {
     m_pModel->RunToRow(m_rightClickRow);
     m_rightClickRow = -1;
+}
+
+void DisasmTableView::runToCursor()
+{
+    // How do we get the selected row
+    QModelIndex i = this->currentIndex();
+    m_pModel->RunToRow(i.row());
+}
+
+void DisasmTableView::toggleBreakpoint()
+{
+    // How do we get the selected row
+    QModelIndex i = this->currentIndex();
+    m_pModel->ToggleBreakpoint(i.row());
 }
 
 QModelIndex DisasmTableView::moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers)
@@ -527,12 +550,6 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     connect(m_pLineEdit,    &QLineEdit::textEdited,               this, &DisasmWidget::textChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmWidget::RecalcRowCount);
 
-    //new QShortcut(QKeySequence(tr("Down", "Next instructions")),  this, SLOT(keyDownPressed()));
-    //new QShortcut(QKeySequence(tr("Up",   "Prev instructions")),  this, SLOT(keyUpPressed()));
-    //new QShortcut(QKeySequence(QKeySequence::MoveToNextPage),     this, SLOT(keyPageDownPressed()));
-    //new QShortcut(QKeySequence(QKeySequence::MoveToPreviousPage), this, SLOT(keyPageUpPressed()));
-    new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
-    new QShortcut(QKeySequence(tr("F9", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
     this->resizeEvent(nullptr);
 }
 
@@ -560,18 +577,6 @@ void DisasmWidget::keyPageDownPressed()
 void DisasmWidget::keyPageUpPressed()
 {
     m_pTableModel->PageUp();
-}
-
-void DisasmWidget::runToCursor()
-{
-    // How do we get the selected row
-    m_pTableModel->RunToRow(0);
-}
-
-void DisasmWidget::toggleBreakpoint()
-{
-    // How do we get the selected row
-    m_pTableModel->ToggleBreakpoint(0);
 }
 
 void DisasmWidget::returnPressedSlot()
