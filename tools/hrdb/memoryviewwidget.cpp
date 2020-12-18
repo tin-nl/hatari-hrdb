@@ -403,9 +403,8 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     setWidget(pGroupBox);
 
     // Listen for start/stop, so we can update our memory request
-    //connect(m_pLineEdit, &QLineEdit::textChanged,           this, SLOT(textEditChangedSlot));
-    connect(m_pComboBox, SIGNAL(currentIndexChanged(int)),
-                                                            SLOT(tmp(int)));
+    connect(m_pLineEdit, &QLineEdit::returnPressed,         this, &MemoryViewWidget::textEditChangedSlot);
+    connect(m_pComboBox, SIGNAL(currentIndexChanged(int)),  SLOT(modeComboBoxChanged(int)));
 }
 
 void MemoryViewWidget::textEditChangedSlot()
@@ -418,7 +417,7 @@ void MemoryViewWidget::textEditChangedSlot()
     pModel->SetAddress(addr);
 }
 
-void MemoryViewWidget::tmp(int index)
+void MemoryViewWidget::modeComboBoxChanged(int index)
 {
     pModel->SetMode((MemoryViewTableModel::Mode)index);
     m_pTableView->resizeColumnToContents(MemoryViewTableModel::kColData);

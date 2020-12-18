@@ -110,7 +110,7 @@ public:
 
 public slots:
     void textEditChangedSlot();
-    void tmp(int index);
+    void modeComboBoxChanged(int index);
 
 private:
     QLineEdit*           m_pLineEdit;
