@@ -565,10 +565,6 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pFollowPC->setTristate(false);
     m_pFollowPC->setChecked(m_pTableModel->GetFollowPC());
 
-    //QWidget* pTempWidget = new QTableSc(this);
-    //pTempWidget->setEnabled(true);
-    //m_pTableView->setViewport(pTempWidget);
-
     const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     m_pTableView->setFont(monoFont);
     QFontMetrics fm(monoFont);
