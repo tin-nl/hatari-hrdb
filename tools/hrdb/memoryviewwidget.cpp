@@ -18,6 +18,7 @@ MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTarget
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher),
     m_address(0),
+    m_bytesPerRow(16),
     m_rowCount(1),
     m_requestId(0)
 {
@@ -47,8 +48,8 @@ void MemoryViewTableModel::MoveUp()
     if (m_requestId != 0)
         return; // not up to date
 
-    if (m_address > 16)
-        SetAddress(m_address - 16);
+    if (m_address > m_bytesPerRow)
+        SetAddress(m_address - m_bytesPerRow);
     else
         SetAddress(0);
 }
@@ -58,7 +59,7 @@ void MemoryViewTableModel::MoveDown()
     if (m_requestId != 0)
         return; // not up to date
 
-    SetAddress(m_address + 16);
+    SetAddress(m_address + m_bytesPerRow);
 }
 
 void MemoryViewTableModel::PageUp()
@@ -66,8 +67,8 @@ void MemoryViewTableModel::PageUp()
     if (m_requestId != 0)
         return; // not up to date
 
-    if (m_address > 16 * m_rowCount)
-        SetAddress(m_address - 16 * m_rowCount);
+    if (m_address > m_bytesPerRow * m_rowCount)
+        SetAddress(m_address - m_bytesPerRow * m_rowCount);
     else
         SetAddress(0);
 }
@@ -77,7 +78,7 @@ void MemoryViewTableModel::PageDown()
     if (m_requestId != 0)
         return; // not up to date
 
-    SetAddress(m_address + 16 * m_rowCount);
+    SetAddress(m_address + m_bytesPerRow * m_rowCount);
 }
 
 int MemoryViewTableModel::rowCount(const QModelIndex &parent) const
@@ -103,17 +104,42 @@ QVariant MemoryViewTableModel::data(const QModelIndex &index, int role) const
         if (row >= m_rows.size())
             return QVariant();
 
-        if (index.column() == 0)
+        if (index.column() == kColAddress)
         {
-            QString addr = QString::asprintf("%08x", m_address + 16 * row);
+            QString addr = QString::asprintf("%08x", m_address + m_bytesPerRow * row);
             return addr;
         }
-        else if (index.column() == 1)
+        else if (index.column() == kColData)
         {
-            return m_rows[index.row()];
+            return m_rows[row].m_hexText;
+        }
+        else if (index.column() == kColAscii)
+        {
+            return m_rows[row].m_asciiText;
         }
     }
     return QVariant(); // invalid item
+}
+
+QVariant MemoryViewTableModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (orientation == Qt::Orientation::Horizontal)
+    {
+        if (role == Qt::DisplayRole)
+        {
+            switch (section)
+            {
+            case kColAddress: return QString("Address");
+            case kColData:    return QString("Data");
+            case kColAscii:   return QString("ASCII");
+            }
+        }
+        if (role == Qt::TextAlignmentRole)
+        {
+            return Qt::AlignLeft;
+        }
+    }
+    return QVariant();
 }
 
 void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
@@ -138,22 +164,29 @@ void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
 
     // We should just save the memory block here and format on demand
     // Build up the text area
-    uint32_t rowCount = (pMem->GetSize() + 15) / 16;
+    uint32_t rowCount = m_rowCount;
     uint32_t offset = 0;
     for (uint32_t r = 0; r < rowCount; ++r)
     {
-        QString row_text;
-
-        for (uint32_t c = 0; c < 16; ++c)
+        Row row;
+        for (uint32_t i = 0; i < m_bytesPerRow; ++i)
         {
             if (offset == pMem->GetSize())
+            {
+                if (i != 0)
+                    m_rows.push_back(row);      // add unfinished row
                 break;
+            }
 
-            QString pc_text = QString::asprintf("%02x ", pMem->Get(offset));
-            row_text += pc_text;
+            uint8_t c = pMem->Get(offset);
+            row.m_hexText += QString::asprintf("%02x ", c);
+            if (c >= 32 && c < 128)
+                row.m_asciiText += QString::asprintf("%c", c);
+            else
+                row.m_asciiText += ".";
             ++offset;
         }
-        m_rows.push_back(row_text);
+        m_rows.push_back(row);
     }
 
     m_requestId = 0;    // flag request is complete
@@ -308,15 +341,14 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     m_pTableView->setFont(monoFont);
     QFontMetrics fm(monoFont);
 
-    m_pTableView->horizontalHeader()->hide();
-
     // Factor in max width and the edge margins
     int l;
     int r;
     int charWidth = fm.maxWidth();
     m_pTableView->getContentsMargins(&l, nullptr, &r, nullptr);
-    m_pTableView->setColumnWidth(0, l + r + charWidth * 9);
-    m_pTableView->setColumnWidth(1, l + r + charWidth * 16 * 3);
+    m_pTableView->setColumnWidth(MemoryViewTableModel::kColAddress, l + r + charWidth * 9);
+    m_pTableView->setColumnWidth(MemoryViewTableModel::kColData,    l + r + charWidth * 16 * 3);
+    m_pTableView->setColumnWidth(MemoryViewTableModel::kColAscii,   l + r + charWidth * (16 + 2));
 
     // Down the side
     m_pTableView->verticalHeader()->hide();
