@@ -415,9 +415,9 @@ void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-DisasmTableView::DisasmTableView(QWidget* parent, DisasmTableModel* pModel) :
-    QTableView (parent),
-    m_pModel(pModel),
+DisasmTableView::DisasmTableView(QWidget* parent, DisasmTableModel* pModel, TargetModel* pTargetModel) :
+    QTableView(parent),
+    m_pTableModel(pModel),
     m_rightClickMenu(this),
     m_rightClickRow(-1)
 {
@@ -425,12 +425,14 @@ DisasmTableView::DisasmTableView(QWidget* parent, DisasmTableModel* pModel) :
     m_pRunUntilAction = new QAction(tr("Run to here"), this);
     connect(m_pRunUntilAction, &QAction::triggered, this, &DisasmTableView::runToCursorRightClick);
     m_pBreakpointAction = new QAction(tr("Toggle Breakpoint"), this);
-    connect(m_pBreakpointAction, &QAction::triggered, this, &DisasmTableView::toggleBreakpointRightClick);
     m_rightClickMenu.addAction(m_pRunUntilAction);
     m_rightClickMenu.addAction(m_pBreakpointAction);
 
     new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
     new QShortcut(QKeySequence(tr("F9", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
+
+    connect(m_pBreakpointAction, &QAction::triggered,                  this, &DisasmTableView::toggleBreakpointRightClick);
+    connect(pTargetModel,        &TargetModel::startStopChangedSignal, this, &DisasmTableView::RecalcRowCount);
 
     // This table gets the focus from the parent docking widget
     setFocus();
@@ -449,13 +451,13 @@ void DisasmTableView::contextMenuEvent(QContextMenuEvent *event)
 
 void DisasmTableView::runToCursorRightClick()
 {
-    m_pModel->RunToRow(m_rightClickRow);
+    m_pTableModel->RunToRow(m_rightClickRow);
     m_rightClickRow = -1;
 }
 
 void DisasmTableView::toggleBreakpointRightClick()
 {
-    m_pModel->ToggleBreakpoint(m_rightClickRow);
+    m_pTableModel->ToggleBreakpoint(m_rightClickRow);
     m_rightClickRow = -1;
 }
 
@@ -463,14 +465,14 @@ void DisasmTableView::runToCursor()
 {
     // How do we get the selected row
     QModelIndex i = this->currentIndex();
-    m_pModel->RunToRow(i.row());
+    m_pTableModel->RunToRow(i.row());
 }
 
 void DisasmTableView::toggleBreakpoint()
 {
     // How do we get the selected row
     QModelIndex i = this->currentIndex();
-    m_pModel->ToggleBreakpoint(i.row());
+    m_pTableModel->ToggleBreakpoint(i.row());
 }
 
 QModelIndex DisasmTableView::moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers)
@@ -481,25 +483,25 @@ QModelIndex DisasmTableView::moveCursor(QAbstractItemView::CursorAction cursorAc
     if (cursorAction == QAbstractItemView::CursorAction::MoveUp &&
         i.row() == 0)
     {
-        m_pModel->MoveUp();
+        m_pTableModel->MoveUp();
         return i;
     }
     else if (cursorAction == QAbstractItemView::CursorAction::MoveDown &&
-             i.row() >= m_pModel->GetRowCount() - 1)
+             i.row() >= m_pTableModel->GetRowCount() - 1)
     {
-        m_pModel->MoveDown();
+        m_pTableModel->MoveDown();
         return i;
     }
     else if (cursorAction == QAbstractItemView::CursorAction::MovePageUp &&
              i.row() == 0)
     {
-        m_pModel->PageUp();
+        m_pTableModel->PageUp();
         return i;
     }
     else if (cursorAction == QAbstractItemView::CursorAction::MovePageDown &&
-             i.row() >= m_pModel->GetRowCount() - 1)
+             i.row() >= m_pTableModel->GetRowCount() - 1)
     {
-        m_pModel->PageDown();
+        m_pTableModel->PageDown();
         return i;
     }
 
@@ -523,7 +525,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
     m_pLineEdit = new QLineEdit(this);
 
-    m_pTableView = new DisasmTableView(this, m_pTableModel);
+    m_pTableView = new DisasmTableView(this, m_pTableModel, m_pTargetModel);
     m_pTableView->setModel(m_pTableModel);
 
     //QWidget* pTempWidget = new QTableSc(this);
@@ -561,7 +563,6 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     connect(m_pTableModel,  &DisasmTableModel::addressChanged,    this, &DisasmWidget::UpdateTextBox);
     connect(m_pLineEdit,    &QLineEdit::returnPressed,            this, &DisasmWidget::returnPressedSlot);
     connect(m_pLineEdit,    &QLineEdit::textEdited,               this, &DisasmWidget::textChangedSlot);
-    connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmWidget::RecalcRowCount);
 
     this->resizeEvent(nullptr);
 }
@@ -618,9 +619,9 @@ void DisasmWidget::textChangedSlot()
     m_pLineEdit->setPalette(pal);
 }
 
-void DisasmWidget::resizeEvent(QResizeEvent* event)
+void DisasmTableView::resizeEvent(QResizeEvent* event)
 {
-    QDockWidget::resizeEvent(event);
+    QTableView::resizeEvent(event);
     RecalcRowCount();
 }
 
@@ -630,12 +631,12 @@ void DisasmWidget::UpdateTextBox()
     m_pLineEdit->setText(QString::asprintf("$%x", addr));
 }
 
-void DisasmWidget::RecalcRowCount()
+void DisasmTableView::RecalcRowCount()
 {
     // It seems that viewport is updated without this even being called,
     // which means that on startup, "h" == 0.
-    int h = m_pTableView->viewport()->size().height();
-    int rowh = m_pTableView->rowHeight(0);
+    int h = this->viewport()->size().height();
+    int rowh = this->rowHeight(0);
     if (rowh != 0)
         m_pTableModel->SetRowCount(h / rowh);
 }

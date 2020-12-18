@@ -86,7 +86,7 @@ class DisasmTableView : public QTableView
 {
     Q_OBJECT
 public:
-    DisasmTableView(QWidget* parent, DisasmTableModel* pModel);
+    DisasmTableView(QWidget* parent, DisasmTableModel* pModel, TargetModel* pTargetModel);
 
 public slots:
     void runToCursor();
@@ -100,7 +100,13 @@ private:
     void runToCursorRightClick();
     void toggleBreakpointRightClick();
 
-    DisasmTableModel*     m_pModel;
+    // override -- this doesn't trigger at the start?
+    virtual void resizeEvent(QResizeEvent*);
+private slots:
+    void RecalcRowCount();
+
+private:
+    DisasmTableModel*     m_pTableModel;
     // Actions
     QAction*              m_pRunUntilAction;
     QAction*              m_pBreakpointAction;
@@ -129,11 +135,8 @@ protected slots:
     void textChangedSlot();
 
 private:
-    // override -- this doesn't trigger at the start?
-    virtual void resizeEvent(QResizeEvent*);
 
     void UpdateTextBox();
-    void RecalcRowCount();
 
     QLineEdit*      m_pLineEdit;
     QTableView*     m_pTableView;
