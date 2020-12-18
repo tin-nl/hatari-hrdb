@@ -7,6 +7,7 @@
 
 class TargetModel;
 class Dispatcher;
+class QComboBox;
 
 class MemoryViewTableModel : public QAbstractTableModel
 {
@@ -20,11 +21,22 @@ public:
         kColCount
     };
 
+    enum Mode
+    {
+        kModeByte,
+        kModeWord,
+        kModeLong
+    };
+
     MemoryViewTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* pDispatcher);
 
     uint32_t GetRowCount() const { return m_rowCount; }
+    Mode GetMode() const { return m_mode; }
+
     void SetAddress(uint32_t address);
     void SetRowCount(uint32_t rowCount);
+    void SetMode(Mode mode);
+
     void MoveUp();
     void MoveDown();
     void PageUp();
@@ -45,6 +57,7 @@ public slots:
 
 private:
     void RequestMemory();
+    void RecalcText();
 
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
@@ -60,6 +73,8 @@ private:
     uint32_t m_address;
 
     uint32_t m_bytesPerRow;
+    Mode     m_mode;
+
     uint32_t m_rowCount;
     uint64_t m_requestId;
 };
@@ -95,8 +110,11 @@ public:
 
 public slots:
     void textEditChangedSlot();
+    void tmp(int index);
+
 private:
     QLineEdit*           m_pLineEdit;
+    QComboBox*           m_pComboBox;
     MemoryTableView*     m_pTableView;
 
     MemoryViewTableModel* pModel;

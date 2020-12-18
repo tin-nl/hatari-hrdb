@@ -3,6 +3,7 @@
 #include <iostream>
 #include <QGroupBox>
 #include <QLineEdit>
+#include <QComboBox>
 #include <QVBoxLayout>
 #include <QHeaderView>
 #include <QStringListModel>
@@ -19,6 +20,7 @@ MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTarget
     m_pDispatcher(pDispatcher),
     m_address(0),
     m_bytesPerRow(16),
+    m_mode(kModeWord),
     m_rowCount(1),
     m_requestId(0)
 {
@@ -41,6 +43,12 @@ void MemoryViewTableModel::SetRowCount(uint32_t rowCount)
         RequestMemory();
         emit endResetModel();
     }
+}
+
+void MemoryViewTableModel::SetMode(MemoryViewTableModel::Mode mode)
+{
+    m_mode = mode;
+    RecalcText();
 }
 
 void MemoryViewTableModel::MoveUp()
@@ -151,6 +159,11 @@ void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     if (commandId != m_requestId)
         return;
 
+    RecalcText();
+}
+
+void MemoryViewTableModel::RecalcText()
+{
     m_rows.clear();
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kMemoryView);
     if (!pMem)
@@ -166,6 +179,9 @@ void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     // Build up the text area
     uint32_t rowCount = m_rowCount;
     uint32_t offset = 0;
+    std::vector<uint8_t> rowData;
+    rowData.resize(m_bytesPerRow);
+
     for (uint32_t r = 0; r < rowCount; ++r)
     {
         Row row;
@@ -179,13 +195,32 @@ void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
             }
 
             uint8_t c = pMem->Get(offset);
-            row.m_hexText += QString::asprintf("%02x ", c);
+            rowData[i] = c;
             if (c >= 32 && c < 128)
                 row.m_asciiText += QString::asprintf("%c", c);
             else
                 row.m_asciiText += ".";
             ++offset;
         }
+
+        // Format to bytes/words etc
+        if (m_mode == kModeByte)
+        {
+            for (uint32_t i = 0; i < m_bytesPerRow; ++i)
+                row.m_hexText += QString::asprintf("%02x ", rowData[i]);
+        }
+        else if (m_mode == kModeWord)
+        {
+            for (uint32_t i = 0; i <= m_bytesPerRow - 2; i += 2)
+                row.m_hexText += QString::asprintf("%04x ", (rowData[i] << 8) | rowData[i+1]);
+        }
+        else if (m_mode == kModeLong)
+        {
+            for (uint32_t i = 0; i <= m_bytesPerRow - 4; i += 4)
+                row.m_hexText += QString::asprintf("%08x ",
+                        (rowData[i] << 24) | (rowData[i+1] << 16) | (rowData[i+2] << 8) | rowData[i+3]);
+        }
+
         m_rows.push_back(row);
     }
 
@@ -334,6 +369,13 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     auto pGroupBox = new QGroupBox(this);
 
     m_pLineEdit = new QLineEdit(this);
+
+    m_pComboBox = new QComboBox(this);
+    m_pComboBox->insertItem(MemoryViewTableModel::kModeByte, "Byte");
+    m_pComboBox->insertItem(MemoryViewTableModel::kModeWord, "Word");
+    m_pComboBox->insertItem(MemoryViewTableModel::kModeLong, "Long");
+    m_pComboBox->setCurrentIndex(pModel->GetMode());
+
     m_pTableView = new MemoryTableView(this, pModel, m_pTargetModel);
     m_pTableView->setModel(pModel);
 
@@ -355,12 +397,15 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     m_pTableView->verticalHeader()->setDefaultSectionSize(fm.height());
 
     layout->addWidget(m_pLineEdit);
+    layout->addWidget(m_pComboBox);
     layout->addWidget(m_pTableView);
     pGroupBox->setLayout(layout);
     setWidget(pGroupBox);
 
     // Listen for start/stop, so we can update our memory request
-    connect(m_pLineEdit, &QLineEdit::textChanged,                   this, &MemoryViewWidget::textEditChangedSlot);
+    //connect(m_pLineEdit, &QLineEdit::textChanged,           this, SLOT(textEditChangedSlot));
+    connect(m_pComboBox, SIGNAL(currentIndexChanged(int)),
+                                                            SLOT(tmp(int)));
 }
 
 void MemoryViewWidget::textEditChangedSlot()
@@ -371,4 +416,10 @@ void MemoryViewWidget::textEditChangedSlot()
                                         m_pTargetModel->GetRegs()))
         return;
     pModel->SetAddress(addr);
+}
+
+void MemoryViewWidget::tmp(int index)
+{
+    pModel->SetMode((MemoryViewTableModel::Mode)index);
+    m_pTableView->resizeColumnToContents(MemoryViewTableModel::kColData);
 }
