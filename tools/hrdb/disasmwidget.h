@@ -10,6 +10,7 @@
 
 class TargetModel;
 class Dispatcher;
+class QCheckBox;
 
 class DisasmTableModel : public QAbstractTableModel
 {
@@ -39,6 +40,7 @@ public:
 
     uint32_t GetAddress() const { return m_logicalAddr; }
     int GetRowCount() const     { return m_rowCount; }
+    bool GetFollowPC() const    { return m_bFollowPC; }
 
     bool SetAddress(std::string addr);
     void MoveUp();
@@ -48,6 +50,7 @@ public:
     void RunToRow(int row);
     void ToggleBreakpoint(int row);
     void SetRowCount(int count);
+    void SetFollowPC(bool follow);
 
 signals:
     void addressChanged(uint64_t addr);
@@ -77,7 +80,7 @@ private:
     uint32_t m_requestedAddress;    // Most recent address requested
     uint32_t m_logicalAddr;    // Most recent address that can be shown
     uint64_t m_requestId;           // Most recent memory request
-
+    bool     m_bFollowPC;
     QPixmap m_breakpoint10Pixmap;
     static const uint32_t kInvalid = 0xffffffff;
 };
@@ -133,12 +136,14 @@ protected slots:
     void keyPageUpPressed();
     void returnPressedSlot();
     void textChangedSlot();
+    void followPCClickedSlot();
 
 private:
 
     void UpdateTextBox();
 
     QLineEdit*      m_pLineEdit;
+    QCheckBox*      m_pFollowPC;
     QTableView*     m_pTableView;
 
     DisasmTableModel* m_pTableModel;

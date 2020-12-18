@@ -9,6 +9,7 @@
 #include <QFontDatabase>
 #include <QMenu>
 #include <QContextMenuEvent>
+#include <QCheckBox>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
@@ -23,7 +24,8 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     m_rowCount(25),
     m_requestedAddress(0),
     m_logicalAddr(0),
-    m_requestId(0)
+    m_requestId(0),
+    m_bFollowPC(true)
 {
     m_breakpoint10Pixmap = QPixmap(":/images/breakpoint10.png");
 
@@ -284,7 +286,16 @@ void DisasmTableModel::startStopChangedSlot()
     if (!m_pTargetModel->IsRunning())
     {
         // Decide what to request.
-        SetAddress(m_pTargetModel->GetPC());
+        if (m_bFollowPC)
+        {
+            // Update to PC position
+            SetAddress(m_pTargetModel->GetPC());
+        }
+        else
+        {
+            // Just request what we had already.
+            RequestMemory();
+        }
     }
 }
 
@@ -391,6 +402,12 @@ void DisasmTableModel::SetRowCount(int count)
         emit endResetModel();
     }
 }
+
+void DisasmTableModel::SetFollowPC(bool bFollow)
+{
+    m_bFollowPC = bFollow;
+}
+
 
 void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_t address, QTextStream& ref) const
 {
@@ -508,6 +525,22 @@ QModelIndex DisasmTableView::moveCursor(QAbstractItemView::CursorAction cursorAc
     return QTableView::moveCursor(cursorAction, modifiers);
 }
 
+void DisasmTableView::resizeEvent(QResizeEvent* event)
+{
+    QTableView::resizeEvent(event);
+    RecalcRowCount();
+}
+
+void DisasmTableView::RecalcRowCount()
+{
+    // It seems that viewport is updated without this even being called,
+    // which means that on startup, "h" == 0.
+    int h = this->viewport()->size().height();
+    int rowh = this->rowHeight(0);
+    if (rowh != 0)
+        m_pTableModel->SetRowCount(h / rowh);
+}
+
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
@@ -527,6 +560,10 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
     m_pTableView = new DisasmTableView(this, m_pTableModel, m_pTargetModel);
     m_pTableView->setModel(m_pTableModel);
+
+    m_pFollowPC = new QCheckBox("Follow PC", this);
+    m_pFollowPC->setTristate(false);
+    m_pFollowPC->setChecked(m_pTableModel->GetFollowPC());
 
     //QWidget* pTempWidget = new QTableSc(this);
     //pTempWidget->setEnabled(true);
@@ -554,6 +591,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
     m_pTableView->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
     layout->addWidget(m_pLineEdit);
+    layout->addWidget(m_pFollowPC);
     layout->addWidget(m_pTableView);
     pGroupBox->setLayout(layout);
     setWidget(pGroupBox);
@@ -563,6 +601,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     connect(m_pTableModel,  &DisasmTableModel::addressChanged,    this, &DisasmWidget::UpdateTextBox);
     connect(m_pLineEdit,    &QLineEdit::returnPressed,            this, &DisasmWidget::returnPressedSlot);
     connect(m_pLineEdit,    &QLineEdit::textEdited,               this, &DisasmWidget::textChangedSlot);
+    connect(m_pFollowPC,    &QCheckBox::clicked,                  this, &DisasmWidget::followPCClickedSlot);
 
     this->resizeEvent(nullptr);
 }
@@ -619,10 +658,9 @@ void DisasmWidget::textChangedSlot()
     m_pLineEdit->setPalette(pal);
 }
 
-void DisasmTableView::resizeEvent(QResizeEvent* event)
+void DisasmWidget::followPCClickedSlot()
 {
-    QTableView::resizeEvent(event);
-    RecalcRowCount();
+    m_pTableModel->SetFollowPC(m_pFollowPC->isChecked());
 }
 
 void DisasmWidget::UpdateTextBox()
@@ -631,12 +669,3 @@ void DisasmWidget::UpdateTextBox()
     m_pLineEdit->setText(QString::asprintf("$%x", addr));
 }
 
-void DisasmTableView::RecalcRowCount()
-{
-    // It seems that viewport is updated without this even being called,
-    // which means that on startup, "h" == 0.
-    int h = this->viewport()->size().height();
-    int rowh = this->rowHeight(0);
-    if (rowh != 0)
-        m_pTableModel->SetRowCount(h / rowh);
-}
