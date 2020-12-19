@@ -29,7 +29,8 @@ int RegNameToEnum(const char* name)
 Dispatcher::Dispatcher(QTcpSocket* tcpSocket, TargetModel* pTargetModel) :
 	m_pTcpSocket(tcpSocket),
     m_pTargetModel(pTargetModel),
-    m_responseUid(100)
+    m_responseUid(100),
+    m_waitingConnectionAck(false)
 {
 	connect(m_pTcpSocket, &QAbstractSocket::connected, this, &Dispatcher::connected);
     connect(m_pTcpSocket, &QAbstractSocket::disconnected, this, &Dispatcher::disconnected);
@@ -83,7 +84,16 @@ void Dispatcher::ReceivePacket(const char* response)
 		}
 	}
 
-	// Find the last "sent" packet
+    // Handle replies to normal commands.
+    // If we have just connected, new packets might be from the old connection,
+    // so ditch them
+    if (m_waitingConnectionAck)
+    {
+        std::cout << "Dropping old response" << new_resp << std::endl;
+        return;
+    }
+
+    // Find the last "sent" packet
 	size_t checkIndex = m_sentCommands.size();
 	if (checkIndex != 0)
 	{
@@ -114,14 +124,17 @@ void Dispatcher::connected()
     this->SendCommandPacket("status");
     m_pTargetModel->SetConnected(1);
 	// THIS HAPPENS ON THE EVENT LOOP
-	printf("Host connected\n");
+    std::cout << "Host connected" << std::endl;
+
+    // Flag that we are awaiting the "connected" notification
+    m_waitingConnectionAck = true;
 }
 
 void Dispatcher::disconnected()
 {
     m_pTargetModel->SetConnected(0);
     // THIS HAPPENS ON THE EVENT LOOP
-    printf("Host disconnected\n");
+    std::cout << "Host disconnected" << std::endl;
 }
 
 void Dispatcher::readyRead()
@@ -295,5 +308,11 @@ void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
             return;
 		m_pTargetModel->SetStatus(running, pc);
 	}
+    else if (type == "!connected")
+    {
+        // Allow new command responses to be processed.
+        m_waitingConnectionAck = false;
+        std::cout << "Connection acknowleged by server" << std::endl;
+    }
 }
 

@@ -49,6 +49,10 @@ private:
 
 	std::string 					m_active_resp;
     uint64_t                        m_responseUid;
+
+    /* If true, drop incoming packets since they are assumed to be
+     * from a previous connection. */
+    bool                            m_waitingConnectionAck;
 };
 
 #endif // DISPATCHER_H
