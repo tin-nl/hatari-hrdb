@@ -87,13 +87,20 @@ static void send_key_value(int fd, const char* pStr, uint32_t val)
 }
 
 // -----------------------------------------------------------------------------
+static void send_term(int fd)
+{
+	uint8_t null = 0;
+	send(fd, &null, 1, 0);
+}
+
+// -----------------------------------------------------------------------------
 // Send the out-of-band status to flag start/stop
 static int RemoteDebug_NotifyState(int fd)
 {
 	char tmp[100];
-	int len = sprintf(tmp, "!status %x %x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
-	// +1 for the terminator
-	send(fd, tmp, len + 1, 0);
+	sprintf(tmp, "!status %x %x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
+	send_str(fd, tmp);
+	send_term(fd);
 	return 0;
 }
 
@@ -102,7 +109,7 @@ static int RemoteDebug_NotifyState(int fd)
 static int RemoteDebug_Status(int nArgc, char *psArgs[], int fd)
 {
 	char tmp[100];
-	int len = sprintf(tmp, "status %x %x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
+	int len = sprintf(tmp, "OK %x %x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
 	send(fd, tmp, len, 0);
 	return 0;
 }
@@ -479,11 +486,7 @@ static void RemoteDebug_ProcessBuffer(RemoteDebugState* state)
 			// return an error if something failed
 			send_str(state->AcceptedFD, "NG");
 		}
-
-		// Write packet terminator
-		char terminator;
-		terminator = 0;
-		send(state->AcceptedFD, &terminator, 1, 0);
+		send_term(state->AcceptedFD);
 
 		// Copy extra bytes to the start
 		// -1 here is for the terminator
@@ -657,6 +660,11 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 			printf("Remote Debug connection accepted\n");
 			DebugUI_RegisterRemoteDebug(RemoteDebug_BreakLoop);
 			SetNonBlocking(state->AcceptedFD, 1);
+
+			// Send connected handshake, so client can
+			// drop any subsequent commands
+			send_str(state->AcceptedFD, "!connected");
+			send_term(state->AcceptedFD);
 		}
 	}
 }

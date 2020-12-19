@@ -1,4 +1,5 @@
 #include "symboltable.h"
+#include <assert.h>
 
 #define ADD_SYM(symname, addr, size)  AddInternal(#symname, addr, size);
 
@@ -202,10 +203,11 @@ bool SymbolTable::FindLowerOrEqual(uint32_t address, Symbol &result) const
     }
 
     result = m_symbols[m_addrKeys[lower].second];
+    assert(address >= result.address);
     // Size checks
     if (result.size == 0)
         return true;        // unlimited size
-    else if (result.size > (result.address - address))
+    else if (result.size > (address - result.address))
         return true;
     return false;
 }

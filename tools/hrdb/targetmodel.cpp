@@ -1,5 +1,7 @@
-#include <iostream>
 #include "targetmodel.h"
+
+#include <iostream>
+#include <QTimer>
 
 //-----------------------------------------------------------------------------
 const char* Registers::s_names[] =
@@ -25,12 +27,17 @@ TargetModel::TargetModel() :
 {
     for (int i = 0; i < MemorySlot::kMemorySlotCount; ++i)
         m_pTestMemory[i] = nullptr;
+
+    m_pTimer = new QTimer(this);
+    connect(m_pTimer, &QTimer::timeout, this, &TargetModel::delayedTimer);
 }
 
 TargetModel::~TargetModel()
 {
     for (int i = 0; i < MemorySlot::kMemorySlotCount; ++i)
         delete m_pTestMemory[i];
+
+    delete m_pTimer;
 }
 
 void TargetModel::SetConnected(int connected)
@@ -55,6 +62,15 @@ void TargetModel::SetStatus(int running, uint32_t pc)
 	m_bRunning = running;
 	m_pc = pc;
     emit startStopChangedSignal();
+
+    m_pTimer->stop();
+
+    //    if (!m_bRunning)
+    {
+        m_pTimer->setSingleShot(true);
+        m_pTimer->start(500);
+    }
+
 }
 
 void TargetModel::SetRegisters(const Registers& regs, uint64_t commandId)
@@ -82,4 +98,10 @@ void TargetModel::SetSymbolTable(const SymbolTable& syms, uint64_t commandId)
 {
     m_symbolTable = syms;
     emit symbolTableChangedSignal(commandId);
+}
+
+void TargetModel::delayedTimer()
+{
+    m_pTimer->stop();
+    emit startStopChangedSignalDelayed(m_bRunning);
 }
