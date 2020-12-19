@@ -18,6 +18,8 @@
 #include "symboltable.h"
 #include "registers.h"
 
+class QTimer;
+
 class TargetModel : public QObject
 {
 	Q_OBJECT
@@ -56,6 +58,8 @@ signals:
     // When start/stop status is changed
     void startStopChangedSignal();
 
+    void startStopChangedSignalDelayed(int running);
+
 	// When new CPU registers are changed
     void registersChangedSignal(uint64_t commandId);
 
@@ -65,6 +69,10 @@ signals:
 
     void breakpointsChangedSignal(uint64_t commandId);
     void symbolTableChangedSignal(uint64_t commandId);
+private slots:
+
+    // Called shortly after stop notification received
+    void delayedTimer();
 
 private:
 
@@ -77,6 +85,8 @@ private:
     Breakpoints m_breakpoints;  // Current breakpoint list
 
     SymbolTable m_symbolTable;
+
+    QTimer*     m_pTimer;
 };
 
 #endif // TARGET_MODEL_H
