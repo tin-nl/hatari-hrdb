@@ -553,14 +553,12 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableModel = new DisasmTableModel(this, pTargetModel, pDispatcher);
 
     this->setWindowTitle("Disassembly");
-    QVBoxLayout *layout = new QVBoxLayout;
-    auto pGroupBox = new QGroupBox(this);
-
-    m_pLineEdit = new QLineEdit(this);
 
     m_pTableView = new DisasmTableView(this, m_pTableModel, m_pTargetModel);
     m_pTableView->setModel(m_pTableModel);
 
+    // Top group box
+    m_pLineEdit = new QLineEdit(this);
     m_pFollowPC = new QCheckBox("Follow PC", this);
     m_pFollowPC->setTristate(false);
     m_pFollowPC->setChecked(m_pTableModel->GetFollowPC());
@@ -586,11 +584,22 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
     m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
     m_pTableView->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
-    layout->addWidget(m_pLineEdit);
-    layout->addWidget(m_pFollowPC);
+
+    // Layouts
+    QVBoxLayout *layout = new QVBoxLayout;
+    QHBoxLayout *hlayout = new QHBoxLayout;
+    auto pMainGroupBox = new QGroupBox(this);   // whole panel
+    auto pTopGroupBox = new QGroupBox(this);    // top buttons/edits
+
+    hlayout->addWidget(m_pLineEdit);
+    hlayout->addWidget(m_pFollowPC);
+
+    layout->addWidget(pTopGroupBox);
     layout->addWidget(m_pTableView);
-    pGroupBox->setLayout(layout);
-    setWidget(pGroupBox);
+
+    pTopGroupBox->setLayout(hlayout);
+    pMainGroupBox->setLayout(layout);
+    setWidget(pMainGroupBox);
 
     // Listen for start/stop, so we can update our memory request
     connect(m_pTableView,   &QTableView::clicked,                 this, &DisasmWidget::cellClickedSlot);
