@@ -586,19 +586,20 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableView->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
 
     // Layouts
-    QVBoxLayout *layout = new QVBoxLayout;
-    QHBoxLayout *hlayout = new QHBoxLayout;
+    QVBoxLayout* pMainLayout = new QVBoxLayout;
+    QHBoxLayout* pTopLayout = new QHBoxLayout;
     auto pMainGroupBox = new QGroupBox(this);   // whole panel
-    auto pTopGroupBox = new QGroupBox(this);    // top buttons/edits
+    auto pTopRegion = new QWidget(this);    // top buttons/edits
+    pMainGroupBox->setFlat(true);
 
-    hlayout->addWidget(m_pLineEdit);
-    hlayout->addWidget(m_pFollowPC);
+    pTopLayout->addWidget(m_pLineEdit);
+    pTopLayout->addWidget(m_pFollowPC);
 
-    layout->addWidget(pTopGroupBox);
-    layout->addWidget(m_pTableView);
+    pMainLayout->addWidget(pTopRegion);
+    pMainLayout->addWidget(m_pTableView);
 
-    pTopGroupBox->setLayout(hlayout);
-    pMainGroupBox->setLayout(layout);
+    pTopRegion->setLayout(pTopLayout);
+    pMainGroupBox->setLayout(pMainLayout);
     setWidget(pMainGroupBox);
 
     // Listen for start/stop, so we can update our memory request

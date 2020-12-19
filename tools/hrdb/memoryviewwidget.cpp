@@ -365,11 +365,7 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     // Make the data first
     pModel = new MemoryViewTableModel(this, pTargetModel, pDispatcher);
 
-    QVBoxLayout *layout = new QVBoxLayout;
-    auto pGroupBox = new QGroupBox(this);
-
     m_pLineEdit = new QLineEdit(this);
-
     m_pComboBox = new QComboBox(this);
     m_pComboBox->insertItem(MemoryViewTableModel::kModeByte, "Byte");
     m_pComboBox->insertItem(MemoryViewTableModel::kModeWord, "Word");
@@ -396,11 +392,22 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     m_pTableView->verticalHeader()->hide();
     m_pTableView->verticalHeader()->setDefaultSectionSize(fm.height());
 
-    layout->addWidget(m_pLineEdit);
-    layout->addWidget(m_pComboBox);
-    layout->addWidget(m_pTableView);
-    pGroupBox->setLayout(layout);
-    setWidget(pGroupBox);
+    // Layouts
+    QVBoxLayout* pMainLayout = new QVBoxLayout;
+    QHBoxLayout* pTopLayout = new QHBoxLayout;
+    auto pMainGroupBox = new QGroupBox(this);   // whole panel
+    auto pTopRegion = new QWidget(this);      // top buttons/edits
+    pMainGroupBox->setFlat(true);
+
+    pTopLayout->addWidget(m_pLineEdit);
+    pTopLayout->addWidget(m_pComboBox);
+
+    pMainLayout->addWidget(pTopRegion);
+    pMainLayout->addWidget(m_pTableView);
+
+    pTopRegion->setLayout(pTopLayout);
+    pMainGroupBox->setLayout(pMainLayout);
+    setWidget(pMainGroupBox);
 
     // Listen for start/stop, so we can update our memory request
     connect(m_pLineEdit, &QLineEdit::returnPressed,         this, &MemoryViewWidget::textEditChangedSlot);
