@@ -1,7 +1,18 @@
 #include "symboltable.h"
 #include <assert.h>
+#include <algorithm>
 
 #define ADD_SYM(symname, addr, size)  AddInternal(#symname, addr, size);
+
+class SymbolNameCompare
+{
+public:
+    // This is the "less" comparison
+    bool operator()(const Symbol &lhs, const Symbol &rhs) const
+    {
+        return lhs.name < rhs.name;
+    }
+};
 
 void SymbolTable::AddHardware()
 {
@@ -152,6 +163,9 @@ void SymbolTable::AddInternal(const Symbol &sym)
 
 void SymbolTable::AddComplete()
 {
+    // Sort the symbols in name order
+    std::sort(m_symbols.begin(), m_symbols.end(), SymbolNameCompare());
+
     // Recalc the keys table
     m_addrKeys.clear();
     Map::iterator it(m_addrLookup.begin());
