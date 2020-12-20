@@ -225,6 +225,11 @@ bool SymbolTable::Find(std::string name, Symbol &result) const
     return false;
 }
 
+const Symbol& SymbolTable::Get(size_t index) const
+{
+    return m_symbols[index];
+}
+
 void SymbolTable::AddInternal(const char* name, uint32_t addr, uint32_t size)
 {
     Symbol sym;

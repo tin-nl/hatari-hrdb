@@ -10,10 +10,12 @@
 #include <QMenu>
 #include <QContextMenuEvent>
 #include <QCheckBox>
+#include <QCompleter>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
 #include "stringparsers.h"
+#include "symboltablemodel.h"
 
 //-----------------------------------------------------------------------------
 DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher) :
@@ -601,6 +603,12 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     pTopRegion->setLayout(pTopLayout);
     pMainRegion->setLayout(pMainLayout);
     setWidget(pMainRegion);
+
+    m_pSymbolTableModel = new SymbolTableModel(this, m_pTargetModel->GetSymbolTable());
+    QCompleter* pCompl = new QCompleter(m_pSymbolTableModel, this);
+    pCompl->setCaseSensitivity(Qt::CaseSensitivity::CaseInsensitive);
+
+    m_pLineEdit->setCompleter(pCompl);
 
     // Listen for start/stop, so we can update our memory request
     connect(m_pTableView,   &QTableView::clicked,                 this, &DisasmWidget::cellClickedSlot);

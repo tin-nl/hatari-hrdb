@@ -29,7 +29,8 @@ SOURCES += \
     memoryviewwidget.cpp \
     breakpoint.cpp \
     stringsplitter.cpp \
-    symboltable.cpp
+    symboltable.cpp \
+    symboltablemodel.cpp
 
 HEADERS += \
     disassembler.h \
@@ -47,7 +48,8 @@ HEADERS += \
     breakpoint.h \
     stringsplitter.h \
     symboltable.h \
-    registers.h
+    registers.h \
+    symboltablemodel.h
     
 RESOURCES     = hrdb.qrc    
 

@@ -149,6 +149,7 @@ private:
     DisasmTableModel* m_pTableModel;
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
+    QAbstractItemModel* m_pSymbolTableModel;
 };
 
 #endif // DISASMWINDOW_H

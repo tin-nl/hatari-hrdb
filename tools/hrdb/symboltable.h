@@ -30,6 +30,7 @@ public:
     bool Find(uint32_t address, Symbol& result) const;
     bool FindLowerOrEqual(uint32_t address, Symbol& result) const;
     bool Find(std::string name, Symbol& result) const;
+    const Symbol& Get(size_t index) const;
 
     int m_userSymbolCount;
 private:
