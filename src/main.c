@@ -830,6 +830,7 @@ static void Main_Init(void)
  */
 static void Main_UnInit(void)
 {
+	RemoteDebug_UnInit();
 	Screen_ReturnFromFullScreen();
 	Floppy_UnInit();
 	HDC_UnInit();

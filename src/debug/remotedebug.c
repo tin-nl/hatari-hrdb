@@ -89,7 +89,7 @@ static void send_key_value(int fd, const char* pStr, uint32_t val)
 // -----------------------------------------------------------------------------
 static void send_term(int fd)
 {
-	uint8_t null = 0;
+	char null = 0;
 	send(fd, &null, 1, 0);
 }
 
@@ -428,6 +428,8 @@ static void SetNonBlocking(SOCKET socket, u_long nonblock)
 	ioctlsocket(socket, FIONBIO, &mode);
 }
 #define GET_SOCKET_ERROR		WSAGetLastError()
+#define RDB_CLOSE				closesocket
+
 #endif
 #if HAVE_UNIX_DOMAIN_SOCKETS
 static void SetNonBlocking(int socket, u_long nonblock)
@@ -440,7 +442,17 @@ static void SetNonBlocking(int socket, u_long nonblock)
 		on &= ~O_NONBLOCK;
 	fcntl(socket, F_SETFL, on);
 }
+
+// Set the socket to allow reusing the port. Avoids problems when
+// exiting and restarting with hrdb still live.
+static void SetReuseAddr(int fd)
+{
+	int val = 1;
+	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
+}
+
 #define GET_SOCKET_ERROR		errno
+#define RDB_CLOSE				close
 #endif
 
 typedef struct RemoteDebugState
@@ -543,7 +555,7 @@ static bool RemoteDebug_BreakLoop(void)
 			// This represents an orderly EOF, even in Winsock
 			printf("Remote Debug connection closed\n");
 			DebugUI_RegisterRemoteDebug(NULL);
-			close(state->AcceptedFD);
+			RDB_CLOSE(state->AcceptedFD);
 			state->AcceptedFD = -1;
 
 			// Bail out of the loop here so we don't just spin
@@ -580,6 +592,10 @@ static int RemoteDebugState_InitServer(RemoteDebugState* state)
 		fprintf(stderr, "Failed to open socket\n");
 		return 1;
 	}
+#if HAVE_UNIX_DOMAIN_SOCKETS
+	SetReuseAddr(state->SocketFD);
+#endif
+
 	// Socket is non-blokcing to start with
 	SetNonBlocking(state->SocketFD, 1);
 
@@ -590,14 +606,14 @@ static int RemoteDebugState_InitServer(RemoteDebugState* state)
 
 	if (bind(state->SocketFD,(struct sockaddr *)&sa, sizeof sa) == -1) {
 		fprintf(stderr, "Failed to bind socket (%d)\n", GET_SOCKET_ERROR);
-		close(state->SocketFD);
+		RDB_CLOSE(state->SocketFD);
 		state->SocketFD =-1;
 		return 1;
 	}
   
 	if (listen(state->SocketFD, 1) == -1) {
 		fprintf(stderr, "Failed to listen() on socket\n");
-		close(state->SocketFD);
+		RDB_CLOSE(state->SocketFD);
 		state->SocketFD =-1;
 		return 1;
 	}
@@ -646,7 +662,7 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 			// This represents an orderly EOF
 			printf("Remote Debug connection closed\n");
 			DebugUI_RegisterRemoteDebug(NULL);
-			close(state->AcceptedFD);
+			RDB_CLOSE(state->AcceptedFD);
 			state->AcceptedFD = -1;
 			return;
 		}
@@ -694,6 +710,22 @@ void RemoteDebug_Init(void)
 
 	RemoteDebugState_Init(&g_rdbState);
 	RemoteDebugState_InitServer(&g_rdbState);
+}
+
+void RemoteDebug_UnInit()
+{
+	printf("Stopping remote debug\n");
+	if (g_rdbState.AcceptedFD != -1)
+	{
+		RDB_CLOSE(g_rdbState.AcceptedFD);
+		g_rdbState.AcceptedFD = -1;
+	}
+
+	if (g_rdbState.SocketFD != -1)
+	{
+		RDB_CLOSE(g_rdbState.SocketFD);
+		g_rdbState.SocketFD = -1;
+	}
 }
 
 void RemoteDebug_Update(void)
