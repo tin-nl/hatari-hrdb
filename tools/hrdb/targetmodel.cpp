@@ -43,6 +43,17 @@ TargetModel::~TargetModel()
 void TargetModel::SetConnected(int connected)
 {
     m_bConnected = connected;
+
+    if (connected == 0)
+    {
+        // Clear out lots of data from the model
+        SymbolTable dummy;
+        SetSymbolTable(dummy, 0);
+
+        Breakpoints dummyBreak;
+        SetBreakpoints(dummyBreak, 0);
+    }
+
     emit connectChangedSignal();
 }
 
