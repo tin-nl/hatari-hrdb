@@ -395,9 +395,8 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     // Layouts
     QVBoxLayout* pMainLayout = new QVBoxLayout;
     QHBoxLayout* pTopLayout = new QHBoxLayout;
-    auto pMainGroupBox = new QGroupBox(this);   // whole panel
+    auto pMainRegion = new QWidget(this);   // whole panel
     auto pTopRegion = new QWidget(this);      // top buttons/edits
-    pMainGroupBox->setFlat(true);
 
     pTopLayout->addWidget(m_pLineEdit);
     pTopLayout->addWidget(m_pComboBox);
@@ -406,8 +405,8 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     pMainLayout->addWidget(m_pTableView);
 
     pTopRegion->setLayout(pTopLayout);
-    pMainGroupBox->setLayout(pMainLayout);
-    setWidget(pMainGroupBox);
+    pMainRegion->setLayout(pMainLayout);
+    setWidget(pMainRegion);
 
     // Listen for start/stop, so we can update our memory request
     connect(m_pLineEdit, &QLineEdit::returnPressed,         this, &MemoryViewWidget::textEditChangedSlot);

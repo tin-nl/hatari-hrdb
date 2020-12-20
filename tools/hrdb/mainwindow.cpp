@@ -71,6 +71,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,   this, &MainWindow::connectChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,    this, &MainWindow::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal,this, &MainWindow::symbolTableChangedSlot);
+    connect(m_pTargetModel, &TargetModel::startStopChangedSignalDelayed,this, &MainWindow::startStopDelayedSlot);
 
 	// Wire up buttons to actions
     connect(m_pStartStopButton, &QAbstractButton::clicked, this, &MainWindow::startStopClicked);
@@ -122,8 +123,8 @@ void MainWindow::startStopChangedSlot()
         m_prevRegs = m_pTargetModel->GetRegs();
 
         m_pStartStopButton->setText("Break");
-		m_pSingleStepButton->setEnabled(false);	
-	}
+        m_pSingleStepButton->setEnabled(false);
+    }
 	else
 	{
         // STOPPED
@@ -138,10 +139,21 @@ void MainWindow::startStopChangedSlot()
 
         m_pStartStopButton->setText("Run");
 		m_pSingleStepButton->setEnabled(true);	
-	}
+        m_pRegistersTextEdit->setEnabled(true);
+    }
     PopulateRunningSquare();
     PopulateRegisters();
 }
+
+void MainWindow::startStopDelayedSlot(int running)
+{
+    if (running)
+    {
+        m_pRegistersTextEdit->setEnabled(false);
+    }
+
+}
+
 
 void MainWindow::registersChangedSlot(uint64_t commandId)
 {

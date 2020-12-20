@@ -37,6 +37,7 @@ public slots:
     void registersChangedSlot(uint64_t commandId);
     void memoryChangedSlot(int slot, uint64_t commandId);
     void symbolTableChangedSlot(uint64_t commandId);
+    void startStopDelayedSlot(int running);
 
     void startStopClicked();
     void singleStepClicked();
