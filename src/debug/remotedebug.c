@@ -681,6 +681,9 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 			// drop any subsequent commands
 			send_str(state->AcceptedFD, "!connected");
 			send_term(state->AcceptedFD);
+
+			// Flag the running status straight away
+			RemoteDebug_NotifyState(state->AcceptedFD);
 		}
 	}
 }
