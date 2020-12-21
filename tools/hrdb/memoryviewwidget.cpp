@@ -20,7 +20,7 @@ MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTarget
     m_pDispatcher(pDispatcher),
     m_address(0),
     m_bytesPerRow(16),
-    m_mode(kModeWord),
+    m_mode(kModeByte),
     m_rowCount(1),
     m_requestId(0)
 {
