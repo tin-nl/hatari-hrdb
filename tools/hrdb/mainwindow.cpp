@@ -37,7 +37,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_pRegistersTextEdit->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
     m_pRegistersTextEdit->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
 
-    m_pDisasmWidget = new DisasmWidget(this, m_pTargetModel, m_pDispatcher);
+    m_pDisasmWidget0 = new DisasmWidget(this, m_pTargetModel, m_pDispatcher, 0);
+    m_pDisasmWidget1 = new DisasmWidget(this, m_pTargetModel, m_pDispatcher, 1);
     m_pMemoryViewWidget0 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 0);
     m_pMemoryViewWidget1 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 1);
 
@@ -60,10 +61,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     setCentralWidget(pMainGroupBox);
 
-    this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWidget);
+    this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWidget0);
     this->addDockWidget(Qt::RightDockWidgetArea, m_pMemoryViewWidget0);
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pMemoryViewWidget1);
+    this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWidget1);
     m_pMemoryViewWidget1->hide();
+    m_pDisasmWidget1->hide();
 
     // Set up menus
     createActions();
@@ -345,7 +348,8 @@ void MainWindow::PopulateRunningSquare()
 
 void MainWindow::updateWindowMenu()
 {
-    disasmWindowAct->setChecked(m_pDisasmWidget->isVisible());
+    disasmWindowAct0->setChecked(m_pDisasmWidget0->isVisible());
+    disasmWindowAct1->setChecked(m_pDisasmWidget1->isVisible());
     memoryWindowAct0->setChecked(m_pMemoryViewWidget0->isVisible());
     memoryWindowAct1->setChecked(m_pMemoryViewWidget1->isVisible());
 }
@@ -360,9 +364,14 @@ void MainWindow::menuDisconnect()
     Disconnect();
 }
 
-void MainWindow::menuDisasmWindow()
+void MainWindow::menuDisasmWindow0()
 {
-    toggleVis(m_pDisasmWidget);
+    toggleVis(m_pDisasmWidget0);
+}
+
+void MainWindow::menuDisasmWindow1()
+{
+    toggleVis(m_pDisasmWidget1);
 }
 
 void MainWindow::menuMemoryWindow0()
@@ -398,10 +407,15 @@ void MainWindow::createActions()
     connect(disconnectAct, &QAction::triggered, this, &MainWindow::Disconnect);
 
     // "Window"
-    disasmWindowAct = new QAction(tr("&Disassembly"), this);
-    disasmWindowAct->setStatusTip(tr("Show the memory window"));
-    disasmWindowAct->setCheckable(true);
-    connect(disasmWindowAct, &QAction::triggered, this, &MainWindow::menuDisasmWindow);
+    disasmWindowAct0 = new QAction(tr("&Disassembly 1"), this);
+    disasmWindowAct0->setStatusTip(tr("Show the memory window"));
+    disasmWindowAct0->setCheckable(true);
+    connect(disasmWindowAct0, &QAction::triggered, this, &MainWindow::menuDisasmWindow0);
+
+    disasmWindowAct1 = new QAction(tr("&Disassembly 2"), this);
+    disasmWindowAct1->setStatusTip(tr("Show the memory window"));
+    disasmWindowAct1->setCheckable(true);
+    connect(disasmWindowAct1, &QAction::triggered, this, &MainWindow::menuDisasmWindow1);
 
     memoryWindowAct0 = new QAction(tr("&Memory 1"), this);
     memoryWindowAct0->setStatusTip(tr("Show the memory window"));
@@ -443,7 +457,8 @@ void MainWindow::createMenus()
     editMenu->addSeparator();
 
     windowMenu = menuBar()->addMenu(tr("&Window"));
-    windowMenu->addAction(disasmWindowAct);
+    windowMenu->addAction(disasmWindowAct0);
+    windowMenu->addAction(disasmWindowAct1);
     windowMenu->addAction(memoryWindowAct0);
     windowMenu->addAction(memoryWindowAct1);
 

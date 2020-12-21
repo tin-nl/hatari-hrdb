@@ -27,7 +27,7 @@ public:
         kColCount
     };
 
-    DisasmTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher);
+    DisasmTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher, int windowIndex);
 
     // "When subclassing QAbstractTableModel, you must implement rowCount(), columnCount(), and data()."
     virtual int rowCount(const QModelIndex &parent) const;
@@ -78,9 +78,12 @@ private:
     // Address of the top line of text that was requested
 
     uint32_t m_requestedAddress;    // Most recent address requested
-    uint32_t m_logicalAddr;    // Most recent address that can be shown
+    uint32_t m_logicalAddr;         // Most recent address that can be shown
     uint64_t m_requestId;           // Most recent memory request
     bool     m_bFollowPC;
+
+    int         m_windowIndex;
+    MemorySlot  m_memSlot;
     QPixmap m_breakpoint10Pixmap;
     static const uint32_t kInvalid = 0xffffffff;
 };
@@ -123,7 +126,7 @@ class DisasmWidget : public QDockWidget
 {
     Q_OBJECT
 public:
-    DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher);
+    DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher, int windowIndex);
 
 protected:
 

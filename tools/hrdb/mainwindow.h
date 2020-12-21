@@ -46,7 +46,8 @@ private slots:
     void updateWindowMenu();
     void menuConnect();
     void menuDisconnect();
-    void menuDisasmWindow();
+    void menuDisasmWindow0();
+    void menuDisasmWindow1();
     void menuMemoryWindow0();
     void menuMemoryWindow1();
     void about();
@@ -68,7 +69,8 @@ private:
     QWidget*        m_pRunningSquare;
 
     // Docking windows
-    DisasmWidget*       m_pDisasmWidget;
+    DisasmWidget*       m_pDisasmWidget0;
+    DisasmWidget*       m_pDisasmWidget1;
     MemoryViewWidget*   m_pMemoryViewWidget0;
     MemoryViewWidget*   m_pMemoryViewWidget1;
 
@@ -93,7 +95,8 @@ private:
     QAction *connectAct;
     QAction *disconnectAct;
 
-    QAction *disasmWindowAct;
+    QAction *disasmWindowAct0;
+    QAction *disasmWindowAct1;
     QAction *memoryWindowAct0;
     QAction *memoryWindowAct1;
     QAction *aboutAct;

@@ -9,7 +9,8 @@ enum MemorySlot
     kNone,          // e.g. regs
     kMainPC,        // Memory around the stopped PC for the main view (to allow stepping etc)
 
-    kDisasm,        // general disassembly view memory
+    kDisasm0,       // general disassembly view memory
+    kDisasm1,       // secondary disassembly
 
     kMemoryView0,   // general memory view memory
     kMemoryView1,   // second memory view window

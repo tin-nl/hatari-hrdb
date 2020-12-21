@@ -18,7 +18,7 @@
 #include "symboltablemodel.h"
 
 //-----------------------------------------------------------------------------
-DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher) :
+DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher, int windowIndex):
     QAbstractTableModel(parent),
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher),
@@ -27,8 +27,11 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     m_requestedAddress(0),
     m_logicalAddr(0),
     m_requestId(0),
-    m_bFollowPC(true)
+    m_bFollowPC(true),
+    m_windowIndex(windowIndex)
 {
+    m_memSlot = (MemorySlot)(windowIndex + MemorySlot::kDisasm0);
+
     m_breakpoint10Pixmap = QPixmap(":/images/breakpoint10.png");
 
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmTableModel::startStopChangedSlot);
@@ -170,7 +173,7 @@ void DisasmTableModel::RequestMemory()
     uint32_t addr = m_logicalAddr;
     uint32_t lowAddr = (addr > 100) ? addr - 100 : 0;
     uint32_t size = ((m_rowCount * 10) + 100);
-    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kDisasm, lowAddr, size);
+    m_requestId = m_pDispatcher->RequestMemory(m_memSlot, lowAddr, size);
 }
 
 bool DisasmTableModel::SetAddress(std::string addrStr)
@@ -303,14 +306,14 @@ void DisasmTableModel::startStopChangedSlot()
 
 void DisasmTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
 {
-    if (memorySlot != MemorySlot::kDisasm)
+    if (memorySlot != m_memSlot)
         return;
 
     // Only update for the last request we added
     if (commandId != m_requestId)
         return;
 
-    const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kDisasm);
+    const Memory* pMemOrig = m_pTargetModel->GetMemory(m_memSlot);
     if (!pMemOrig)
         return;
 
@@ -546,13 +549,13 @@ void DisasmTableView::RecalcRowCount()
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
-DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher) :
+DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher, int windowIndex) :
     QDockWidget(parent),
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher)
 {
     // Create model early
-    m_pTableModel = new DisasmTableModel(this, pTargetModel, pDispatcher);
+    m_pTableModel = new DisasmTableModel(this, pTargetModel, pDispatcher, windowIndex);
 
     this->setWindowTitle("Disassembly");
 
