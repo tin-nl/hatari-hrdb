@@ -46,20 +46,8 @@ private slots:
     void newFile();
     void menuConnect();
     void menuDisconnect();
-    void print();
-    void undo();
-    void redo();
-    void cut();
-    void copy();
-    void paste();
-    void bold();
-    void italic();
-    void leftAlign();
-    void rightAlign();
-    void justify();
-    void center();
-    void setLineSpacing();
-    void setParagraphSpacing();
+    void menuDisasmWindow();
+    void menuMemoryWindow();
     void about();
     void aboutQt();
 private:
@@ -72,19 +60,23 @@ private:
     QString FindSymbol(uint32_t addr);
     void PopulateRunningSquare();
 
+    // Our UI widgets
     QPushButton*	m_pStartStopButton;
     QPushButton*	m_pSingleStepButton;
 	QTextEdit*		m_pRegistersTextEdit;
     QWidget*        m_pRunningSquare;
 
-    DisasmWidget*   m_pDisasmWindow;
-    MemoryViewWidget* m_pMemoryViewWidget;
+    // Docking windows
+    DisasmWidget*       m_pDisasmWidget;
+    MemoryViewWidget*   m_pMemoryViewWidget;
 
+    // Low-level data
 	QTcpSocket* 	tcpSocket;
     Dispatcher*		m_pDispatcher;
 	TargetModel*	m_pTargetModel;
 
-    Registers       m_prevRegs;
+    // Shown data
+    Registers                      m_prevRegs;
     Disassembler::disassembly      m_disasm;
 
     // Menus
@@ -92,27 +84,14 @@ private:
     void createMenus();
     QMenu *fileMenu;
     QMenu *editMenu;
-    QMenu *formatMenu;
+    QMenu *windowMenu;
     QMenu *helpMenu;
-    QActionGroup *alignmentGroup;
-    QAction *newAct;
-    QAction *openAct;
-    QAction *saveAct;
-    QAction *printAct;
-    QAction *exitAct;
-    QAction *undoAct;
-    QAction *redoAct;
-    QAction *cutAct;
-    QAction *copyAct;
-    QAction *pasteAct;
-    QAction *boldAct;
-    QAction *italicAct;
-    QAction *leftAlignAct;
-    QAction *rightAlignAct;
-    QAction *justifyAct;
-    QAction *centerAct;
-    QAction *setLineSpacingAct;
-    QAction *setParagraphSpacingAct;
+
+    QAction *connectAct;
+    QAction *disconnectAct;
+
+    QAction *disasmWindowAct;
+    QAction *memoryWindowAct;
     QAction *aboutAct;
     QAction *aboutQtAct;
 };

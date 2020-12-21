@@ -38,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_pRegistersTextEdit->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
     m_pRegistersTextEdit->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
 
-    m_pDisasmWindow = new DisasmWidget(this, m_pTargetModel, m_pDispatcher);
+    m_pDisasmWidget = new DisasmWidget(this, m_pTargetModel, m_pDispatcher);
     m_pMemoryViewWidget = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher);
 
     // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
@@ -62,7 +62,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     setCentralWidget(pMainGroupBox);
 
-    this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWindow);
+    this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWidget);
     this->addDockWidget(Qt::RightDockWidgetArea, m_pMemoryViewWidget);
 
 	// Listen for target changes
@@ -92,6 +92,9 @@ MainWindow::MainWindow(QWidget *parent)
     // Update everything
     connectChangedSlot();
     startStopChangedSlot();
+
+    disasmWindowAct->setChecked(m_pDisasmWidget->isVisible());
+    memoryWindowAct->setChecked(m_pMemoryViewWidget->isVisible());
 }
 
 MainWindow::~MainWindow()
@@ -150,6 +153,7 @@ void MainWindow::startStopDelayedSlot(int running)
     if (running)
     {
         m_pRegistersTextEdit->setEnabled(false);
+        m_pRegistersTextEdit->setText("Running, F5 to break...");
     }
 
 }
@@ -365,60 +369,22 @@ void MainWindow::menuDisconnect()
     Disconnect();
 }
 
-void MainWindow::print()
+void MainWindow::menuDisasmWindow()
 {
+    if (m_pDisasmWidget->isVisible())
+        m_pDisasmWidget->hide();
+    else
+        m_pDisasmWidget->show();
+    disasmWindowAct->setChecked(m_pDisasmWidget->isVisible());
 }
 
-void MainWindow::undo()
+void MainWindow::menuMemoryWindow()
 {
-}
-
-void MainWindow::redo()
-{
-}
-
-void MainWindow::cut()
-{
-}
-
-void MainWindow::copy()
-{
-}
-
-void MainWindow::paste()
-{
-}
-
-void MainWindow::bold()
-{
-}
-
-void MainWindow::italic()
-{
-}
-
-void MainWindow::leftAlign()
-{
-}
-
-void MainWindow::rightAlign()
-{
-}
-
-void MainWindow::justify()
-{
-}
-
-void MainWindow::center()
-{
-}
-
-void MainWindow::setLineSpacing()
-{
-}
-
-void MainWindow::setParagraphSpacing()
-{
+    if (m_pMemoryViewWidget->isVisible())
+        m_pMemoryViewWidget->hide();
+    else
+        m_pMemoryViewWidget->show();
+    memoryWindowAct->setChecked(m_pMemoryViewWidget->isVisible());
 }
 
 void MainWindow::about()
@@ -435,92 +401,27 @@ void MainWindow::aboutQt()
 //! [4]
 void MainWindow::createActions()
 {
-//! [5]
-    newAct = new QAction(tr("&New"), this);
-    newAct->setShortcuts(QKeySequence::New);
-    newAct->setStatusTip(tr("Create a new file"));
-    connect(newAct, &QAction::triggered, this, &MainWindow::newFile);
-//! [4]
+    // "File"
+    connectAct = new QAction(tr("&Connect"), this);
+    connectAct->setStatusTip(tr("Connect to Hatari"));
+    connect(connectAct, &QAction::triggered, this, &MainWindow::Connect);
 
-    openAct = new QAction(tr("&Connect..."), this);
-    //openAct->setShortcuts(QKeySequence::Open);
-    openAct->setStatusTip(tr("Connect to server"));
-    connect(openAct, &QAction::triggered, this, &MainWindow::menuConnect);
-//! [5]
+    disconnectAct = new QAction(tr("&Disonnect"), this);
+    disconnectAct->setStatusTip(tr("Disconnect from Hatari"));
+    connect(disconnectAct, &QAction::triggered, this, &MainWindow::Disconnect);
 
-    saveAct = new QAction(tr("&Disconnect"), this);
-    //saveAct->setShortcuts(QKeySequence::Save);
-    saveAct->setStatusTip(tr("Disconnect from server"));
-    connect(saveAct, &QAction::triggered, this, &MainWindow::menuDisconnect);
+    // "Window"
+    disasmWindowAct = new QAction(tr("&Disassembly"), this);
+    disasmWindowAct->setStatusTip(tr("Show the memory window"));
+    disasmWindowAct->setCheckable(true);
+    connect(disasmWindowAct, &QAction::triggered, this, &MainWindow::menuDisasmWindow);
 
-    printAct = new QAction(tr("&Print..."), this);
-    printAct->setShortcuts(QKeySequence::Print);
-    printAct->setStatusTip(tr("Print the document"));
-    connect(printAct, &QAction::triggered, this, &MainWindow::print);
+    memoryWindowAct = new QAction(tr("&Memory"), this);
+    memoryWindowAct->setStatusTip(tr("Show the memory window"));
+    memoryWindowAct->setCheckable(true);
+    connect(memoryWindowAct, &QAction::triggered, this, &MainWindow::menuMemoryWindow);
 
-    exitAct = new QAction(tr("E&xit"), this);
-    exitAct->setShortcuts(QKeySequence::Quit);
-    exitAct->setStatusTip(tr("Exit the application"));
-    connect(exitAct, &QAction::triggered, this, &QWidget::close);
-
-    undoAct = new QAction(tr("&Undo"), this);
-    undoAct->setShortcuts(QKeySequence::Undo);
-    undoAct->setStatusTip(tr("Undo the last operation"));
-    connect(undoAct, &QAction::triggered, this, &MainWindow::undo);
-
-    redoAct = new QAction(tr("&Redo"), this);
-    redoAct->setShortcuts(QKeySequence::Redo);
-    redoAct->setStatusTip(tr("Redo the last operation"));
-    connect(redoAct, &QAction::triggered, this, &MainWindow::redo);
-
-    cutAct = new QAction(tr("Cu&t"), this);
-    cutAct->setShortcuts(QKeySequence::Cut);
-    cutAct->setStatusTip(tr("Cut the current selection's contents to the "
-                            "clipboard"));
-    connect(cutAct, &QAction::triggered, this, &MainWindow::cut);
-
-    copyAct = new QAction(tr("&Copy"), this);
-    copyAct->setShortcuts(QKeySequence::Copy);
-    copyAct->setStatusTip(tr("Copy the current selection's contents to the "
-                             "clipboard"));
-    connect(copyAct, &QAction::triggered, this, &MainWindow::copy);
-
-    pasteAct = new QAction(tr("&Paste"), this);
-    pasteAct->setShortcuts(QKeySequence::Paste);
-    pasteAct->setStatusTip(tr("Paste the clipboard's contents into the current "
-                              "selection"));
-    connect(pasteAct, &QAction::triggered, this, &MainWindow::paste);
-
-    boldAct = new QAction(tr("&Bold"), this);
-    boldAct->setCheckable(true);
-    boldAct->setShortcut(QKeySequence::Bold);
-    boldAct->setStatusTip(tr("Make the text bold"));
-    connect(boldAct, &QAction::triggered, this, &MainWindow::bold);
-
-    QFont boldFont = boldAct->font();
-    boldFont.setBold(true);
-    boldAct->setFont(boldFont);
-
-    italicAct = new QAction(tr("&Italic"), this);
-    italicAct->setCheckable(true);
-    italicAct->setShortcut(QKeySequence::Italic);
-    italicAct->setStatusTip(tr("Make the text italic"));
-    connect(italicAct, &QAction::triggered, this, &MainWindow::italic);
-
-    QFont italicFont = italicAct->font();
-    italicFont.setItalic(true);
-    italicAct->setFont(italicFont);
-
-    setLineSpacingAct = new QAction(tr("Set &Line Spacing..."), this);
-    setLineSpacingAct->setStatusTip(tr("Change the gap between the lines of a "
-                                       "paragraph"));
-    connect(setLineSpacingAct, &QAction::triggered, this, &MainWindow::setLineSpacing);
-
-    setParagraphSpacingAct = new QAction(tr("Set &Paragraph Spacing..."), this);
-    setParagraphSpacingAct->setStatusTip(tr("Change the gap between paragraphs"));
-    connect(setParagraphSpacingAct, &QAction::triggered,
-            this, &MainWindow::setParagraphSpacing);
-
+    // "About"
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, &QAction::triggered, this, &MainWindow::about);
@@ -529,83 +430,32 @@ void MainWindow::createActions()
     aboutQtAct->setStatusTip(tr("Show the Qt library's About box"));
     connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt);
     connect(aboutQtAct, &QAction::triggered, this, &MainWindow::aboutQt);
-
-    leftAlignAct = new QAction(tr("&Left Align"), this);
-    leftAlignAct->setCheckable(true);
-    leftAlignAct->setShortcut(tr("Ctrl+L"));
-    leftAlignAct->setStatusTip(tr("Left align the selected text"));
-    connect(leftAlignAct, &QAction::triggered, this, &MainWindow::leftAlign);
-
-    rightAlignAct = new QAction(tr("&Right Align"), this);
-    rightAlignAct->setCheckable(true);
-    rightAlignAct->setShortcut(tr("Ctrl+R"));
-    rightAlignAct->setStatusTip(tr("Right align the selected text"));
-    connect(rightAlignAct, &QAction::triggered, this, &MainWindow::rightAlign);
-
-    justifyAct = new QAction(tr("&Justify"), this);
-    justifyAct->setCheckable(true);
-    justifyAct->setShortcut(tr("Ctrl+J"));
-    justifyAct->setStatusTip(tr("Justify the selected text"));
-    connect(justifyAct, &QAction::triggered, this, &MainWindow::justify);
-
-    centerAct = new QAction(tr("&Center"), this);
-    centerAct->setCheckable(true);
-    centerAct->setShortcut(tr("Ctrl+E"));
-    centerAct->setStatusTip(tr("Center the selected text"));
-    connect(centerAct, &QAction::triggered, this, &MainWindow::center);
-
-//! [6] //! [7]
-    alignmentGroup = new QActionGroup(this);
-    alignmentGroup->addAction(leftAlignAct);
-    alignmentGroup->addAction(rightAlignAct);
-    alignmentGroup->addAction(justifyAct);
-    alignmentGroup->addAction(centerAct);
-    leftAlignAct->setChecked(true);
-//! [6]
 }
 //! [7]
 
 //! [8]
 void MainWindow::createMenus()
 {
-//! [9] //! [10]
+    // "File"
     fileMenu = menuBar()->addMenu(tr("&File"));
-    fileMenu->addAction(newAct);
-//! [9]
-    fileMenu->addAction(openAct);
-//! [10]
-    fileMenu->addAction(saveAct);
-    fileMenu->addAction(printAct);
-//! [11]
-    fileMenu->addSeparator();
-//! [11]
-    fileMenu->addAction(exitAct);
+    fileMenu->addAction(connectAct);
+    fileMenu->addAction(disconnectAct);
 
     editMenu = menuBar()->addMenu(tr("&Edit"));
-    editMenu->addAction(undoAct);
-    editMenu->addAction(redoAct);
+    //editMenu->addAction(undoAct);
+    //editMenu->addAction(redoAct);
     editMenu->addSeparator();
-    editMenu->addAction(cutAct);
-    editMenu->addAction(copyAct);
-    editMenu->addAction(pasteAct);
+    //editMenu->addAction(cutAct);
+    //editMenu->addAction(copyAct);
+    //editMenu->addAction(pasteAct);
     editMenu->addSeparator();
+
+    windowMenu = menuBar()->addMenu(tr("&Window"));
+    windowMenu->addAction(disasmWindowAct);
+    windowMenu->addAction(memoryWindowAct);
 
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);
-//! [8]
-
-//! [12]
-    formatMenu = editMenu->addMenu(tr("&Format"));
-    formatMenu->addAction(boldAct);
-    formatMenu->addAction(italicAct);
-    formatMenu->addSeparator()->setText(tr("Alignment"));
-    formatMenu->addAction(leftAlignAct);
-    formatMenu->addAction(rightAlignAct);
-    formatMenu->addAction(justifyAct);
-    formatMenu->addAction(centerAct);
-    formatMenu->addSeparator();
-    formatMenu->addAction(setLineSpacingAct);
-    formatMenu->addAction(setParagraphSpacingAct);
 }
 //! [12]
