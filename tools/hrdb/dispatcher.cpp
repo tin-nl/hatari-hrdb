@@ -137,8 +137,7 @@ void Dispatcher::connected()
     // Clear any accidental button clicks that sent messages while disconnected
     DeletePending();
 
-    // Do this before the UI gets to do its requests
-    this->SendCommandPacket("status");
+    // Flag for the UI to request the data it wants
     m_pTargetModel->SetConnected(1);
 
 	// THIS HAPPENS ON THE EVENT LOOP
