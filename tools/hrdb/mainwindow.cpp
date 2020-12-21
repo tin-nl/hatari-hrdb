@@ -25,7 +25,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_pRunningSquare->setFixedSize(10, 25);
     m_pRunningSquare->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
     m_pStartStopButton = new QPushButton("Break", this);
-    m_pSingleStepButton = new QPushButton("Step", this);
+    m_pStepIntoButton = new QPushButton("Step Into", this);
+    m_pStepOverButton = new QPushButton("Step Over", this);
 
     // Register/status window
     m_pRegistersTextEdit = new QTextEdit("", this);
@@ -50,7 +51,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     hlayout->addWidget(m_pRunningSquare);
     hlayout->addWidget(m_pStartStopButton);
-    hlayout->addWidget(m_pSingleStepButton);
+    hlayout->addWidget(m_pStepIntoButton);
+    hlayout->addWidget(m_pStepOverButton);
     pTopGroupBox->setLayout(hlayout);
 
     vlayout->addWidget(pTopGroupBox);
@@ -82,7 +84,8 @@ MainWindow::MainWindow(QWidget *parent)
 
 	// Wire up buttons to actions
     connect(m_pStartStopButton, &QAbstractButton::clicked, this, &MainWindow::startStopClicked);
-    connect(m_pSingleStepButton, &QAbstractButton::clicked, this, &MainWindow::singleStepClicked);
+    connect(m_pStepIntoButton, &QAbstractButton::clicked, this, &MainWindow::singleStepClicked);
+    connect(m_pStepOverButton, &QAbstractButton::clicked, this, &MainWindow::nextClicked);
 
     // Wire up menu appearance
     connect(windowMenu, &QMenu::aboutToShow, this, &MainWindow::updateWindowMenu);
@@ -110,27 +113,25 @@ MainWindow::~MainWindow()
 void MainWindow::connectChangedSlot()
 {
     bool isConnect = m_pTargetModel->IsConnected() ? true : false;
-    m_pStartStopButton->setEnabled(isConnect);
-    m_pSingleStepButton->setEnabled(isConnect);
     m_pRegistersTextEdit->setEnabled(isConnect);
 
     PopulateRunningSquare();
     PopulateRegisters();
+    updateButtonEnable();
 }
 
 void MainWindow::startStopChangedSlot()
 {
-	// Update text here
-	if (m_pTargetModel->IsRunning())
+    bool isRunning = m_pTargetModel->IsRunning();
+
+    // Update text here
+    if (isRunning)
 	{       
         // Update our previous values
         // TODO: this is not the ideal way to do this, since there
         // are timing issues. In future, parcel up the stopping updates so
         // that widget refreshes happen as one.
         m_prevRegs = m_pTargetModel->GetRegs();
-
-        m_pStartStopButton->setText("Break");
-        m_pSingleStepButton->setEnabled(false);
     }
 	else
 	{
@@ -144,12 +145,12 @@ void MainWindow::startStopChangedSlot()
         if (m_pTargetModel->GetSymbolTable().m_userSymbolCount == 0)  // NO CHECK
             m_pDispatcher->SendCommandPacket("symlist");
 
-        m_pStartStopButton->setText("Run");
-		m_pSingleStepButton->setEnabled(true);	
         m_pRegistersTextEdit->setEnabled(true);
     }
     PopulateRunningSquare();
     PopulateRegisters();
+
+    updateButtonEnable();
 }
 
 void MainWindow::startStopDelayedSlot(int running)
@@ -354,6 +355,18 @@ void MainWindow::updateWindowMenu()
     memoryWindowAct1->setChecked(m_pMemoryViewWidget1->isVisible());
 }
 
+void MainWindow::updateButtonEnable()
+{
+    bool isConnected = m_pTargetModel->IsConnected();
+    bool isRunning = m_pTargetModel->IsRunning();
+
+    m_pStartStopButton->setEnabled(isConnected);
+    m_pStartStopButton->setText(isRunning ? "Break" : "Run");
+
+    m_pStepIntoButton->setEnabled(isConnected && !isRunning);
+    m_pStepOverButton->setEnabled(isConnected && !isRunning);
+}
+
 void MainWindow::menuConnect()
 {
     Connect();
@@ -402,7 +415,7 @@ void MainWindow::createActions()
     connectAct->setStatusTip(tr("Connect to Hatari"));
     connect(connectAct, &QAction::triggered, this, &MainWindow::Connect);
 
-    disconnectAct = new QAction(tr("&Disonnect"), this);
+    disconnectAct = new QAction(tr("&Disconnect"), this);
     disconnectAct->setStatusTip(tr("Disconnect from Hatari"));
     connect(disconnectAct, &QAction::triggered, this, &MainWindow::Disconnect);
 

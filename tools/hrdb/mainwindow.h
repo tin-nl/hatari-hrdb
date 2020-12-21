@@ -61,10 +61,13 @@ private:
 	void PopulateRegisters();
     QString FindSymbol(uint32_t addr);
     void PopulateRunningSquare();
+    void updateButtonEnable();
 
     // Our UI widgets
     QPushButton*	m_pStartStopButton;
-    QPushButton*	m_pSingleStepButton;
+    QPushButton*	m_pStepIntoButton;
+    QPushButton*	m_pStepOverButton;
+
 	QTextEdit*		m_pRegistersTextEdit;
     QWidget*        m_pRunningSquare;
 
