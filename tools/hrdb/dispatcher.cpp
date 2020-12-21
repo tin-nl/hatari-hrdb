@@ -131,14 +131,18 @@ void Dispatcher::DeletePending()
 
 void Dispatcher::connected()
 {
+    // Flag that we are awaiting the "connected" notification
+    m_waitingConnectionAck = true;
+
+    // Clear any accidental button clicks that sent messages while disconnected
+    DeletePending();
+
     // Do this before the UI gets to do its requests
     this->SendCommandPacket("status");
     m_pTargetModel->SetConnected(1);
+
 	// THIS HAPPENS ON THE EVENT LOOP
     std::cout << "Host connected" << std::endl;
-
-    // Flag that we are awaiting the "connected" notification
-    m_waitingConnectionAck = true;
 }
 
 void Dispatcher::disconnected()
