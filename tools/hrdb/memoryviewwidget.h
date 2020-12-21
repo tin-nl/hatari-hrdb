@@ -4,6 +4,7 @@
 #include <QDockWidget>
 #include <QTableView>
 #include "disassembler.h"
+#include "memory.h"
 
 class TargetModel;
 class Dispatcher;
@@ -28,7 +29,7 @@ public:
         kModeLong
     };
 
-    MemoryViewTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* pDispatcher);
+    MemoryViewTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* pDispatcher, int windowIndex);
 
     uint32_t GetRowCount() const { return m_rowCount; }
     Mode GetMode() const { return m_mode; }
@@ -77,6 +78,8 @@ private:
 
     uint32_t m_rowCount;
     uint64_t m_requestId;
+    int      m_windowIndex;        // e.g. "memory 0", "memory 1"
+    MemorySlot  m_memSlot;
 };
 
 class MemoryTableView : public QTableView
@@ -106,7 +109,7 @@ class MemoryViewWidget : public QDockWidget
 {
     Q_OBJECT
 public:
-    MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher);
+    MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher, int windowIndex);
 
 public slots:
     void textEditChangedSlot();

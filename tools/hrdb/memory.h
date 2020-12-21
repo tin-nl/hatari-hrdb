@@ -11,8 +11,8 @@ enum MemorySlot
 
     kDisasm,        // general disassembly view memory
 
-    kMemoryView,    // general memory view memory
-
+    kMemoryView0,   // general memory view memory
+    kMemoryView1,   // second memory view window
     kMemorySlotCount
 };
 

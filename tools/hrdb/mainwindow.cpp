@@ -18,7 +18,6 @@ MainWindow::MainWindow(QWidget *parent)
 {
     // Create the core data models, since other object want to connect to them.
     m_pTargetModel = new TargetModel();
-
     m_pDispatcher = new Dispatcher(tcpSocket, m_pTargetModel);
 
     // Top row of buttons
@@ -39,7 +38,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_pRegistersTextEdit->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
 
     m_pDisasmWidget = new DisasmWidget(this, m_pTargetModel, m_pDispatcher);
-    m_pMemoryViewWidget = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher);
+    m_pMemoryViewWidget0 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 0);
+    m_pMemoryViewWidget1 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 1);
 
     // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
     QVBoxLayout *vlayout = new QVBoxLayout;
@@ -47,8 +47,6 @@ MainWindow::MainWindow(QWidget *parent)
     auto pTopGroupBox = new QWidget(this);
     auto pMainGroupBox = new QGroupBox(this);
 
-    //pTopGroupBox->setFixedSize(400, 50);
-    //pTopGroupBox->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred));
     hlayout->addWidget(m_pRunningSquare);
     hlayout->addWidget(m_pStartStopButton);
     hlayout->addWidget(m_pSingleStepButton);
@@ -63,7 +61,9 @@ MainWindow::MainWindow(QWidget *parent)
     setCentralWidget(pMainGroupBox);
 
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWidget);
-    this->addDockWidget(Qt::RightDockWidgetArea, m_pMemoryViewWidget);
+    this->addDockWidget(Qt::RightDockWidgetArea, m_pMemoryViewWidget0);
+    this->addDockWidget(Qt::BottomDockWidgetArea, m_pMemoryViewWidget1);
+    m_pMemoryViewWidget1->hide();
 
     // Set up menus
     createActions();
@@ -96,9 +96,6 @@ MainWindow::MainWindow(QWidget *parent)
     // Update everything
     connectChangedSlot();
     startStopChangedSlot();
-
-    disasmWindowAct->setChecked(m_pDisasmWidget->isVisible());
-    memoryWindowAct->setChecked(m_pMemoryViewWidget->isVisible());
 }
 
 MainWindow::~MainWindow()
@@ -159,9 +156,7 @@ void MainWindow::startStopDelayedSlot(int running)
         m_pRegistersTextEdit->setEnabled(false);
         m_pRegistersTextEdit->setText("Running, F5 to break...");
     }
-
 }
-
 
 void MainWindow::registersChangedSlot(uint64_t commandId)
 {
@@ -313,16 +308,7 @@ void MainWindow::PopulateRegisters()
     ref << DispReg32(Registers::D5, m_prevRegs, regs) << " " << DispReg32(Registers::A5, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A5] & 0xffffff) << "<br>";
     ref << DispReg32(Registers::D6, m_prevRegs, regs) << " " << DispReg32(Registers::A6, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A6] & 0xffffff) << "<br>";
     ref << DispReg32(Registers::D7, m_prevRegs, regs) << " " << DispReg32(Registers::A7, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A7] & 0xffffff) << "<br>";
-
     ref << "</font>";
-    /*
-	for (int i = 0; i < Registers::REG_COUNT; ++i)
-	{
-		QString pc_text;
-		pc_text = QString::asprintf("%s: %08x\n", Registers::s_names[i], regs.m_value[i]);
-		regsText += pc_text;
-	}
-    */
     m_pRegistersTextEdit->setHtml(regsText);
 }
 
@@ -360,7 +346,8 @@ void MainWindow::PopulateRunningSquare()
 void MainWindow::updateWindowMenu()
 {
     disasmWindowAct->setChecked(m_pDisasmWidget->isVisible());
-    memoryWindowAct->setChecked(m_pMemoryViewWidget->isVisible());
+    memoryWindowAct0->setChecked(m_pMemoryViewWidget0->isVisible());
+    memoryWindowAct1->setChecked(m_pMemoryViewWidget1->isVisible());
 }
 
 void MainWindow::menuConnect()
@@ -375,18 +362,17 @@ void MainWindow::menuDisconnect()
 
 void MainWindow::menuDisasmWindow()
 {
-    if (m_pDisasmWidget->isVisible())
-        m_pDisasmWidget->hide();
-    else
-        m_pDisasmWidget->show();
+    toggleVis(m_pDisasmWidget);
 }
 
-void MainWindow::menuMemoryWindow()
+void MainWindow::menuMemoryWindow0()
 {
-    if (m_pMemoryViewWidget->isVisible())
-        m_pMemoryViewWidget->hide();
-    else
-        m_pMemoryViewWidget->show();
+    toggleVis(m_pMemoryViewWidget0);
+}
+
+void MainWindow::menuMemoryWindow1()
+{
+    toggleVis(m_pMemoryViewWidget1);
 }
 
 void MainWindow::about()
@@ -417,10 +403,15 @@ void MainWindow::createActions()
     disasmWindowAct->setCheckable(true);
     connect(disasmWindowAct, &QAction::triggered, this, &MainWindow::menuDisasmWindow);
 
-    memoryWindowAct = new QAction(tr("&Memory"), this);
-    memoryWindowAct->setStatusTip(tr("Show the memory window"));
-    memoryWindowAct->setCheckable(true);
-    connect(memoryWindowAct, &QAction::triggered, this, &MainWindow::menuMemoryWindow);
+    memoryWindowAct0 = new QAction(tr("&Memory 1"), this);
+    memoryWindowAct0->setStatusTip(tr("Show the memory window"));
+    memoryWindowAct0->setCheckable(true);
+    connect(memoryWindowAct0, &QAction::triggered, this, &MainWindow::menuMemoryWindow0);
+
+    memoryWindowAct1 = new QAction(tr("&Memory 2"), this);
+    memoryWindowAct1->setStatusTip(tr("Show the memory window"));
+    memoryWindowAct1->setCheckable(true);
+    connect(memoryWindowAct1, &QAction::triggered, this, &MainWindow::menuMemoryWindow1);
 
     // "About"
     aboutAct = new QAction(tr("&About"), this);
@@ -453,10 +444,18 @@ void MainWindow::createMenus()
 
     windowMenu = menuBar()->addMenu(tr("&Window"));
     windowMenu->addAction(disasmWindowAct);
-    windowMenu->addAction(memoryWindowAct);
+    windowMenu->addAction(memoryWindowAct0);
+    windowMenu->addAction(memoryWindowAct1);
 
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAct);
     helpMenu->addAction(aboutQtAct);
 }
-//! [12]
+
+void MainWindow::toggleVis(QWidget* pWidget)
+{
+    if (pWidget->isVisible())
+        pWidget->hide();
+    else
+        pWidget->show();
+}

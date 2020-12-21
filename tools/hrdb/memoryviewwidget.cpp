@@ -15,7 +15,8 @@
 #include "stringparsers.h"
 #include "symboltablemodel.h"
 
-MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher) :
+MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher,
+                                           int windowIndex) :
     QAbstractTableModel(parent),
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher),
@@ -23,8 +24,10 @@ MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTarget
     m_bytesPerRow(16),
     m_mode(kModeByte),
     m_rowCount(1),
-    m_requestId(0)
+    m_requestId(0),
+    m_windowIndex(windowIndex)
 {
+    m_memSlot = (MemorySlot)(MemorySlot::kMemoryView0 + m_windowIndex);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryViewTableModel::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryViewTableModel::startStopChangedSlot);
 }
@@ -153,7 +156,7 @@ QVariant MemoryViewTableModel::headerData(int section, Qt::Orientation orientati
 
 void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
 {
-    if (memorySlot != MemorySlot::kMemoryView)
+    if (memorySlot != m_memSlot)
         return;
 
     // ignore out-of-date requests
@@ -166,7 +169,7 @@ void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
 void MemoryViewTableModel::RecalcText()
 {
     m_rows.clear();
-    const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kMemoryView);
+    const Memory* pMem = m_pTargetModel->GetMemory(m_memSlot);
     if (!pMem)
         return;
 
@@ -241,7 +244,7 @@ void MemoryViewTableModel::startStopChangedSlot()
 void MemoryViewTableModel::RequestMemory()
 {
     uint32_t size = ((m_rowCount * 16));
-    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kMemoryView, m_address, size);
+    m_requestId = m_pDispatcher->RequestMemory(m_memSlot, m_address, size);
 }
 
 //-----------------------------------------------------------------------------
@@ -356,15 +359,15 @@ void MemoryTableView::RecalcRowCount()
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher) :
+MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher, int windowIndex) :
     QDockWidget(parent),
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher)
 {
-    this->setWindowTitle("Memory");
+    this->setWindowTitle(QString::asprintf("Memory %d", windowIndex + 1));
 
     // Make the data first
-    pModel = new MemoryViewTableModel(this, pTargetModel, pDispatcher);
+    pModel = new MemoryViewTableModel(this, pTargetModel, pDispatcher, windowIndex);
 
     m_pLineEdit = new QLineEdit(this);
     m_pComboBox = new QComboBox(this);

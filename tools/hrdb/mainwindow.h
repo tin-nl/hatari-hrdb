@@ -47,7 +47,8 @@ private slots:
     void menuConnect();
     void menuDisconnect();
     void menuDisasmWindow();
-    void menuMemoryWindow();
+    void menuMemoryWindow0();
+    void menuMemoryWindow1();
     void about();
     void aboutQt();
 private:
@@ -68,7 +69,8 @@ private:
 
     // Docking windows
     DisasmWidget*       m_pDisasmWidget;
-    MemoryViewWidget*   m_pMemoryViewWidget;
+    MemoryViewWidget*   m_pMemoryViewWidget0;
+    MemoryViewWidget*   m_pMemoryViewWidget1;
 
     // Low-level data
 	QTcpSocket* 	tcpSocket;
@@ -82,6 +84,7 @@ private:
     // Menus
     void createActions();
     void createMenus();
+    void toggleVis(QWidget *pWidget);
     QMenu *fileMenu;
     QMenu *editMenu;
     QMenu *windowMenu;
@@ -91,7 +94,8 @@ private:
     QAction *disconnectAct;
 
     QAction *disasmWindowAct;
-    QAction *memoryWindowAct;
+    QAction *memoryWindowAct0;
+    QAction *memoryWindowAct1;
     QAction *aboutAct;
     QAction *aboutQtAct;
 };
