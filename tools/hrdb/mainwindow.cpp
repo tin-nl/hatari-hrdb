@@ -65,6 +65,10 @@ MainWindow::MainWindow(QWidget *parent)
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWidget);
     this->addDockWidget(Qt::RightDockWidgetArea, m_pMemoryViewWidget);
 
+    // Set up menus
+    createActions();
+    createMenus();
+
 	// Listen for target changes
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &MainWindow::registersChangedSlot);
@@ -77,9 +81,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pStartStopButton, &QAbstractButton::clicked, this, &MainWindow::startStopClicked);
     connect(m_pSingleStepButton, &QAbstractButton::clicked, this, &MainWindow::singleStepClicked);
 
-    // Set up menus
-    createActions();
-    createMenus();
+    // Wire up menu appearance
+    connect(windowMenu, &QMenu::aboutToShow, this, &MainWindow::updateWindowMenu);
+
 	// Keyboard shortcuts
     new QShortcut(QKeySequence(tr("F5", "Start/Stop")), 		this, 			SLOT(startStopClicked()));
 
@@ -353,10 +357,10 @@ void MainWindow::PopulateRunningSquare()
     m_pRunningSquare->setPalette(pal);
 }
 
-
-
-void MainWindow::newFile()
+void MainWindow::updateWindowMenu()
 {
+    disasmWindowAct->setChecked(m_pDisasmWidget->isVisible());
+    memoryWindowAct->setChecked(m_pMemoryViewWidget->isVisible());
 }
 
 void MainWindow::menuConnect()
@@ -375,7 +379,6 @@ void MainWindow::menuDisasmWindow()
         m_pDisasmWidget->hide();
     else
         m_pDisasmWidget->show();
-    disasmWindowAct->setChecked(m_pDisasmWidget->isVisible());
 }
 
 void MainWindow::menuMemoryWindow()
@@ -384,14 +387,12 @@ void MainWindow::menuMemoryWindow()
         m_pMemoryViewWidget->hide();
     else
         m_pMemoryViewWidget->show();
-    memoryWindowAct->setChecked(m_pMemoryViewWidget->isVisible());
 }
 
 void MainWindow::about()
 {
-    QMessageBox::about(this, tr("About Menu"),
-            tr("The <b>Menu</b> example shows how to create "
-               "menu-bar menus and context menus."));
+    QMessageBox::about(this, tr("hrdb"),
+            tr("hrdb - Hatari remote debugger GUI"));
 }
 
 void MainWindow::aboutQt()

@@ -43,7 +43,7 @@ public slots:
     void singleStepClicked();
     void nextClicked();
 private slots:
-    void newFile();
+    void updateWindowMenu();
     void menuConnect();
     void menuDisconnect();
     void menuDisasmWindow();
