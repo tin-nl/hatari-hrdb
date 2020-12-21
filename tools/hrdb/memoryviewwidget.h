@@ -120,6 +120,7 @@ private:
     MemoryViewTableModel* pModel;
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
+    QAbstractItemModel* m_pSymbolTableModel;
 };
 
 #endif // MEMORYVIEWWIDGET_H

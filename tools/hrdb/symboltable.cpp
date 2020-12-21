@@ -155,8 +155,6 @@ SymbolTable::SymbolTable() :
 
 void SymbolTable::AddInternal(const Symbol &sym)
 {
-    size_t index = m_symbols.size();
-    m_addrLookup.insert(Pair(sym.address, index));
     m_symbols.push_back(sym);
     ++m_userSymbolCount;
 }
@@ -165,6 +163,14 @@ void SymbolTable::AddComplete()
 {
     // Sort the symbols in name order
     std::sort(m_symbols.begin(), m_symbols.end(), SymbolNameCompare());
+
+    // Reset the lookup keys, since the order has changed
+    m_addrLookup.clear();
+    for (size_t i = 0; i < m_symbols.size(); ++i)
+    {
+        Symbol& s = m_symbols[i];
+        m_addrLookup.insert(Pair(s.address, i));
+    }
 
     // Recalc the keys table
     m_addrKeys.clear();

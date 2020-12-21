@@ -8,11 +8,12 @@
 #include <QHeaderView>
 #include <QStringListModel>
 #include <QFontDatabase>
+#include <QCompleter>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
 #include "stringparsers.h"
-
+#include "symboltablemodel.h"
 
 MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher) :
     QAbstractTableModel(parent),
@@ -374,6 +375,12 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
 
     m_pTableView = new MemoryTableView(this, pModel, m_pTargetModel);
     m_pTableView->setModel(pModel);
+
+    m_pSymbolTableModel = new SymbolTableModel(this, m_pTargetModel->GetSymbolTable());
+    QCompleter* pCompl = new QCompleter(m_pSymbolTableModel, this);
+    pCompl->setCaseSensitivity(Qt::CaseSensitivity::CaseInsensitive);
+
+    m_pLineEdit->setCompleter(pCompl);
 
     const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     m_pTableView->setFont(monoFont);
