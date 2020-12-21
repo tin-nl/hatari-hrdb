@@ -16,7 +16,7 @@
 <h1 class="pageheader">Hatari Debugger User's Manual</h1>
 
 <p class="pageheader">
-Version 2.2.1, December 2019
+Version 2.3, November 2020
 </p>
 <p class="pageheader">
 Debugger manual written by: <strong>Eero Tamminen</strong>
@@ -184,6 +184,7 @@ Generic commands:
         parse ( p) : get debugger commands from file
        rename (  ) : rename given file
         reset (  ) : reset emulation
+   screenshot (  ) : save screenshot to given file
        setopt ( o) : set Hatari command line and debugger options
     stateload (  ) : restore emulation state
     statesave (  ) : save emulation state
@@ -298,9 +299,9 @@ value.)
 </p>
 
 <p>
-With command argument completion (see <a href="#Build_notes">build
-notes</a>), result from the last "evaluate" command can be inserted
-by typing '$' and pressing TAB.
+With command argument completion (see <a href="#readline">readline</a>),
+result from the last "evaluate" command can be inserted by typing '$'
+and pressing TAB.
 </p>
 
 
@@ -359,8 +360,9 @@ registers (e.g. "info videl") and Atari OS structures (e.g. "info gemdos").
 
 <p>
 By using the "lock" command, you can ask Hatari to show specific
-information whenever you enter the debugger / hit a breakpoint. For
-example to see disassembly from current PC address, use "lock disasm".
+information whenever you enter the debugger, e.g. due to a breakpoint.
+For example to see disassembly from current PC address, use "lock
+disasm".
 </p>
 
 <p>
@@ -630,33 +632,49 @@ above).  This enables also trace option as you would anyway see this
 information if debugger would be entered.
 </dd>
 
+<dt><em>info &lt;name&gt;</em></dt>
+<dd>
+Show on breakpoint hits the same information as "info" command would
+show (see <a href="#Inspecting_emulation_state">Inspecting emulation
+state</a> above).  With "lock" option and command there is more control
+over what information is shown, whereas with "info" option, every
+breakpoint can show different information, and one doesn't need to
+change what's shown on entering the debugger.  This option also
+enables trace option.
+</dd>
+
 <dt><em>file &lt;file&gt;</em></dt>
 <dd>
 Execute debugger commands from given &lt;file&gt; when this breakpoint
 is hit.  With this you have complete control over what information is
 show when the debugger is hit, you can even chain breakpoints (as
 explained in
-<a href="#Chaining_breakpoints">Chaining breakpoints</a> later on)
-etc.  Use this if "lock" option isn't enough or you want different
-information show on breakpoints and when entering the debugger.
+<a href="#Chaining_breakpoints">Chaining breakpoints</a> later on).
+Use this when "info" and "lock" options are not enough.
 </dd>
 
 <dt><em>noinit</em></dt>
 <dd>
-Hitting breakpoint doesn't re-initialize debugger which would e.g.
-cause profiling data to be reset.  This implies trace option as
-entering debugger would also re-initialize debugger state. This option
-is mainly intended for breakpoints that use :file option to show
-backtraces with "profile stack" command during
-<a href="#Profiling">profiling</a>.  See
+Avoid debugger initialization (profiling data reset and disassembly
+address being set to current PC) on breakpoint hit. This enables trace
+option as entering debugger would anyway re-initialize debugger state.
+This option is mainly intended for breakpoints that use either
+":file" or ":lock" option to show backtraces with "profile stack"
+command during <a href="#Profiling">profiling</a>.  See
 <a href="#Usage_examples">Usage examples</a> section for an example.
+</dd>
+
+<dt><em>quiet</em></dt>
+<dd>
+Inhibit showing of general breakpoint hit information i.e. show only
+the additional information that breakpoint outputs.
 </dd>
 </dl>
 
 <p>
 Note: you can give multiple options for conditional breakpoints, but
-for address breakpoints you can give only one these options.  And
-"file" option is supported only for conditional breakpoints.
+for address breakpoints you can give only one these options. "file"
+and "info" options are supported only for conditional breakpoints.
 </p>
 
 
@@ -981,6 +999,11 @@ instructions aren't supported currently.)
 <h3>Tracing</h3>
 
 <p>
+(Hatari needs to be built with ENABLE_TRACING define set for
+tracing to work. By default it is.)
+</p>
+
+<p>
 If you want e.g. to continue with real-time disassembling, you can
 enable it with "trace cpu_disasm" (or "trace dsp_disasm" for DSP) at
 the debugger prompt before continuing.
@@ -1000,7 +1023,7 @@ trace +xbios,bios      # trace additionally these
 trace -aes,-vdi        # remove tracing of these
 </pre>
 <p>
-('+' is optional for addition exept at start of the trace flags list.)
+('+' is optional for addition except at start of the trace flags list.)
 </p>
 <p>
 Notes:
@@ -1865,11 +1888,18 @@ b  ($ff820a).b &amp; 2 ! ($ff820a).b &amp; 2  :trace
 <dt><em>Viewing OS structure and IO register values</em></dt>
 <dd>To see e.g. basepage for currently running program:
 <pre>
-info basepage
+info  basepage
 </pre>
 To see e.g. all Falcon Videl register values, use:
 <pre>
-info videl
+info  videl
+</pre>
+</dd>
+
+<dt><em>Showing OS attribute information for specific OS calls</em></dt>
+<dd>To see e.g. VDI attributes for all v_gtext VDI calls:
+<pre>
+b  VdiOpcode = $8  :quiet :info vdi
 </pre>
 </dd>
 
@@ -1994,8 +2024,8 @@ callstack information (with some limitations).
 <dd>Enable profiling, load symbols for the program and set breakpoint
 for the function you are interested about, in the following way:
 <pre>
-profile on
-symbols prg
+profile  on
+symbols  prg
 b  pc = _my_function  :quiet :noinit :file showstack.ini
 </pre>
 I.e. whenever 'my_function' address is called, quietly trigger a
@@ -2003,7 +2033,7 @@ breakpoint without resetting profiling (callstack) information and run
 debugger command(s) from the 'showstack.ini' debugger script file,
 which contains following command:
 <pre>
-profile stack
+profile  stack
 </pre>
 </dd>
 
@@ -2021,22 +2051,67 @@ the DSP.
 </p>
 
 
-<h3 id="Build_notes">Build notes</h3>
+<h3 id="readline">Command line editing and libreadline</h3>
 
 <p>
-Lastly, the debugger is much nicer to use with the command line
-history, editing and especially the completion support for the
-command, command argument and symbol names.
+Hatari debugger is much nicer to use with the command line history,
+editing and especially the completion support for the command, command
+argument and symbol names. Like many other programs (Bash etc),
+debugger uses libreadline to handle this.
 </p>
+
+
+<h4>Hatari building</h4>
 <p>
-If you are building Hatari yourself, please make sure that you have the
-GNU readline development files installed (on Debian / Ubuntu these
-come from the libreadline5-dev package). Otherwise the name completion
-and other features don't get enabled when you configure Hatari.
+If you are building Hatari yourself, please make sure that you have
+the GNU readline development files installed (on Debian / Ubuntu these
+come from the "libreadline*-dev" packages). Otherwise the name
+completion and other features don't get enabled when you configure
+Hatari.
 </p>
+
+
+<h4>Keyboard shortcuts</h4>
+
 <p>
-ENABLE_TRACING define needs to be set for tracing to work.
-By default it should be enabled.
+In addition to the normal line editing keys, libreadline supports
+several keyboard shorcuts ('^' indicates Control-key):
+</p>
+<ul>
+ <li>Cursor movement (sometimes preferable over using arrow keys):</li>
+ <ul>
+   <li>^B - backward</li>
+   <li>^F - forward</li>
+   <li>^arrow - move by word</li>
+   <li>^A - start of line</li>
+   <li>^E - end of line</li>
+   <li>^P - previous line</li>
+   <li>^N - next line</li>
+ </ul>
+ <li>Cut / paste (relative to cursor position):</li>
+ <ul>
+   <li>^W - cut previous word (space separated)</li>
+   <li>^K - cut ("kill") to end of line</li>
+   <li>^U - cut to start of line</li>
+   <li>^Y - paste ("yank") deleted content</li>
+ </ul>
+ <li>Other text changes:</li>
+ <ul>
+   <li>^D - delete character</li>
+   <li>^T - transpose (switch) last 2 characters</li>
+   <li>^_ - undo last change</li>
+ </ul>
+ <li>Miscanellous:</li>
+ <ul>
+   <li>^R - history ("reverse") search</li>
+   <li>^L - clear screen and redraw line</li>
+ </ul>
+</ul>
+
+<p>
+(Above shortcuts are inherited from Emacs text editor, and work also
+in all shells using readline.  See "man readline" on how to configure
+them.)
 </p>
 
 </body>

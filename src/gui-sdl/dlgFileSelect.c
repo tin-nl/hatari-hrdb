@@ -6,7 +6,7 @@
 
   A file selection dialog for the graphical user interface for Hatari.
 */
-const char DlgFileSelect_fileid[] = "Hatari dlgFileSelect.c : " __DATE__ " " __TIME__;
+const char DlgFileSelect_fileid[] = "Hatari dlgFileSelect.c";
 
 #include <SDL.h>
 #include <sys/stat.h>
@@ -595,6 +595,8 @@ char* SDLGui_FileSelect(const char *title, const char *path_and_name, char **zip
 
 	/* Allocate memory for the file and path name strings: */
 	pStringMem = malloc(4 * FILENAME_MAX);
+	if ( !pStringMem )
+		return NULL;
 	path = pStringMem;
 	fname = pStringMem + FILENAME_MAX;
 	zipdir = pStringMem + 2 * FILENAME_MAX;

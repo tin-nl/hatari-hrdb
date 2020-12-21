@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
-# Copyright (C) 2012-2019 by Eero Tamminen <oak at helsinkinet fi>
+# Copyright (C) 2012-2020 by Eero Tamminen <oak at helsinkinet fi>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -106,7 +106,7 @@ class TOS:
         # older TOS versions don't support autostarting
         # programs from GEMDOS HD dir with *.INF files
         f.seek(0x2C, 0)
-        etos = (f.read(4) == "ETOS")
+        etos = (f.read(4) == b"ETOS")
         return (version, etos)
 
 
@@ -128,35 +128,30 @@ class TOS:
         # https://en.wikipedia.org/wiki/Atari_TOS
         elif version <= 0x100:
             # boots up really slow with 4MB
-            info = (0, 16, ("st",))
+            info = (0, 20, ("st",))
         elif version <= 0x104:
-            info = (0, 6, ("st", "megast"))
+            info = (0, 12, ("st", "megast"))
         elif version <= 0x162:
-            info = (0, 6, ("ste",))
+            info = (0, 20, ("ste",))
         elif version < 0x206:
             # TOS v2.x are slower with VDI mode than others
-            info = (2, 8, ("ste", "megaste"))
+            info = (3, 14, ("ste", "megaste"))
         elif version == 0x206:
             # ST support added to TOS 2.x only after 2.05
-            info = (2, 8, ("st", "megast", "ste", "megaste"))
-        elif version < 0x306:
-            # memcheck comes up fast, but boot takes time,
-            # especially with GEMDOS HD and MMU, and
-            # even more on TOS 3.00
-            info = (0, 16, ("tt",))
-        elif version == 0x306:
-            info = (2, 8, ("tt",))
+            info = (3, 14, ("st", "megast", "ste", "megaste"))
+        elif version <= 0x306:
+            # MMU slowdown is taken care of in prepare_test()
+            info = (3, 16, ("tt",))
         elif version <= 0x404:
-            # memcheck takes long to come up with lots of RAM,
-            # especially with MMU enabled
-            info = (3, 10, ("falcon",))
+            # no-IDE scan slowdown is taken care of in prepare_test()
+            info = (3, 28, ("falcon",))
         else:
             raise AssertionError("Unknown '%s' TOS version 0x%x" % (name, version))
 
         if self.etos:
-            print("%s is EmuTOS v%x %dkB" % (name, version, size))
+            print("%s is %dkB EmuTOS corresponding to TOS v%x (wait startup: %ds, rest: %ds)" % (name, size, version, info[0], info[1]))
         else:
-            print("%s is normal TOS v%x" % (name, version))
+            print("%s is normal TOS v%x (wait memcheck: %ds, rest: %ds)" % (name, version, info[0], info[1])
         # 0: whether / how long to wait to dismiss memory test
         # 1: how long to wait until concluding test failed
         # 2: list of machines supported by this TOS version
@@ -180,6 +175,7 @@ class TOS:
         # TOS isn't support.
         #
         # (And even with a driver, only TOS 4.x supports IDE.)
+        print("NOTE: '%s' hard disk tests are supported only for EmuTOS" % hdinterface)
         return False
 
     def supports_monitor(self, monitortype, machine):
@@ -229,6 +225,7 @@ class Config:
 
     # defaults
     fast = False
+    opts = []
     bools = []
     disks = ("floppy", "gemdos", "scsi")
     graphics = ("mono", "rgb", "vga", "vdi1", "vdi4")
@@ -237,15 +234,21 @@ class Config:
     ttrams = (0, 32)
 
     def __init__(self, argv):
-        longopts = ["bool=", "disks=", "fast", "graphics=", "help", "machines=", "memsizes=", "ttrams="]
+        longopts = ["bool=", "disks=", "fast", "graphics=", "help", "machines=", "memsizes=", "opts=", "ttrams="]
         try:
-            opts, paths = getopt.gnu_getopt(argv[1:], "b:d:fg:hm:s:t:", longopts)
+            opts, paths = getopt.gnu_getopt(argv[1:], "b:d:fg:hm:s:o:t:", longopts)
         except getopt.GetoptError as error:
             self.usage(error)
         self.handle_options(opts)
         self.images = self.check_images(paths)
-        configs = (self.disks, self.graphics, self.machines, self.memsizes, self.ttrams, self.bools)
-        print("Test configuration:\n\t%s %s %s RAM=%s TTRAM=%s bool=%s\n" % configs)
+        print("\nTest configurations:")
+        print("- machines = %s" % self.machines)
+        print("- graphics = %s" % self.graphics)
+        print("- disks = %s" % self.disks)
+        print("- RAM = %s" % self.memsizes)
+        print("- TTRAM = %s" % self.ttrams)
+        print("- bools = %s" % self.bools)
+        print("- fixed = '%s'\n" % ' '.join(self.opts))
 
 
     def check_images(self, paths):
@@ -271,7 +274,9 @@ class Config:
             if opt in ("-f", "--fast"):
                 self.fast = True
             elif opt in ("-b", "--bool"):
-                self.bools += args
+                self.bools = args
+            elif opt in ("-o", "--opts"):
+                self.opts = arg.split()
             elif opt in ("-d", "--disks"):
                 unknown, self.disks = validate(args, self.all_disks)
             elif opt in ("-g", "--graphics"):
@@ -300,6 +305,10 @@ class Config:
     def usage(self, msg=None):
         "output program usage information"
         name = os.path.basename(sys.argv[0])
+        # option value lists in directly CLI copy-pastable format
+        disks, graphics, machines = [','.join(x) for x in
+            (self.all_disks, self.all_graphics, self.all_machines)]
+        memsizes = ','.join([str(x) for x in self.all_memsizes])
         print(__doc__)
         print("""
 Usage: %s [options] <TOS image files>
@@ -308,14 +317,16 @@ Options:
 \t-h, --help\tthis help
 \t-f, --fast\tspeed up boot with less accurate emulation:
 \t\t\t"--fast-forward yes --fast-boot yes --fastfdc yes --timer-d yes"
-\t-d, --disks\t%s
-\t-g, --graphics\t%s
-\t-m, --machines\t%s
-\t-s, --memsizes\t%s
-\t-t, --ttrams\t%s
+\t-d, --disks\t(%s)
+\t-g, --graphics\t(%s)
+\t-m, --machines\t(%s)
+\t-s, --memsizes\t(%s)
+\t-t, --ttrams\t(0-512, in 4MB steps)
 \t-b, --bool\t(extra boolean Hatari options to test)
+\t-o, --opts\t(hatari options to pass as-is)
 
-Multiple values for an option need to be comma separated. If some
+Multiple values for an option need to be comma separated. If option
+is given multiple times, last given value(s) are used. If some
 option isn't given, default list of values will be used for that.
 
 For example:
@@ -325,8 +336,9 @@ For example:
 \t--memsizes 0,4,14 \\
 \t--ttrams 0,32 \\
 \t--graphics mono,rgb \\
-\t--bool --compatible,--mmu
-""" % (name, self.all_disks, self.all_graphics, self.all_machines, self.all_memsizes, self.ttrams, name))
+\t--bool --compatible,--driver-b \\
+\t--opts "--mmu on"
+""" % (name, disks, graphics, machines, memsizes, name))
         if msg:
             print("ERROR: %s\n" % msg)
         sys.exit(1)
@@ -405,8 +417,13 @@ For example:
         #
         # Below ones should be potentially relevant ones to test
         # (EmuTOS supports NatFeats so it can have impact too)
-        generic_opts = ("--compatible", "--timer-d", "--fastfdc", "--fast-boot", "--natfeats")
-        winuae_opts = ("--cpu-exact", "--mmu", "--addr24", "--fpu-softfloat")
+        generic_opts = (
+            "--compatible", "--timer-d", "--fast-boot",
+            "--natfeats", "--fastfdc", "--drive-b"
+        )
+        winuae_opts = (
+            "--cpu-exact", "--mmu", "--addr24", "--fpu-softfloat"
+        )
         for option in self.bools:
             if option not in generic_opts:
                 if option not in winuae_opts:
@@ -449,8 +466,7 @@ def exit_if_missing(names):
     "exit if given (test input) file is missing"
     for name in names:
         if not os.path.exists(name):
-            print("ERROR: test file '%s' missing")
-            sys.exit(1)
+            error_exit("test file '%s' missing")
 
 
 # how long to wait for invoked Hatari to open FIFO (= MIDI output file)
@@ -494,34 +510,96 @@ class Tester:
     def alarm_handler(self, signum, dummy):
         "output error if (timer) signal came before passing current test stage"
         if signum == signal.SIGALRM:
-            print("ERROR: timeout triggered -> test FAILED")
+            raise OSError("ERROR: timeout")
         else:
             print("ERROR: unknown signal %d received" % signum)
             raise AssertionError
 
     def create_config(self):
-        "create Hatari configuration file for testing"
-        # write specific configuration to:
-        # - avoid user's own config
+        "create Hatari default configuration file for testing"
+        # override user's own config with default config to:
         # - get rid of the dialogs
-        # - don't warp mouse on resolution changes
+        # - disable NatFeats
+        # - disable fast boot options
+        # - run as fast as possible (fast forward)
+        # - use best CPU emulation options & 24-bit addressing
+        # - disable ST blitter & (for now) MMU
+        # - use dummy DSP & HW FPU types for speed
+        #   (OS doesn't use them, it just checks for their presence)
+        # - enable TOS patching and disable cartridge
         # - limit Videl zooming to same sizes as ST screen zooming
-        # - get rid of statusbar and borders in TOS screenshots
+        # - don't warp mouse on resolution changes
+        # - get rid of borders in TOS screenshots
         #   to make them smaller & more consistent
         # - disable GEMDOS emu by default
+        # - disable GEMDOS HD write protection and host time use
+        # - disable fast FDC & floppy write protection
         # - use empty floppy disk image to avoid TOS error when no disks
+        # - enable both floppy drives, as double sided
         # - set printer output file
         # - disable serial in and set serial output file
         # - disable MIDI in, use MIDI out as fifo file to signify test completion
         dummy = open(self.dummycfg, "w")
-        dummy.write("[Log]\nnAlertDlgLogLevel = 0\nbConfirmQuit = FALSE\n\n")
-        dummy.write("[Screen]\nnMaxWidth = 832\nnMaxHeight = 576\nbCrop = TRUE\nbAllowOverscan = FALSE\nbMouseWarp = FALSE\n\n")
-        dummy.write("[HardDisk]\nbUseHardDiskDirectory = FALSE\n\n")
-        dummy.write("[Floppy]\nszDiskAFileName = blank-a.st.gz\n\n")
-        dummy.write("[Printer]\nbEnablePrinting = TRUE\nszPrintToFileName = %s\n\n" % self.printout)
-        dummy.write("[RS232]\nbEnableRS232 = TRUE\nszInFileName = \nszOutFileName = %s\n" % self.serialout)
-        dummy.write("bEnableSccB = TRUE\nsSccBOutFileName = %s\n\n" % self.serialout)
-        dummy.write("[Midi]\nbEnableMidi = TRUE\nsMidiInFileName = \nsMidiOutFileName = %s\n\n" % self.fifofile)
+        dummy.write("""
+[Log]
+nAlertDlgLogLevel = 0
+bConfirmQuit = FALSE
+bNatFeats = FALSE
+
+[System]
+bFastBoot = FALSE
+bPatchTimerD = FALSE
+bFastForward = TRUE
+bCompatibleCpu = TRUE
+bCycleExactCpu = TRUE
+bAddressSpace24 = TRUE
+bBlitter = FALSE
+bMMU = FALSE
+nDSPType = 1
+n_FPUType = 0
+
+[ROM]
+bPatchTos = TRUE
+szCartridgeImageFileName =
+
+[Screen]
+nMaxWidth = 832
+nMaxHeight = 576
+bAllowOverscan = FALSE
+bMouseWarp = FALSE
+bCrop = TRUE
+
+[HardDisk]
+nGemdosDrive = 0
+bUseHardDiskDirectory = FALSE
+bGemdosHostTime = FALSE
+nWriteProtection = 0
+
+[Floppy]
+FastFloppy = FALSE
+nWriteProtection = 0
+EnableDriveA = TRUE
+DriveA_NumberOfHeads = 2
+EnableDriveB = TRUE
+DriveB_NumberOfHeads = 2
+szDiskAFileName = blank-a.st.gz
+
+[Printer]
+bEnablePrinting = TRUE
+szPrintToFileName = %s
+
+[RS232]
+bEnableRS232 = TRUE
+bEnableSccB = TRUE
+szInFileName =
+szOutFileName = %s
+sSccBOutFileName = %s
+
+[Midi]
+bEnableMidi = TRUE
+sMidiInFileName =
+sMidiOutFileName = %s
+""" % (self.printout, self.serialout, self.serialout, self.fifofile))
         dummy.close()
 
     def cleanup_all_files(self):
@@ -625,6 +703,7 @@ class Tester:
             init_ok = True
 
         if memwait:
+            print("Final start/memcheck wait: %ds" % memwait)
             # pass memory test
             time.sleep(memwait)
             instance.run("keypress %s" % hconsole.Scancode.Space)
@@ -655,15 +734,6 @@ class Tester:
             else:
                 testargs += ["--addr24", "on"]
 
-        memwait = tos.memwait
-        testwait = tos.fullwait
-        if bool_opt:
-            if bool_opt[0] == '--mmu' and bool_opt[1] == 'on':
-                # MMU doubles memory wait
-                memwait *= 2
-            identity += "-%s%s" % (bool_opt[0].replace("-", ""), bool_opt[1])
-            testargs += bool_opt
-
         if monitor.startswith("vdi"):
             planes = monitor[-1]
             testargs += ["--vdi-planes", planes]
@@ -676,9 +746,29 @@ class Tester:
         else:
             testargs += ["--monitor", monitor]
 
+        memwait = tos.memwait
+        testwait = tos.fullwait
+        mmu = False
+        if bool_opt:
+            if bool_opt[0] == '--mmu' and bool_opt[1] == 'on':
+                mmu = True
+            identity += "-%s%s" % (bool_opt[0].replace('-', ''), bool_opt[1])
+            testargs += bool_opt
+        if config.opts:
+            if "--mmu" in config.opts:
+                mmu = True
+            # pass-through Hatari options
+            testargs += config.opts
+        if mmu and machine in ("tt", "falcon"):
+            # MMU doubles memory wait
+            memwait *= 2
+
         if config.fast:
             testargs += ["--fast-forward", "yes", "--fast-boot", "yes",
                          "--fastfdc", "yes", "--timer-d", "yes"]
+        elif machine == "falcon" and disk != "ide":
+            # Falcon IDE interface scanning when there's no IDE takes long
+            memwait += 8
 
         if disk == "gemdos":
             exit_if_missing([self.testprg, self.textinput])
@@ -713,6 +803,7 @@ class Tester:
             testargs += ["--ide-master", self.hdimage, "--auto", self.hdprg]
         else:
             raise AssertionError("unknown disk type '%s'" % disk)
+
         results = self.test(identity, testargs, memwait, testwait)
         self.results[tos.name].append((identity, results))
 
@@ -795,7 +886,7 @@ class Tester:
         report.write("\n")
 
         # print report out too
-        print("--- %s ---" % self.report)
+        print("\n--- %s ---" % self.report)
         report = open(self.report, "r")
         for line in report.readlines():
             print(line.strip())
@@ -806,6 +897,8 @@ def main():
     "tester main function"
     info = "Hatari TOS bootup tester"
     print("\n%s\n%s\n" % (info, "-"*len(info)))
+    # avoid global config file
+    os.environ["HATARI_TEST"] = "boot"
     config = Config(sys.argv)
     tester = Tester()
     tester.run(config)

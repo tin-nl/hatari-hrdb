@@ -32,7 +32,7 @@
     correct in Falcon & TT 8-bit palette modes?
   - call Statusbar_AddMessage() from log.c?
 */
-const char Statusbar_fileid[] = "Hatari statusbar.c : " __DATE__ " " __TIME__;
+const char Statusbar_fileid[] = "Hatari statusbar.c";
 
 #include <assert.h>
 #include "main.h"
@@ -462,7 +462,7 @@ void Statusbar_Init(SDL_Surface *surf)
 
 /*-----------------------------------------------------------------------*/
 /**
- * Qeueue new statusbar message 'msg' to be shown for 'msecs' milliseconds
+ * Queue new statusbar message 'msg' to be shown for 'msecs' milliseconds
  */
 void Statusbar_AddMessage(const char *msg, Uint32 msecs)
 {
@@ -631,6 +631,8 @@ void Statusbar_UpdateInfo(void)
 			         EmuTosVersion >> 24, (EmuTosVersion >> 16) & 0xff,
 			         (EmuTosVersion >> 8) & 0xff);
 			end = Statusbar_AddString(end, str);
+			if (EmuTosVersion & 0xff)
+				end = Statusbar_AddString(end, "+");
 		}
 		else
 		{
@@ -663,7 +665,11 @@ void Statusbar_UpdateInfo(void)
 			end = Statusbar_AddString(end, "RGB");
 			break;
 		case MONITOR_TYPE_VGA:
-			end = Statusbar_AddString(end, "VGA");
+			/* There were no VGA monitors for the ST/STE */
+			if (Config_IsMachineST() || Config_IsMachineSTE())
+				end = Statusbar_AddString(end, "RGB");
+			else
+				end = Statusbar_AddString(end, "VGA");
 			break;
 		case MONITOR_TYPE_TV:
 			end = Statusbar_AddString(end, "TV");

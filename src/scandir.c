@@ -6,7 +6,7 @@
 
   scandir function for BEOS, SunOS etc..
 */
-const char ScanDir_fileid[] = "Hatari scandir.c : " __DATE__ " " __TIME__;
+const char ScanDir_fileid[] = "Hatari scandir.c";
 
 #include <string.h>
 #include <stdio.h>
@@ -190,7 +190,7 @@ int scandir(const char *dirname, struct dirent ***namelist,
 		return -1;
 
 	strcpy(findIn, dirname);
-	Log_Printf(LOG_DEBUG, "scandir : findIn orign='%s'\n", findIn);
+	Log_Printf(LOG_DEBUG, "scandir : findIn origin='%s'\n", findIn);
 
 	for (d = findIn; *d; d++)
 		if (*d=='/')

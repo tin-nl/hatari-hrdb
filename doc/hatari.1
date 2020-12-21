@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH "HATARI" "1" "2020-03-29" "Hatari" ""
+.TH "HATARI" "1" "2020-11-27" "Hatari" ""
 .\" Please adjust this date whenever revising the manpage.
 
 .SH "NAME"
@@ -25,9 +25,10 @@ emulation.
 .PP
 To run the emulator a TOS ROM image is needed. EmuTOS, a free
 implementation of TOS is shipped with Hatari. It boots faster than
-original TOS versions, but some buggy (floppy only) programs won't
-work correctly with it.  For best compatibility, it is recommended to
-use a TOS ROM from a real Atari.
+original TOS versions and doesn't need separate HD drivers, but some
+buggy (typically floppy only) programs won't work correctly with it.
+For best compatibility, it is recommended to use a TOS ROM from a real
+Atari.
 .PP
 As an argument, one can give either a name of a directory that should
 be emulated as a virtual GEMDOS hard disk, a floppy disk image or an
@@ -38,10 +39,8 @@ program will be started.  These shortcuts correspond to "-d <dir>",
 options.
 .PP
 Booting will be done from the disk image or directory that's given
-last on the command line as an option or the argument (and which
-corresponds to A: or C:). If you want to give floppy image name with
-an autostarting program name, give it with --disk-a option before the
-program name.
+last on the command line, either as an option or an argument (and
+which corresponds to A: or C:).
 
 .SH "OPTIONS"
 Hatari options are split into several categories:
@@ -233,9 +232,11 @@ Whether to do monitor aspect ratio correction (enabled by default)
 .SH "VDI options"
 .TP
 .B \-\-vdi <bool>
-Whether to use VDI screen mode.  Doesn't work with TOS v4.
-TOS v3 memory detection isn't compatible with larger VDI modes
-(i.e. you need to skip the detection at boot)
+Whether to use VDI screen mode.  Doesn't work with TOS v4. TOS v3
+memory detection isn't compatible with larger VDI modes (i.e. you need
+to skip the detection at boot). Original TOS desktops use wrong window
+size in 2-plane (4 color) VDI mode when screen height >= 400 pixels.
+Because of these issues, using EmuTOS is recommended for VDI mode
 .TP
 .B \-\-vdi\-planes <x>
 Use extended VDI resolution with bit depth <x> (x = 1, 2 or 4)
@@ -246,11 +247,12 @@ Use extended VDI resolution with width <w> (320 < w <= 2048)
 .B \-\-vdi\-height <h>
 Use extended VDI resolution with height <h> (200 < h <= 1280)
 .PP
-TOS and some popular GEM programs add extra restrictions for the VDI
-screen size.  In total screen can take at maximum 300kB, width needs
-to be multiple of 128/planes, and height multiple of 16 pixels (or 8,
-depending on system font height). That translates to following maximum
-standard resolutions for the VDI mode:
+Because TOS and popular GEM programs have problems with certain screen
+sizes, Hatari enforces restrictions on VDI screen size.  In total VDI
+screen size is limited to 32-300kB, width to multiple of 128/planes,
+and height to multiple of 16 pixels (or 8, depending on system font
+height). That translates to following maximum standard resolutions for
+the VDI mode:
 .TP
 .B monochrome
 FullHD (1920×1080), WUXGA (1920x1200) and QWXGA (2048x1152)
@@ -287,6 +289,9 @@ Force AVI frame rate (x = 50/60/71/...)
 .TP
 .B \-\-avi\-file <file>
 Use <file> to record AVI
+.TP
+.B \-\-screenshot\-dir <dir>
+Save screenshots in the directory <dir>
 
 .SH "Devices options"
 .TP
@@ -565,7 +570,7 @@ which vector function catches also EmuTOS panic messages and MiNT
 console output, not just normal BIOS console output.
 .TP
 .B \-\-disasm <x>
-Set disassembly options.  'uae' and 'ext' select the dissasembly engine
+Set disassembly options.  'uae' and 'ext' select the disassembly engine
 to use, bitmask sets output options for the external disassembly engine
 and 'help' lists them.
 .TP

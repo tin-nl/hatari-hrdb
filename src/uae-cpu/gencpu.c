@@ -83,7 +83,7 @@
 /* 2015/11/09	[NP]	Add refill_prefetch for i_ADD #xx,d16(An) (Cubase, 'addi.w #5,2(a0)')		*/
 
 
-const char GenCpu_fileid[] = "Hatari gencpu.c : " __DATE__ " " __TIME__;
+const char GenCpu_fileid[] = "Hatari gencpu.c";
 
 #include <ctype.h>
 #include <string.h>
@@ -966,7 +966,7 @@ static void gen_opcode (unsigned long int opcode)
 	    next_cpu_level = 0;
 
 	/* fall through */
-    case 2: /* priviledged */
+    case 2: /* privileged */
 	printf ("if (!regs.s) { Exception(8,0,M68000_EXC_SRC_CPU); goto %s; }\n", endlabelstr);
 	need_endlabel = 1;
 	start_brace ();

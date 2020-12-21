@@ -6,7 +6,7 @@
 
   Low-level hard drive emulation
 */
-const char HDC_fileid[] = "Hatari hdc.c : " __DATE__ " " __TIME__;
+const char HDC_fileid[] = "Hatari hdc.c";
 
 #include <errno.h>
 #include <SDL_endian.h>
@@ -853,7 +853,7 @@ int HDC_InitDevice(SCSI_DEV *dev, char *filename, unsigned long blockSize)
 }
 
 /**
- * Open the disk image file, set partitions.
+ * Open the disk image files, set partitions.
  */
 bool HDC_Init(void)
 {
@@ -877,19 +877,12 @@ bool HDC_Init(void)
 			continue;
 		if (HDC_InitDevice(&AcsiBus.devs[i], ConfigureParams.Acsi[i].sDeviceFile, ConfigureParams.Acsi[i].nBlockSize) == 0)
 		{
-			bAcsiEmuOn = true;
 			nAcsiPartitions += HDC_PartitionCount(AcsiBus.devs[i].image_file, TRACE_SCSI_CMD, NULL);
+			bAcsiEmuOn = true;
 		}
 	}
-
-	/* add SCSI partition count to ACSI ones
-	 * to support GEMDOS HD emu partition skipping
-	 */
-	nAcsiPartitions += Ncr5380_Init();
-
 	/* set total number of partitions */
 	nNumDrives += nAcsiPartitions;
-
 	return bAcsiEmuOn;
 }
 
@@ -915,10 +908,7 @@ void HDC_UnInit(void)
 	free(AcsiBus.buffer);
 	AcsiBus.buffer = NULL;
 
-	Ncr5380_UnInit();
-
-	if (bAcsiEmuOn)
-		nNumDrives -= nAcsiPartitions;
+	nNumDrives -= nAcsiPartitions;
 	nAcsiPartitions = 0;
 	bAcsiEmuOn = false;
 }
@@ -964,8 +954,8 @@ bool HDC_WriteCommandPacket(SCSI_CTRLR *ctr, Uint8 b)
 	++ctr->byteCount;
 
 	/* have we received a complete 6-byte class 0 or 10-byte class 1 packet yet? */
-	if ((ctr->opcode < 0x20 && ctr->byteCount >= 6) ||
-	    (ctr->opcode < 0x60 && ctr->byteCount >= 10))
+	if ((ctr->opcode < 0x20 && ctr->byteCount == 6) ||
+	    (ctr->opcode >= 0x20 && ctr->opcode < 0x60 && ctr->byteCount == 10))
 	{
 		/* We currently only support LUN 0, however INQUIRY must
 		 * always be handled, see SCSI standard */
@@ -990,8 +980,6 @@ bool HDC_WriteCommandPacket(SCSI_CTRLR *ctr, Uint8 b)
 				ctr->status = HD_STATUS_ERROR;
 			}
 		}
-
-		ctr->byteCount = 0;
 	}
 	else if (ctr->opcode >= 0x60)
 	{

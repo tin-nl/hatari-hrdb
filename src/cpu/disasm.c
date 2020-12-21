@@ -164,7 +164,7 @@ skip:
 #endif
 }
 
-uaecptr ShowEA_disp(uaecptr *pcp, uaecptr base, TCHAR *buffer, const TCHAR *name)
+uaecptr ShowEA_disp(uaecptr *pcp, uaecptr base, TCHAR *buffer, const TCHAR *name, bool pcrel)
 {
 	uaecptr addr;
 	uae_u16 dp;
@@ -334,7 +334,11 @@ uaecptr ShowEA_disp(uaecptr *pcp, uaecptr base, TCHAR *buffer, const TCHAR *name
 		_stprintf(regstr, _T(",%c%d.%c"), dp & 0x8000 ? 'A' : 'D', (int)r, dp & 0x800 ? 'L' : 'W');
 		addr = base + (uae_s32)((uae_s8)disp8) + dispreg;
 		if (buffer) {
-			_stprintf(buffer, _T("(%s%s%s,$%02x) == $%08x"), name, regstr, mult, (uae_u8)disp8, addr);
+			if (pcrel) {
+				_stprintf(buffer, _T("(%s%s%s,$%02x=$%08x) == $%08x"), name, regstr, mult, (uae_u8)disp8, (*pcp) += disp8, addr);
+			} else {
+				_stprintf(buffer, _T("(%s%s%s,$%02x) == $%08x"), name, regstr, mult, (uae_u8)disp8, addr);
+			}
 			if (((dp & 0x0100) || m != 1) && currprefs.cpu_model < 68020) {
 				_tcscat(buffer, _T(" (68020+)"));
 			}
@@ -403,7 +407,7 @@ uaecptr ShowEA(void *f, uaecptr pc, uae_u16 opcode, int reg, amodes mode, wordsi
 		{
 			TCHAR name[10];
 			_stprintf(name, _T("A%d"), reg);
-			addr = ShowEA_disp(&pc, m68k_areg(regs, reg), buffer, name);
+			addr = ShowEA_disp(&pc, m68k_areg(regs, reg), buffer, name, false);
 			showea_val(buffer, opcode, addr, size);
 		}
 		break;
@@ -415,7 +419,7 @@ uaecptr ShowEA(void *f, uaecptr pc, uae_u16 opcode, int reg, amodes mode, wordsi
 		break;
 	case PC8r:
 		{
-			addr = ShowEA_disp(&pc, addr, buffer, _T("PC"));
+			addr = ShowEA_disp(&pc, addr, buffer, _T("PC"), true);
 			showea_val(buffer, opcode, addr, size);
 		}
 		break;
@@ -1273,6 +1277,7 @@ int m68k_asm(TCHAR *sline, uae_u16 *out, uaecptr pc)
 	uae_u32 dval = 0;
 	int ssize = -1;
 	int dsize = -1;
+	struct mnemolookup *lookup;
 
 	dmode = asm_parse_mode(dstea, &dreg, &dval, &dextcnt, dexts);
 
@@ -1327,7 +1332,15 @@ int m68k_asm(TCHAR *sline, uae_u16 *out, uaecptr pc)
 				ins[l + 1] = 0;
 			}
 		} else if (last != 'A') {
-			_tcscat(ins, _T("A"));
+			TCHAR insa[256];
+			_tcscpy(insa, ins);
+			_tcscat(insa, _T("A"));
+			for (lookup = lookuptab; lookup->name; lookup++) {
+				if (!_tcscmp(insa, lookup->name)) {
+					_tcscpy(ins, insa);
+					break;
+				}
+			}
 		}
 	}
 
@@ -1341,7 +1354,6 @@ int m68k_asm(TCHAR *sline, uae_u16 *out, uaecptr pc)
 			tsize = 2;
 	}
 
-	struct mnemolookup *lookup;
 	for (lookup = lookuptab; lookup->name; lookup++) {
 		if (!_tcscmp(ins, lookup->name))
 			break;
@@ -1706,6 +1718,7 @@ uae_u32 m68k_disasm_2 (TCHAR *buf, int bufsize, uaecptr pc, uaecptr *nextpc, int
 		int illegal = 0;
 		int segid, lastsegid;
 		TCHAR *symbolpos;
+		bool skip = false;
 
 		seaddr2 = deaddr2 = 0;
 		oldpc = pc;
@@ -1797,9 +1810,8 @@ uae_u32 m68k_disasm_2 (TCHAR *buf, int bufsize, uaecptr pc, uaecptr *nextpc, int
 				instrname[1] = 'M';
 				instrname[2] = 'P';
 			}
-			pc = ShowEA(NULL, pc, opcode, dp->dreg, dp->dmode, dp->size, instrname, &seaddr2, &actualea_src, safemode);
-			extra = get_word_debug(pc);
 			pc += 2;
+			pc = ShowEA(NULL, pc, opcode, dp->dreg, dp->dmode, dp->size, instrname, &seaddr2, &actualea_src, safemode);
 			p = instrname + _tcslen(instrname);
 			_stprintf(p, (extra & 0x8000) ? _T(",A%d") : _T(",D%d"), (extra >> 12) & 7);
 		} else if (lookup->mnemo == i_CAS) {
@@ -2073,27 +2085,32 @@ uae_u32 m68k_disasm_2 (TCHAR *buf, int bufsize, uaecptr pc, uaecptr *nextpc, int
 		} else if ((opcode & 0xf000) == 0xa000) {
 			_tcscpy(instrname, _T("A-LINE"));
 		} else {
-			if (dp->suse) {
-				pc = ShowEA (NULL, pc, opcode, dp->sreg, dp->smode, dp->size, instrname, &seaddr2, &actualea_src, safemode);
+			if (lookup->mnemo == i_FBcc && (opcode & 0x1f) == 0 && extra == 0) {
+				_tcscpy(instrname, _T("FNOP"));
+				pc += 2;
+			} else {
+				if (dp->suse) {
+					pc = ShowEA(NULL, pc, opcode, dp->sreg, dp->smode, dp->size, instrname, &seaddr2, &actualea_src, safemode);
 
-				// JSR x(a6) / JMP x(a6)
-				if (opcode == 0x4ea8 + 6 || opcode == 0x4ee8 + 6) {
-					TCHAR sname[256];
-					if (debugger_get_library_symbol(m68k_areg(regs, 6), 0xffff0000 | extra, sname)) {
-						TCHAR *p = instrname + _tcslen(instrname);
-						_stprintf(p, _T(" %s"), sname);
-						resolve_if_jmp(instrname, m68k_areg(regs, 6) + (uae_s16)extra);
+					// JSR x(a6) / JMP x(a6)
+					if (opcode == 0x4ea8 + 6 || opcode == 0x4ee8 + 6) {
+						TCHAR sname[256];
+						if (debugger_get_library_symbol(m68k_areg(regs, 6), 0xffff0000 | extra, sname)) {
+							TCHAR *p = instrname + _tcslen(instrname);
+							_stprintf(p, _T(" %s"), sname);
+							resolve_if_jmp(instrname, m68k_areg(regs, 6) + (uae_s16)extra);
+						}
+					}
+					// show target address if JSR x(pc) + JMP xxxx combination
+					if (opcode == 0x4eba && seaddr2 && instrname[0]) { // JSR x(pc)
+						resolve_if_jmp(instrname, seaddr2);
 					}
 				}
-				// show target address if JSR x(pc) + JMP xxxx combination
-				if (opcode == 0x4eba && seaddr2 && instrname[0]) { // JSR x(pc)
-					resolve_if_jmp(instrname, seaddr2);
+				if (dp->suse && dp->duse)
+					_tcscat(instrname, _T(","));
+				if (dp->duse) {
+					pc = ShowEA(NULL, pc, opcode, dp->dreg, dp->dmode, dp->size, instrname, &deaddr2, &actualea_dst, safemode);
 				}
-			}
-			if (dp->suse && dp->duse)
-				_tcscat (instrname, _T(","));
-			if (dp->duse) {
-				pc = ShowEA (NULL, pc, opcode, dp->dreg, dp->dmode, dp->size, instrname, &deaddr2, &actualea_dst, safemode);
 			}
 		}
 

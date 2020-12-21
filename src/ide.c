@@ -45,9 +45,19 @@ static uint32_t ide_data_readw(void *opaque, uint32_t addr);
 static void ide_data_writel(void *opaque, uint32_t addr, uint32_t val);
 static uint32_t ide_data_readl(void *opaque, uint32_t addr);
 
-static bool Ide_MmioIsAvailable(void)
+/**
+ * Check whether IDE is available: The Falcon always has an IDE controller,
+ * and for the other machines it is normally only available on expansion
+ * cards - we assume that the users want us to emulate an IDE controller
+ * on such an expansion card if one of the IDE drives has been enabled.
+ * Note that we also disable IDE on Falcon if bFastBoot is enabled - TOS
+ * boots much faster if it does not have to scan for IDE devices.
+ */
+bool Ide_IsAvailable(void)
 {
-	return ConfigureParams.Ide[0].bUseDevice;
+	return ConfigureParams.Ide[0].bUseDevice ||
+	       ConfigureParams.Ide[1].bUseDevice ||
+	       (Config_IsMachineFalcon() && !ConfigureParams.System.bFastBoot);
 }
 
 /**
@@ -84,6 +94,8 @@ static uint32_t fcha2io(uint32_t address)
 
 /**
  * Handle byte read access from IDE IO memory.
+ * Note: Registers are available from usermode, too, so there is no check for
+ * the supervisor mode required here.
  */
 uae_u32 REGPARAM3 Ide_Mem_bget(uaecptr addr)
 {
@@ -93,7 +105,7 @@ uae_u32 REGPARAM3 Ide_Mem_bget(uaecptr addr)
 
 	addr &= 0x00ffffff;                           /* Use a 24 bit address */
 
-	if (addr >= 0xf00040 || !Ide_MmioIsAvailable())
+	if (addr >= 0xf00040 || !Ide_IsAvailable())
 	{
 		/* invalid memory addressing --> bus error */
 		M68000_BusError(addr_in, BUS_ERROR_READ, BUS_ERROR_SIZE_BYTE, BUS_ERROR_ACCESS_DATA, 0);
@@ -130,7 +142,7 @@ uae_u32 REGPARAM3 Ide_Mem_wget(uaecptr addr)
 
 	addr &= 0x00ffffff;                           /* Use a 24 bit address */
 
-	if (addr >= 0xf00040 || !Ide_MmioIsAvailable())
+	if (addr >= 0xf00040 || !Ide_IsAvailable())
 	{
 		/* invalid memory addressing --> bus error */
 		M68000_BusError(addr_in, BUS_ERROR_READ, BUS_ERROR_SIZE_WORD, BUS_ERROR_ACCESS_DATA, 0);
@@ -161,7 +173,7 @@ uae_u32 REGPARAM3 Ide_Mem_lget(uaecptr addr)
 
 	addr &= 0x00ffffff;                           /* Use a 24 bit address */
 
-	if (addr >= 0xf00040 || !Ide_MmioIsAvailable())
+	if (addr >= 0xf00040 || !Ide_IsAvailable())
 	{
 		/* invalid memory addressing --> bus error */
 		M68000_BusError(addr_in, BUS_ERROR_READ, BUS_ERROR_SIZE_LONG, BUS_ERROR_ACCESS_DATA, 0);
@@ -187,6 +199,8 @@ uae_u32 REGPARAM3 Ide_Mem_lget(uaecptr addr)
 
 /**
  * Handle byte write access to IDE IO memory.
+ * Note: Registers are available from usermode, too, so there is no check for
+ * the supervisor mode required here.
  */
 void REGPARAM3 Ide_Mem_bput(uaecptr addr, uae_u32 val)
 {
@@ -198,7 +212,7 @@ void REGPARAM3 Ide_Mem_bput(uaecptr addr, uae_u32 val)
 
 	LOG_TRACE(TRACE_IDE, "IDE: bput($%x, $%x)\n", addr, val);
 
-	if (addr >= 0xf00040 || !Ide_MmioIsAvailable())
+	if (addr >= 0xf00040 || !Ide_IsAvailable())
 	{
 		/* invalid memory addressing --> bus error */
 		M68000_BusError(addr_in, BUS_ERROR_WRITE, BUS_ERROR_SIZE_BYTE, BUS_ERROR_ACCESS_DATA, val);
@@ -230,7 +244,7 @@ void REGPARAM3 Ide_Mem_wput(uaecptr addr, uae_u32 val)
 
 	LOG_TRACE(TRACE_IDE, "IDE: wput($%x, $%x)\n", addr, val);
 
-	if (addr >= 0xf00040 || !Ide_MmioIsAvailable())
+	if (addr >= 0xf00040 || !Ide_IsAvailable())
 	{
 		/* invalid memory addressing --> bus error */
 		M68000_BusError(addr_in, BUS_ERROR_WRITE, BUS_ERROR_SIZE_WORD, BUS_ERROR_ACCESS_DATA, val);
@@ -255,7 +269,7 @@ void REGPARAM3 Ide_Mem_lput(uaecptr addr, uae_u32 val)
 
 	LOG_TRACE(TRACE_IDE, "IDE: lput($%x, $%x)\n", addr, val);
 
-	if (addr >= 0xf00040 || !Ide_MmioIsAvailable())
+	if (addr >= 0xf00040 || !Ide_IsAvailable())
 	{
 		/* invalid memory addressing --> bus error */
 		M68000_BusError(addr_in, BUS_ERROR_WRITE, BUS_ERROR_SIZE_LONG, BUS_ERROR_ACCESS_DATA, val);
@@ -464,7 +478,8 @@ static int bdrv_read(BlockDriverState *bs, int64_t sector_num,
 	ret = fread(buf, 1, len, bs->fhndl);
 	if (ret != len)
 	{
-		fprintf(stderr,"IDE: bdrv_read error (%d != %d length) at sector %lu!\n", ret, len, (unsigned long)sector_num);
+		Log_Printf(LOG_ERROR, "IDE: bdrv_read error (%d != %d length) at sector %lu!\n",
+		           ret, len, (unsigned long)sector_num);
 		return -EINVAL;
 	}
 
@@ -528,8 +543,8 @@ static int bdrv_write(BlockDriverState *bs, int64_t sector_num,
 	}
 	if (ret != len)
 	{
-		fprintf(stderr,"IDE: bdrv_write error (%d != %d length) at sector %lu!\n",
-		        ret, len,  (unsigned long)sector_num);
+		Log_Printf(LOG_ERROR, "IDE: bdrv_write error (%d != %d length) at sector %lu!\n",
+		           ret, len,  (unsigned long)sector_num);
 		return -EIO;
 	}
 
@@ -1762,7 +1777,7 @@ static void ide_atapi_cmd(IDEState *s)
 		switch (format)
 		{
 		case 0:
-			fprintf(stderr,"IDE FIXME: cdrom_read_toc");
+			Log_Printf(LOG_ERROR, "IDE FIXME: cdrom_read_toc not implemented");
 			len=-1;
 			//len = cdrom_read_toc(total_sectors, buf, msf, start_track);
 			if (len < 0)
@@ -1778,7 +1793,7 @@ static void ide_atapi_cmd(IDEState *s)
 			ide_atapi_cmd_reply(s, 12, max_len);
 			break;
 		case 2:
-			fprintf(stderr,"IDE FIXME: cdrom_read_toc_raw");
+			Log_Printf(LOG_ERROR, "IDE FIXME: cdrom_read_toc_raw not implemented");
 			len=-1;
 			//len = cdrom_read_toc_raw(total_sectors, buf, msf, start_track);
 			if (len < 0)
@@ -2020,7 +2035,8 @@ static void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
 		/* ignore commands to non existent IDE device 1 */
 		if (s != ide_if && !s->bs)
 		{
-			fprintf(stderr,"IDE: CMD to non-existant IDE device #1!\n");
+			Log_Printf(LOG_INFO, "IDE: Tried to send command to "
+			           "non-existent IDE device #1!\n");
 			break;
 		}
 
@@ -2145,7 +2161,7 @@ static void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
 				goto abort_cmd;
 			ide_cmd_lba48_transform(s, lba48);
 			// ide_sector_read_dma(s);
-			fprintf(stderr, "IDE: DMA read not supported!\n");
+			Log_Printf(LOG_ERROR, "IDE: DMA read not supported!\n");
 			break;
 		case WIN_WRITEDMA_EXT:
 			lba48 = 1;
@@ -2156,7 +2172,7 @@ static void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
 				goto abort_cmd;
 			ide_cmd_lba48_transform(s, lba48);
 			// ide_sector_write_dma(s);
-			fprintf(stderr, "IDE: DMA write not supported!\n");
+			Log_Printf(LOG_ERROR, "IDE: DMA write not supported!\n");
 			s->media_changed = 1;
 			break;
 		case WIN_READ_NATIVE_MAX_EXT:
@@ -2434,6 +2450,9 @@ static void ide_data_writew(void *opaque, uint32_t addr, uint32_t val)
 	IDEState *s = ((IDEState *)opaque)->cur_drive;
 	uint8_t *p;
 
+	if (!s->data_ptr || s->data_ptr > s->data_end)
+		return;
+
 	p = s->data_ptr;
 	*(uint16_t *)p = le16_to_cpu(val);
 	p += 2;
@@ -2447,6 +2466,10 @@ static uint32_t ide_data_readw(void *opaque, uint32_t addr)
 	IDEState *s = ((IDEState *)opaque)->cur_drive;
 	uint8_t *p;
 	int ret;
+
+	if (!s->data_ptr || s->data_ptr > s->data_end)
+		return 0xffff;
+
 	p = s->data_ptr;
 	ret = cpu_to_le16(*(uint16_t *)p);
 	p += 2;
@@ -2461,6 +2484,9 @@ static void ide_data_writel(void *opaque, uint32_t addr, uint32_t val)
 	IDEState *s = ((IDEState *)opaque)->cur_drive;
 	uint8_t *p;
 
+	if (!s->data_ptr || s->data_ptr > s->data_end)
+		return;
+
 	p = s->data_ptr;
 	*(uint32_t *)p = le32_to_cpu(val);
 	p += 4;
@@ -2473,7 +2499,10 @@ static uint32_t ide_data_readl(void *opaque, uint32_t addr)
 {
 	IDEState *s = ((IDEState *)opaque)->cur_drive;
 	uint8_t *p;
-	int ret;
+	uint32_t ret;
+
+	if (!s->data_ptr || s->data_ptr > s->data_end)
+		return 0xffffffff;
 
 	p = s->data_ptr;
 	ret = cpu_to_le32(*(uint32_t *)p);
@@ -2584,6 +2613,11 @@ static void ide_init2(IDEState *ide_state, BlockDriverState *hd0,
 	for (i = 0; i < 2; i++)
 	{
 		s = ide_state + i;
+		s->cur_drive = s;
+
+		if (!ConfigureParams.Ide[i].bUseDevice)
+			continue;
+
 		s->io_buffer = malloc(MAX_MULT_SECTORS * MAX_SECTOR_SIZE + 4);
 		assert(s->io_buffer);
 		if (i == 0)
@@ -2685,7 +2719,7 @@ void Ide_Init(void)
 {
 	int i;
 
-	if (!ConfigureParams.Ide[0].bUseDevice)
+	if (!Ide_IsAvailable() )
 		return;
 
 	opaque_ide_if = calloc(2, sizeof(IDEState));

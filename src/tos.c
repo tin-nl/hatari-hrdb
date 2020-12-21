@@ -16,7 +16,7 @@
   DMA/Microwire addresses on boot-up which (correctly) cause a
   bus-error on Hatari as they would in a real STfm. If a user tries
   to select any of these images we bring up an error. */
-const char TOS_fileid[] = "Hatari tos.c : " __DATE__ " " __TIME__;
+const char TOS_fileid[] = "Hatari tos.c";
 
 #include <SDL_endian.h>
 
@@ -25,6 +25,7 @@ const char TOS_fileid[] = "Hatari tos.c : " __DATE__ " " __TIME__;
 #include "file.h"
 #include "gemdos.h"
 #include "hdc.h"
+#include "ide.h"
 #include "ioMem.h"
 #include "log.h"
 #include "m68000.h"
@@ -757,7 +758,7 @@ static void TOS_FixRom(Uint32 *logopatch_addr)
 #endif
 			/* Only apply the patch if it is really needed: */
 			if (pPatch->Flags == TP_ALWAYS
-			    || (pPatch->Flags == TP_HDIMAGE_OFF && !ACSI_EMU_ON
+			    || (pPatch->Flags == TP_HDIMAGE_OFF && !bAcsiEmuOn
 			        && !ConfigureParams.Ide[0].bUseDevice
 			        && ConfigureParams.System.bFastBoot)
 			    || (pPatch->Flags == TP_ANTI_STE && Config_IsMachineST())
@@ -846,6 +847,7 @@ static void TOS_CheckSysConfig(void)
 		Log_AlertDlg(LOG_ERROR, "TOS version %x.%02x is for Atari Falcon only.\n"
 		             " ==> Switching to Falcon mode now.\n",
 		             TosVersion >> 8, TosVersion & 0xff);
+		Ide_UnInit();
 		IoMem_UnInit();
 		ConfigureParams.System.nMachineType = MACHINE_FALCON;
 		ClocksTimings_InitMachine ( ConfigureParams.System.nMachineType );
@@ -855,6 +857,7 @@ static void TOS_CheckSysConfig(void)
 		DSP_Enable();
 #endif
 		IoMem_Init();
+		Ide_Init();
 		Configuration_ChangeCpuFreq ( 16 );
 		ConfigureParams.System.nCpuLevel = 3;
 	}
@@ -995,7 +998,8 @@ static uint8_t *TOS_LoadImage(void)
 	bIsEmuTOS = (SDL_SwapBE32(*(Uint32 *)&pTosFile[0x2c]) == 0x45544F53);
 	if (bIsEmuTOS)
 	{
-		if (SDL_SwapBE32(*(Uint32 *)&pTosFile[0x34]) == 0x4F534558)
+		/* The magic value 'OSXH' indicates an extended header */
+		if (SDL_SwapBE32(*(Uint32 *)&pTosFile[0x34]) == 0x4F535848)
 			EmuTosVersion = SDL_SwapBE32(*(Uint32 *)&pTosFile[0x3c]);
 		else
 			EmuTosVersion = 0;	/* Older than 1.0 */

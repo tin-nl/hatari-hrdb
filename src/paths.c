@@ -6,7 +6,7 @@
 
   Set up the various path strings.
 */
-const char Paths_fileid[] = "Hatari paths.c : " __DATE__ " " __TIME__;
+const char Paths_fileid[] = "Hatari paths.c";
 
 #include <unistd.h>
 #include <sys/stat.h>
@@ -75,6 +75,14 @@ const char *Paths_GetScreenShotDir(void)
 	return sScreenShotDir;
 }
 
+/**
+ * Set new screenshot directory location
+ */
+void Paths_SetScreenShotDir(const char *sNewDir)
+{
+	Str_Free(sScreenShotDir);
+	sScreenShotDir = Str_Dup(sNewDir);
+}
 
 /**
  * Explore the PATH environment variable to see where our executable is

@@ -6,7 +6,7 @@
 
   Main initialization and event handling routines.
 */
-const char Main_fileid[] = "Hatari main.c : " __DATE__ " " __TIME__;
+const char Main_fileid[] = "Hatari main.c";
 
 #include <time.h>
 #include <errno.h>
@@ -37,6 +37,7 @@ const char Main_fileid[] = "Hatari main.c : " __DATE__ " " __TIME__;
 #include "m68000.h"
 #include "memorySnapShot.h"
 #include "midi.h"
+#include "ncr5380.h"
 #include "nvram.h"
 #include "paths.h"
 #include "printer.h"
@@ -792,11 +793,12 @@ static void Main_Init(void)
 
 	/* Init HD emulation */
 	HDC_Init();
+	Ncr5380_Init();
 	Ide_Init();
 	GemDOS_Init();
 	if (ConfigureParams.HardDisk.bUseHardDiskDirectories)
 	{
-		/* uses variables set by HDC_Init()! */
+		/* uses variables set by HDC_Init/Ncr5380_Init/Ide_Init */
 		GemDOS_InitDrives();
 	}
 
@@ -834,6 +836,7 @@ static void Main_UnInit(void)
 	Screen_ReturnFromFullScreen();
 	Floppy_UnInit();
 	HDC_UnInit();
+	Ncr5380_UnInit();
 	Midi_UnInit();
 	SCC_UnInit();
 	RS232_UnInit();
@@ -865,14 +868,16 @@ static void Main_UnInit(void)
 
 /*-----------------------------------------------------------------------*/
 /**
- * Load initial configuration file(s)
+ * Load initial configuration files. The global config file is skipped in
+ * test mode (i.e. if the HATARI_TEST environment variable has been set),
+ * so that the test has always full control over the configuration settings.
  */
 static void Main_LoadInitialConfig(void)
 {
 	char *psGlobalConfig;
 
 	psGlobalConfig = malloc(FILENAME_MAX);
-	if (psGlobalConfig)
+	if (psGlobalConfig && !getenv("HATARI_TEST"))
 	{
 		File_MakePathBuf(psGlobalConfig, FILENAME_MAX, CONFDIR,
 		                 "hatari", "cfg");

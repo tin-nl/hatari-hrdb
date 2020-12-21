@@ -79,7 +79,8 @@ int main(int argc, const char *argv[])
 		"pc = 2 &&",
 		"255 & 3 = (d0) & && 2 = 2",
 		/* missing options file */
-		"pc>pc :file no-such-file",		
+		"pc>pc :file no-such-file",
+		"VdiOpcode = $8 :info no-info",
 		/* size and mask mismatches with numbers */
 		"d0.w = $ffff0",
 		"(a0).b & 3 < 100",
@@ -104,10 +105,11 @@ int main(int argc, const char *argv[])
 		/* options */
 		"($200).w ! ($200).w :trace",
 		"($200).w > ($200).w :4 :lock",
+		"VdiOpcode = $8 :quiet :info vdi",
 		"pc>pc :file data/test.ini :once",
 		NULL
 	};
-	/* address breakpoint + expression evalution with register */
+	/* address breakpoint + expression evaluation with register */
 	char addr_pass[] = "pc + ($200*16/2 & 0xffff)";
 
 	const char *nonmatching_tests[] = {

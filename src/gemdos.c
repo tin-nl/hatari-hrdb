@@ -21,7 +21,7 @@
   * rmdir routine, can't remove dir with files in it. (another tos/unix difference)
   * Fix bugs, there are probably a few lurking around in here..
 */
-const char Gemdos_fileid[] = "Hatari gemdos.c : " __DATE__ " " __TIME__;
+const char Gemdos_fileid[] = "Hatari gemdos.c";
 
 #include <config.h>
 
@@ -49,6 +49,7 @@ const char Gemdos_fileid[] = "Hatari gemdos.c : " __DATE__ " " __TIME__;
 #include "ide.h"
 #include "inffile.h"
 #include "hdc.h"
+#include "ncr5380.h"
 #include "gemdos.h"
 #include "gemdos_defines.h"
 #include "log.h"
@@ -99,6 +100,13 @@ typedef struct {
   Uint8 dta_size[4];
   char dta_name[TOS_NAMELEN];
 } DTA;
+
+/* PopulateDTA() return values */
+typedef enum {
+	DTA_ERR = -1,
+	DTA_OK = 0,
+	DTA_SKIP = 1
+} dta_ret_t;
 
 #define DTA_MAGIC_NUMBER  0x12983476
 #define DTA_CACHE_INC     256      /* DTA cache initial and increment size (grows on demand) */
@@ -288,9 +296,9 @@ static Uint8 GemDOS_ConvertAttribute(mode_t mode)
 /*-----------------------------------------------------------------------*/
 /**
  * Populate the DTA buffer with file info.
- * @return   0 if entry is ok, 1 if entry should be skipped, < 0 for errors.
+ * @return   DTA_OK if entry is ok, DTA_SKIP if it should be skipped, DTA_ERR on errors
  */
-static int PopulateDTA(char *path, struct dirent *file, DTA *pDTA, Uint32 DTA_Gemdos)
+static dta_ret_t PopulateDTA(char *path, struct dirent *file, DTA *pDTA, Uint32 DTA_Gemdos)
 {
 	/* TODO: host file path can be longer than MAX_GEMDOS_PATH */
 	char tempstr[MAX_GEMDOS_PATH];
@@ -302,23 +310,25 @@ static int PopulateDTA(char *path, struct dirent *file, DTA *pDTA, Uint32 DTA_Ge
 	             path, PATHSEP, file->d_name) >= (int)sizeof(tempstr))
 	{
 		Log_Printf(LOG_ERROR, "PopulateDTA: path is too long.\n");
-		return -1;
+		return DTA_ERR;
 	}
 
 	if (stat(tempstr, &filestat) != 0)
 	{
+		/* skip file if it doesn't exist, otherwise return an error */
+		dta_ret_t ret = (errno == ENOENT ? DTA_SKIP : DTA_ERR);
 		perror(tempstr);
-		return -1;   /* return on error */
+		return ret;
 	}
 
 	if (!pDTA)
-		return -2;   /* no DTA pointer set */
+		return DTA_ERR;   /* no DTA pointer set */
 
 	/* Check file attributes (check is done according to the Profibuch) */
 	nFileAttr = GemDOS_ConvertAttribute(filestat.st_mode);
 	nAttrMask = nAttrSFirst|GEMDOS_FILE_ATTRIB_WRITECLOSE|GEMDOS_FILE_ATTRIB_READONLY;
 	if (nFileAttr != 0 && !(nAttrMask & nFileAttr))
-		return 1;
+		return DTA_SKIP;
 
 	GemDOS_DateTime2Tos(filestat.st_mtime, &DateTime, tempstr);
 
@@ -336,7 +346,7 @@ static int PopulateDTA(char *path, struct dirent *file, DTA *pDTA, Uint32 DTA_Ge
 	do_put_mem_word(pDTA->dta_date, DateTime.dateword);
 	pDTA->dta_attrib = nFileAttr;
 
-	return 0;
+	return DTA_OK;
 }
 
 
@@ -699,11 +709,14 @@ void GemDOS_InitDrives(void)
 		}
 	}
 
-	ImagePartitions = nAcsiPartitions + nIDEPartitions;
+	ImagePartitions = nAcsiPartitions + nScsiPartitions + nIDEPartitions;
 	if (ConfigureParams.HardDisk.nGemdosDrive == DRIVE_SKIP)
 		SkipPartitions = ImagePartitions;
 	else
 		SkipPartitions = ConfigureParams.HardDisk.nGemdosDrive;
+
+	Log_Printf(LOG_DEBUG, "ACSI: %d, SCSI: %d, IDE: %d - GEMDOS skipping %d partitions.\n",
+		   nAcsiPartitions, nScsiPartitions, nIDEPartitions, SkipPartitions);
 
 	/* Now initialize all available drives */
 	for(i = 0; i < nMaxDrives; i++)
@@ -752,7 +765,7 @@ void GemDOS_InitDrives(void)
 			 *  table(s) match each other).
 			 */
 			if (i < ImagePartitions)
-				Log_Printf(LOG_WARN, "GEMDOS HD drive %c: (may) override ACSI/IDE image partitions!\n", 'A'+DriveNumber);
+				Log_Printf(LOG_WARN, "GEMDOS HD drive %c: (may) override ACSI/SCSI/IDE image partitions!\n", 'A'+DriveNumber);
 		}
 		else
 		{
@@ -1137,10 +1150,11 @@ static char* match_host_dir_entry(const char *path, const char *name, bool patte
 	{
 		while ((entry = readdir(dir)))
 		{
-			Str_DecomposedToPrecomposedUtf8(entry->d_name, entry->d_name);   /* for OSX */
-			if (fsfirst_match(name, entry->d_name))
+			char *d_name = entry->d_name;
+			Str_DecomposedToPrecomposedUtf8(d_name, d_name);   /* for OSX */
+			if (fsfirst_match(name, d_name))
 			{
-				match = strdup(entry->d_name);
+				match = strdup(d_name);
 				break;
 			}
 		}
@@ -1149,10 +1163,11 @@ static char* match_host_dir_entry(const char *path, const char *name, bool patte
 	{
 		while ((entry = readdir(dir)))
 		{
-			Str_DecomposedToPrecomposedUtf8(entry->d_name, entry->d_name);   /* for OSX */
-			if (strcasecmp(name, entry->d_name) == 0)
+			char *d_name = entry->d_name;
+			Str_DecomposedToPrecomposedUtf8(d_name, d_name);   /* for OSX */
+			if (strcasecmp(name, d_name) == 0)
 			{
-				match = strdup(entry->d_name);
+				match = strdup(d_name);
 				break;
 			}
 		}
@@ -2781,7 +2796,7 @@ static int GemDOS_Pexec(Uint32 Params)
 			}
 			cmd = (const char *)STMemory_STAddrToPointer(cmdline);
 			cmdlen = *cmd++;
-			str = malloc(cmdlen+1);
+			str = Str_Alloc(cmdlen);
 			memcpy(str, cmd, cmdlen);
 			str[cmdlen] = '\0';
 			LOG_TRACE_PRINT("GEMDOS 0x4B Pexec(%i, \"%s\", [%d]\"%s\", 0x%x) at PC 0x%X\n",
@@ -2908,9 +2923,9 @@ static bool GemDOS_SNext(void)
 		ret = PopulateDTA(InternalDTAs[Index].path,
 				  temp[InternalDTAs[Index].centry++],
 				  pDTA, DTA_Gemdos);
-	} while (ret == 1);
+	} while (ret == DTA_SKIP);
 
-	if (ret < 0)
+	if (ret == DTA_ERR)
 	{
 		Log_Printf(LOG_WARN, "GEMDOS Fsnext(): Error setting DTA\n");
 		Regs[REG_D0] = GEMDOS_EINTRN;
@@ -3045,8 +3060,9 @@ static bool GemDOS_SFirst(Uint32 Params)
 	j = 0;
 	for (i=0; i < count; i++)
 	{
-		Str_DecomposedToPrecomposedUtf8(files[i]->d_name, files[i]->d_name);   /* for OSX */
-		if (fsfirst_match(dirmask, files[i]->d_name))
+		char *d_name = files[i]->d_name;
+		Str_DecomposedToPrecomposedUtf8(d_name, d_name);   /* for OSX */
+		if (fsfirst_match(dirmask, d_name))
 		{
 			InternalDTAs[useidx].found[j] = files[i];
 			j++;
@@ -3079,11 +3095,20 @@ static bool GemDOS_SFirst(Uint32 Params)
 	{
 		if (DTACount < DTA_CACHE_MAX)
 		{
+			INTERNAL_DTA *pNewIntDTAs;
 			/* increase DTA cache size */
-			InternalDTAs = realloc(InternalDTAs, (DTACount + DTA_CACHE_INC) * sizeof(*InternalDTAs));
-			assert(InternalDTAs);
-			memset(InternalDTAs + DTACount, 0, DTA_CACHE_INC * sizeof(*InternalDTAs));
-			DTACount += DTA_CACHE_INC;
+			pNewIntDTAs = realloc(InternalDTAs, (DTACount + DTA_CACHE_INC) * sizeof(*InternalDTAs));
+			if (pNewIntDTAs)
+			{
+				InternalDTAs = pNewIntDTAs;
+				memset(InternalDTAs + DTACount, 0, DTA_CACHE_INC * sizeof(*InternalDTAs));
+				DTACount += DTA_CACHE_INC;
+			}
+			else
+			{
+				Log_Printf(LOG_WARN, "Failed to alloc GEMDOS HD DTA entries, wrapping DTA index\n");
+				DTAIndex = 0;
+			}
 		}
 		else
 		{

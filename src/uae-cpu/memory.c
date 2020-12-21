@@ -10,7 +10,7 @@
   * This file is distributed under the GNU General Public License, version 2
   * or at your option any later version. Read the file gpl.txt for details.
   */
-const char Memory_fileid[] = "Hatari memory.c : " __DATE__ " " __TIME__;
+const char Memory_fileid[] = "Hatari memory.c";
 
 #include <SDL.h>
 #include "config.h"
@@ -685,6 +685,15 @@ static void init_mem_banks (void)
 bool memory_region_bus_error ( uaecptr addr )
 {
 	return mem_banks[bankindex(addr)] == &BusErrMem_bank;
+}
+
+/*
+ * Check if an address points to the IO memory region
+ * Returns true if it's the case
+ */
+bool memory_region_iomem ( uaecptr addr )
+{
+	return mem_banks[bankindex(addr)] == &IOmem_bank;
 }
 
 

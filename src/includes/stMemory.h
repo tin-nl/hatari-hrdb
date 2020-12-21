@@ -50,7 +50,7 @@ extern void STMemory_MemorySnapShot_Capture(bool bSave);
 extern void STMemory_SetDefaultConfig(void);
 extern int  STMemory_CorrectSTRamSize(void);
 extern bool STMemory_CheckAreaType ( Uint32 addr , int size , int mem_type );
-extern bool STMemory_CheckRegionBusError ( Uint32 addr );
+extern bool STMemory_CheckAddrBusError ( Uint32 addr );
 extern void *STMemory_STAddrToPointer ( Uint32 addr );
 extern char *STMemory_GetStringPointer(uint32_t addr);
 
@@ -62,6 +62,11 @@ extern Uint32	STMemory_Read ( Uint32 addr , int size );
 extern Uint32	STMemory_ReadLong ( Uint32 addr );
 extern Uint16	STMemory_ReadWord ( Uint32 addr );
 extern Uint8	STMemory_ReadByte ( Uint32 addr );
+
+extern Uint16	STMemory_DMA_ReadWord ( Uint32 addr );
+extern void	STMemory_DMA_WriteWord ( Uint32 addr , Uint16 value );
+extern Uint8	STMemory_DMA_ReadByte ( Uint32 addr );
+extern void	STMemory_DMA_WriteByte ( Uint32 addr , Uint8 value );
 
 extern void	STMemory_MMU_Config_ReadByte ( void );
 extern void	STMemory_MMU_Config_WriteByte ( void );

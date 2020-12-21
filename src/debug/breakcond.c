@@ -11,7 +11,7 @@
   whether the breakpoint should be triggered.  See BreakCond_Help()
   for the syntax.
 */
-const char BreakCond_fileid[] = "Hatari breakcond.c : " __DATE__ " " __TIME__;
+const char BreakCond_fileid[] = "Hatari breakcond.c";
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -68,6 +68,7 @@ typedef struct {
 } bc_condition_t;
 
 typedef struct {
+	info_func_t info;  /* pointer to specified ":info" function */
 	char *filename;	/* file where to read commands to do on hit */
 	int skip;	/* how many times to hit before breaking */
 	bool once;	/* remove after hit&break */
@@ -265,7 +266,7 @@ static bool BreakCond_MatchConditions(bc_condition_t *condition, int count)
 	Uint32 lvalue, rvalue;
 	bool hit = false;
 	int i;
-	
+
 	for (i = 0; i < count; condition++, i++) {
 
 		lvalue = BreakCond_GetValue(&(condition->lvalue));
@@ -330,19 +331,21 @@ static bool BreakCond_MatchBreakPoints(bc_breakpoints_t *bps)
 			}
 			if (!bp->options.quiet) {
 				fprintf(stderr, "%d. %s breakpoint condition(s) matched %d times.\n",
-					i+1, bps->name, bp->hits);			
+					i+1, bps->name, bp->hits);
 				BreakCond_Print(bp);
 			}
 			History_Mark(bps->reason);
 
-			if (bp->options.lock || bp->options.filename) {
+			if (bp->options.info || bp->options.lock || bp->options.filename) {
 				bool reinit = !bp->options.noinit;
 
 				if (reinit) {
 					DebugCpu_InitSession();
 					DebugDsp_InitSession();
 				}
-
+				if (bp->options.info) {
+					bp->options.info(stderr, 0);
+				}
 				if (bp->options.lock) {
 					DebugInfo_ShowSessionInfo();
 				}
@@ -455,7 +458,7 @@ static bool BreakCond_ParseSymbol(const char *name, bc_value_t *bc_value)
 		/* direct value can be compared for anything */
 		symtype = SYMTYPE_ALL;
 	}
-	
+
 	if (bc_value->dsp_space) {
 		if (!Symbols_GetDspAddress(symtype, name, &addr)) {
 			EXITFUNC(("-> false (DSP)\n"));
@@ -468,7 +471,7 @@ static bool BreakCond_ParseSymbol(const char *name, bc_value_t *bc_value)
 		EXITFUNC(("-> true (DSP)\n"));
 		return true;
 	}
-	
+
 	if (!Symbols_GetCpuAddress(symtype, name, &addr)) {
 		EXITFUNC(("-> false (CPU)\n"));
 		return false;
@@ -718,7 +721,7 @@ static bool BreakCond_ParseValue(parser_state_t *pstate, bc_value_t *bc_value)
 			skip = 2;
 		}
 	}
-	
+
 	str = pstate->argv[pstate->arg];
 	if (isalpha((unsigned char)*str) || *str == '_') {
 		/* parse direct or indirect variable/register/symbol name */
@@ -783,7 +786,7 @@ static bool BreakCond_ParseValue(parser_state_t *pstate, bc_value_t *bc_value)
 static char BreakCond_ParseComparison(parser_state_t *pstate)
 {
 	const char *comparison;
-	
+
 	ENTERFUNC(("BreakCond_ParseComparison(), arg:%d\n", pstate->arg));
 	if (pstate->arg >= pstate->argc) {
 		pstate->error = "breakpoint comparison missing";
@@ -858,7 +861,7 @@ static bool BreakCond_CrossCheckValues(parser_state_t *pstate,
 
 	/* check first value mask & bit width */
 	mask1 = BITMASK(bc_value1->bits) & bc_value1->mask;
-	
+
 	if (mask1 != bc_value1->mask) {
 		fprintf(stderr, "WARNING: mask 0x%x doesn't fit into %d address/register bits.\n",
 			bc_value1->mask, bc_value1->bits);
@@ -869,7 +872,7 @@ static bool BreakCond_CrossCheckValues(parser_state_t *pstate,
 		fprintf(stderr, "WARNING: odd CPU address 0x%x given without using byte (.b) width.\n",
 			bc_value1->value.number);
 	}
-	
+
 	/* cross-check both values masks */
 	mask2 = BITMASK(bc_value2->bits) & bc_value2->mask;
 
@@ -1086,7 +1089,7 @@ static char *BreakCond_TokenizeExpression(const char *expression,
 
 
 /**
- * Select corrent breakpoints struct and provide name for it.
+ * Select current breakpoints struct and provide name for it.
  * Make sure there's always space for at least one additional breakpoint.
  * Return pointer to the breakpoints struct
  */
@@ -1143,7 +1146,7 @@ static void BreakCond_CheckTracking(bc_breakpoint_t *bp)
 
 	condition = bp->conditions;
 	for (i = 0; i < bp->ccount; condition++, i++) {
-		
+
 		if (memcmp(&(condition->lvalue), &(condition->rvalue), sizeof(bc_value_t)) == 0) {
 			/* set current value to right side */
 			value = BreakCond_GetValue(&(condition->rvalue));
@@ -1212,16 +1215,20 @@ static bool BreakCond_Parse(const char *expression, bc_options_t *options, bool 
 				fprintf(stderr, "-> Break only on every %d hit.\n", options->skip);
 			}
 			if (options->once) {
-				fprintf(stderr, "-> Once, delete after breaking.\n");
+				fprintf(stderr, "-> Break only once, and delete breakpoint afterwards.\n");
 			}
 			if (options->trace) {
-				fprintf(stderr, "-> Trace instead of breaking, but show still hits.\n");
+				fprintf(stderr, "-> Trace (just show breakpoint info, instead of dropping to debugger).\n");
+				/* all of these options enable also trace option */
+				if (options->info) {
+					fprintf(stderr, "-> Call selected info command.\n");
+				}
 				if (options->lock) {
-					fprintf(stderr, "-> Show also info selected with lock command.\n");
-				}				
+					fprintf(stderr, "-> Call locked info command.\n");
+				}
 				if (options->noinit) {
-					fprintf(stderr, "-> Skip debugger inits on hit.\n");
-				}				
+					fprintf(stderr, "-> Skip debugger initialization on hit.\n");
+				}
 			}
 			if (options->filename) {
 				fprintf(stderr, "-> Execute debugger commands from '%s' file on hit.\n", options->filename);
@@ -1233,6 +1240,7 @@ static bool BreakCond_Parse(const char *expression, bc_options_t *options, bool 
 		bp->options.skip = options->skip;
 		bp->options.once = options->once;
 		bp->options.trace = options->trace;
+		bp->options.info = options->info;
 		bp->options.lock = options->lock;
 		bp->options.noinit = options->noinit;
 		if (options->filename) {
@@ -1271,33 +1279,35 @@ static bool BreakCond_Parse(const char *expression, bc_options_t *options, bool 
  */
 static void BreakCond_Print(bc_breakpoint_t *bp)
 {
-		fprintf(stderr, "\t%s", bp->expression);
-		if (bp->options.skip) {
-			fprintf(stderr, " :%d", bp->options.skip);
+	fprintf(stderr, "\t%s", bp->expression);
+	if (bp->options.skip) {
+		fprintf(stderr, " :%d", bp->options.skip);
+	}
+	if (bp->options.once) {
+		fprintf(stderr, " :once");
+	}
+	if (bp->options.quiet) {
+		fprintf(stderr, " :quiet");
+	}
+	if (bp->options.trace) {
+		fprintf(stderr, " :trace");
+		if (bp->options.info) {
+			fprintf(stderr, " :info");
 		}
-		if (bp->options.once) {
-			fprintf(stderr, " :once");
+		if (bp->options.lock) {
+			fprintf(stderr, " :lock");
 		}
-		if (bp->options.quiet) {
-			fprintf(stderr, " :quiet");
+		if (bp->options.noinit) {
+			fprintf(stderr, " :noinit");
 		}
-		if (bp->options.trace) {
-			if (bp->options.lock) {
-				fprintf(stderr, " :lock");
-			} else {
-				fprintf(stderr, " :trace");
-			}
-			if (bp->options.noinit) {
-				fprintf(stderr, " :noinit");
-			}
-		}
-		if (bp->options.filename) {
-			fprintf(stderr, " :file %s", bp->options.filename);
-		}
-		if (bp->options.deleted) {
-			fprintf(stderr, " (deleted)");
-		}
-		fprintf(stderr, "\n");
+	}
+	if (bp->options.filename) {
+		fprintf(stderr, " :file %s", bp->options.filename);
+	}
+	if (bp->options.deleted) {
+		fprintf(stderr, " (deleted)");
+	}
+	fprintf(stderr, "\n");
 }
 
 /**
@@ -1462,7 +1472,8 @@ const char BreakCond_Description[] =
 	"\tMultiple breakpoint action options can be specified after\n"
 	"\tthe breakpoint condition(s):\n"
 	"\t- 'trace', print the breakpoint match without stopping\n"
-	"\t- 'lock', print the debugger entry info without stopping\n"
+	"\t- 'info <name>', call indicated info functionality (enables 'trace')\n"
+	"\t- 'lock', print the locked debugger entry info (enables 'trace')\n"
 	"\t- 'noinit', no debugger inits on hit, useful for stack tracing\n"
 	"\t- 'file <file>', execute debugger commands from given <file>\n"
 	"\t- 'once', delete the breakpoint after it's hit\n"
@@ -1475,9 +1486,9 @@ const char BreakCond_Description[] =
  */
 static bool BreakCond_Options(char *str, bc_options_t *options, char marker)
 {
-	char *option, *next, *filename;
+	char *option, *next, *filename, *info;
 	int skip;
-	
+
 	memset(options, 0, sizeof(*options));
 
 	option = strchr(str, marker);
@@ -1507,6 +1518,14 @@ static bool BreakCond_Options(char *str, bc_options_t *options, char marker)
 		} else if (strcmp(option, "noinit") == 0) {
 			options->trace = true;
 			options->noinit = true;
+		} else if (strncmp(option, "info ", 5) == 0) {
+			options->trace = true;
+			info = Str_Trim(option+4);
+			options->info = DebugInfo_GetInfoFunc(info);
+			if (!options->info) {
+				fprintf(stderr, "ERROR: no info for '%s'!\n", info);
+				return false;
+			}
 		} else if (strncmp(option, "file ", 5) == 0) {
 			filename = Str_Trim(option+4);
 			if (!File_Exists(filename)) {
@@ -1552,9 +1571,9 @@ bool BreakCond_Command(const char *args, bool bForDsp)
 	}
 	argscopy = strdup(args);
 	assert(argscopy);
-	
+
 	expression = Str_Trim(argscopy);
-	
+
 	/* subcommands? */
 	if (strncmp(expression, "help", 4) == 0) {
 		fputs(BreakCond_Help, stderr);

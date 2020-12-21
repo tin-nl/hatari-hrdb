@@ -8,7 +8,7 @@
   pressed, the emulator is (hopefully) halted and this little CLI can be used
   (in the terminal box) for debugging tasks like memory and register dumps.
 */
-const char DebugUI_fileid[] = "Hatari debugui.c : " __DATE__ " " __TIME__;
+const char DebugUI_fileid[] = "Hatari debugui.c";
 
 #include <ctype.h>
 #include <stdio.h>
@@ -29,6 +29,7 @@ const char DebugUI_fileid[] = "Hatari debugui.c : " __DATE__ " " __TIME__;
 #include "log.h"
 #include "m68000.h"
 #include "memorySnapShot.h"
+#include "screenSnapShot.h"
 #include "options.h"
 #include "reset.h"
 #include "screen.h"
@@ -55,8 +56,9 @@ static int debugCommands;
 /* stores last 'e' command result as hex, used for TAB-completion */
 static char lastResult[10];
 
-/* parse debugger commands from here on init */
-static const char *parseFileName;
+/* array of files from which to read debugger commands after debugger is initialized */
+static char **parseFileNames;
+static int parseFiles;
 
 /* to which directory to change after (potentially recursed) scripts parsing finishes */
 static char *finalDir;
@@ -71,8 +73,7 @@ void DebugUI_MemorySnapShot_Capture(const char *path, bool bSave)
 {
 	char *filename;
 
-	filename = malloc(strlen(path) + strlen(".debug") + 1);
-	assert(filename);
+	filename = Str_Alloc(strlen(path) + strlen(".debug"));
 	strcpy(filename, path);
 	strcat(filename, ".debug");
 	
@@ -173,7 +174,7 @@ static void DebugUI_PrintValue(Uint32 value)
 
 
 /**
- * Commmand: Evaluate an expression with CPU reg and symbol parsing.
+ * Command: Evaluate an expression with CPU reg and symbol parsing.
  */
 static int DebugUI_Evaluate(int nArgc, char *psArgs[])
 {
@@ -383,6 +384,18 @@ static int DebugUI_SetOptions(int argc, char *argv[])
 
 
 /**
+ * Command: Screenshot
+ */
+static int DebugUI_Screenshot(int argc, char *argv[])
+{
+	if (argc == 2)
+		ScreenSnapShot_SaveToFile(argv[1]);
+	else
+		return DebugUI_PrintCmdHelp(argv[0]);
+	return DEBUGGER_CMDDONE;
+}
+
+/**
  * Command: Set tracing
  */
 static int DebugUI_SetTracing(int argc, char *argv[])
@@ -398,7 +411,6 @@ static int DebugUI_SetTracing(int argc, char *argv[])
 
 	return DEBUGGER_CMDDONE;
 }
-
 
 /**
  * Command: Change Hatari work directory
@@ -864,7 +876,7 @@ static void DebugUI_GetScreenSize(int *rows, int *cols)
 	*cols = 80;
 	if ((p = getenv("LINES")) != NULL)
 		*rows = (int)strtol(p, NULL, 0);
-	if ((p = getenv("COLUMS")) != NULL)
+	if ((p = getenv("COLUMNS")) != NULL)
 		*cols = (int)strtol(p, NULL, 0);
 }
 
@@ -881,7 +893,8 @@ static char *DebugUI_GetCommand(char *input)
 	if (!input)
 	{
 		input = malloc(256);
-		assert(input);
+		if (!input)
+			return NULL;
 	}
 	input[0] = '\0';
 	if (fgets(input, 256, stdin) == NULL)
@@ -936,7 +949,7 @@ static const dbgcommand_t uicommand[] =
 	  "\tEvaluate an expression and show the result.  Expression can\n"
 	  "\tinclude CPU register & symbol and Hatari variable names.\n"
 	  "\tThose are replaced by their values. Supported operators in\n"
-	  "\texpressions are, in the decending order of precedence:\n"
+	  "\texpressions are, in the descending order of precedence:\n"
 	  "\t\t(), +, -, ~, *, /, +, -, >>, <<, ^, &, |\n"
 	  "\tParenthesis will fetch a _long_ value from the address\n"
 	  "\tto what the value inside it evaluates to. Prefixes can be\n"
@@ -1002,6 +1015,11 @@ static const dbgcommand_t uicommand[] =
 	  "reset", "",
 	  "reset emulation",
 	  "<soft|hard>\n",
+	  false },
+	{ DebugUI_Screenshot, NULL,
+	  "screenshot", "",
+	  "save screenshot to given file",
+	  "<filename>\n",
 	  false },
 	{ DebugUI_SetOptions, Opt_MatchOption,
 	  "setopt", "o",
@@ -1079,26 +1097,43 @@ void DebugUI_Init(void)
 	memcpy(&debugCommand[debugCommands], dspcmd, sizeof(dbgcommand_t) * dspcmds);
 	debugCommands += dspcmds;
 
-	if (parseFileName)
-		DebugUI_ParseFile(parseFileName, true);
+
+	if (parseFiles)
+	{
+		int i;
+		for (i = 0; i < parseFiles; i++)
+		{
+			DebugUI_ParseFile(parseFileNames[i], true);
+			free(parseFileNames[i]);
+		}
+		free(parseFileNames);
+		parseFileNames = NULL;
+		parseFiles = 0;
+	}
 }
 
 
 /**
- * Set debugger commands file during Hatari startup before things
+ * Add debugger command files during Hatari startup before things
  * needed by the debugger are initialized so that it can be parsed
  * when debugger itself gets initialized.
- * Return true if file exists, false otherwise.
+ * Return true if file exists and it could be added, false otherwise.
  */
-bool DebugUI_SetParseFile(const char *path)
+bool DebugUI_AddParseFile(const char *path)
 {
-	if (File_Exists(path))
+	if (!File_Exists(path))
 	{
-		parseFileName = path;
-		return true;
+		fprintf(stderr, "ERROR: debugger input file '%s' missing.\n", path);
+		return false;
 	}
-	fprintf(stderr, "ERROR: debugger input file '%s' missing.\n", path);
-	return false;
+	parseFileNames = realloc(parseFileNames, (parseFiles+1)*sizeof(char*));
+	if (!parseFileNames)
+	{
+		perror("DebugUI_AddParseFile");
+		return false;
+	}
+	parseFileNames[parseFiles++] = strdup(path);
+	return true;
 }
 
 
@@ -1214,7 +1249,8 @@ bool DebugUI_ParseFile(const char *path, bool reinit)
 {
 	int recurse;
 	static int recursing;
-	char *olddir, *dir, *cmd, *input, *expanded, *slash;
+	char *olddir, *dir, *cmd, *expanded, *slash;
+	char input[256];
 	FILE *fp;
 
 	fprintf(stderr, "Reading debugger commands from '%s'...\n", path);
@@ -1252,17 +1288,8 @@ bool DebugUI_ParseFile(const char *path, bool reinit)
 	recurse = recursing;
 	recursing = true;
 
-	input = NULL;
-	for (;;)
+	while (fgets(input, sizeof(input), fp) != NULL)
 	{
-		if (!input)
-		{
-			input = malloc(256);
-			assert(input);
-		}
-		if (!fgets(input, 256, fp))
-			break;
-
 		/* ignore empty and comment lines */
 		cmd = Str_Trim(input);
 		if (!*cmd || *cmd == '#')
@@ -1280,7 +1307,6 @@ bool DebugUI_ParseFile(const char *path, bool reinit)
 	}
 	recursing = false;
 
-	free(input);
 	fclose(fp);
 
 	if (olddir)

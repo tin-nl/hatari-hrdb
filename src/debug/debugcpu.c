@@ -7,7 +7,7 @@
   debugcpu.c - function needed for the CPU debugging tasks like memory
   and register dumps.
 */
-const char DebugCpu_fileid[] = "Hatari debugcpu.c : " __DATE__ " " __TIME__;
+const char DebugCpu_fileid[] = "Hatari debugcpu.c";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -161,7 +161,7 @@ static bool DebugCpu_ShowAddressInfo(Uint32 addr, FILE *fp)
 }
 
 /**
- * Dissassemble - arg = starting address, or PC.
+ * Disassemble - arg = starting address, or PC.
  */
 int DebugCpu_DisAsm(int nArgc, char *psArgs[])
 {
@@ -465,7 +465,7 @@ int DebugCpu_MemDump(int nArgc, char *psArgs[])
 	if (nArgc > 1)
 		mode = tolower(psArgs[arg][0]);
 
-	if (!mode || isdigit(psArgs[arg][0]) || psArgs[arg][1])
+	if (!mode || isdigit((unsigned char)psArgs[arg][0]) || psArgs[arg][1])
 	{
 		/* no args, single digit or multiple chars -> default mode */
 		mode = 'b';
@@ -566,7 +566,7 @@ int DebugCpu_MemDump(int nArgc, char *psArgs[])
 
 
 /**
- * Command: Write to memory, optional arg for value lenghts,
+ * Command: Write to memory, optional arg for value lengths,
  * followed by starting address and the values.
  */
 static int DebugCpu_MemWrite(int nArgc, char *psArgs[])
@@ -589,7 +589,7 @@ static int DebugCpu_MemWrite(int nArgc, char *psArgs[])
 	mode = tolower(psArgs[arg][0]);
 	max_values = ARRAY_SIZE(store.bytes);
 
-	if (!mode || isdigit(psArgs[arg][0]) || psArgs[arg][1])
+	if (!mode || isdigit((unsigned char)psArgs[arg][0]) || psArgs[arg][1])
 	{
 		/* no args, single digit or multiple chars -> default mode */
 		mode = 'b';

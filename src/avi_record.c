@@ -78,10 +78,11 @@
   ...
 */
 
-const char AVIRecord_fileid[] = "Hatari avi_record.c : " __DATE__ " " __TIME__;
+const char AVIRecord_fileid[] = "Hatari avi_record.c";
 
 #include <SDL.h>
 #include <SDL_endian.h>
+#include <sys/types.h>  /* For off_t */
 
 #include "main.h"
 #include "version.h"

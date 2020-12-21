@@ -9,7 +9,7 @@
  * natfeats.c - Hatari Native features identification and call forwarding,
  * modeled after similar code in Aranym.  See tests/natfeats/ for more info.
  */
-const char Natfeats_fileid[] = "Hatari natfeats.c : " __DATE__ " " __TIME__;
+const char Natfeats_fileid[] = "Hatari natfeats.c";
 
 #include <stdio.h>
 #include "main.h"
@@ -182,7 +182,7 @@ static bool nf_shutdown(Uint32 stack, Uint32 subid, Uint32 *retval)
 		Main_RequestQuit(0);
 		break;
 	default:
-		/* unrecogized subid -> no-op */
+		/* unrecognized subid -> no-op */
 		return true;
 	}
 	fprintf(stderr, "NatFeats: %s\n", msg);
@@ -232,7 +232,7 @@ static bool nf_fastforward(Uint32 stack, Uint32 subid, Uint32 *retval)
 
 	*retval = ConfigureParams.System.bFastForward;
 	if (subid) {
-		/* unrecogized sub id -> no-op */
+		/* unrecognized sub id -> no-op */
 		val = *retval;
 	} else {
 		val = STMemory_ReadLong(stack);
@@ -254,7 +254,7 @@ static bool nf_command(Uint32 stack, Uint32 subid, Uint32 *retval)
 	Uint32 ptr;
 
 	if (subid) {
-		/* unrecogized sub id -> no-op */
+		/* unrecognized sub id -> no-op */
 		return true;
 	}
 	ptr = STMemory_ReadLong(stack);

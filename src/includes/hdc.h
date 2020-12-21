@@ -11,6 +11,7 @@
 #ifndef HATARI_HDC_H
 #define HATARI_HDC_H
 
+#include <sys/types.h>  /* For off_t */
 
 /* Opcodes */
 /* The following are multi-sector transfers with seek implied */
@@ -84,7 +85,6 @@ typedef struct {
 	SCSI_DEV devs[8];
 } SCSI_CTRLR;
 
-#define ACSI_EMU_ON        bAcsiEmuOn         /* Do we have HDC emulation? */
 
 extern int nAcsiPartitions;
 extern bool bAcsiEmuOn;

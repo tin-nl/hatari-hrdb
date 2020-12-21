@@ -9,14 +9,14 @@
   The IKBD has a small ROM which is used to process various commands send
   by the main CPU to the THE IKBD.
   Due to lack of real HD6301 emulation, those commands are handled by
-  functionnaly equivalent code that tries to be as close as possible
+  functionally equivalent code that tries to be as close as possible
   to a real HD6301.
 
   For program using their own HD6301 code, we also use some custom
   handlers to emulate the expected result.
 */
 
-const char IKBD_fileid[] = "Hatari ikbd.c : " __DATE__ " " __TIME__;
+const char IKBD_fileid[] = "Hatari ikbd.c";
 
 /* 2007/09/29	[NP]	Use the new int.c to add interrupts with INT_CPU_CYCLE / INT_MFP_CYCLE.		*/
 /* 2007/12/09	[NP]	If reset is written to ACIA control register, we must call ACIA_Reset to reset	*/

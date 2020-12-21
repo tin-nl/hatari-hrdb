@@ -10,7 +10,7 @@
   * This file is distributed under the GNU General Public License, version 2
   * or at your option any later version. Read the file gpl.txt for details.
   */
-const char Memory_fileid[] = "Hatari memory.c : " __DATE__ " " __TIME__;
+const char Memory_fileid[] = "Hatari memory.c";
 
 #include <SDL.h>
 #include "main.h"
@@ -57,7 +57,7 @@ static uae_u32 TTmem_mask;
 
 /* Some prototypes: */
 static int REGPARAM3 STmem_check (uaecptr addr, uae_u32 size) REGPARAM;
-static uae_u8 REGPARAM3 *STmem_xlate (uaecptr addr) REGPARAM;
+static uae_u8 * REGPARAM3 STmem_xlate (uaecptr addr) REGPARAM;
 
 
 
@@ -388,7 +388,7 @@ static int REGPARAM2 dummy_check (uaecptr addr, uae_u32 size)
 	return 0;
 }
 
-static uae_u8 REGPARAM3 *dummy_xlate(uaecptr addr)
+static uae_u8 * REGPARAM3 dummy_xlate(uaecptr addr)
 {
     write_log("Your Atari program just did something terribly stupid:"
               " dummy_xlate($%x)\n", addr);
@@ -537,7 +537,7 @@ static int REGPARAM3 BusErrMem_check(uaecptr addr, uae_u32 size)
     return 0;
 }
 
-static uae_u8 REGPARAM3 *BusErrMem_xlate (uaecptr addr)
+static uae_u8 * REGPARAM3 BusErrMem_xlate (uaecptr addr)
 {
     write_log("Your Atari program just did something terribly stupid:"
               " BusErrMem_xlate($%x)\n", addr);
@@ -601,7 +601,7 @@ static int REGPARAM3 STmem_check(uaecptr addr, uae_u32 size)
     return (addr + size) <= STmem_size;
 }
 
-static uae_u8 REGPARAM3 *STmem_xlate(uaecptr addr)
+static uae_u8 * REGPARAM3 STmem_xlate(uaecptr addr)
 {
     addr -= STmem_start & STmem_mask;
     addr &= STmem_mask;
@@ -932,7 +932,7 @@ static int REGPARAM3 VoidMem_check(uaecptr addr, uae_u32 size)
     return 0;
 }
 
-static uae_u8 REGPARAM3 *VoidMem_xlate (uaecptr addr)
+static uae_u8 * REGPARAM3 VoidMem_xlate (uaecptr addr)
 {
     write_log("Your Atari program just did something terribly stupid:"
               " VoidMem_xlate($%x)\n", addr);
@@ -994,7 +994,7 @@ static int REGPARAM3 TTmem_check(uaecptr addr, uae_u32 size)
     return (addr + size) <= TTmem_size;
 }
 
-static uae_u8 REGPARAM3 *TTmem_xlate(uaecptr addr)
+static uae_u8 * REGPARAM3 TTmem_xlate(uaecptr addr)
 {
     addr -= TTmem_start & TTmem_mask;
     addr &= TTmem_mask;
@@ -1055,7 +1055,7 @@ static int REGPARAM3 ROMmem_check(uaecptr addr, uae_u32 size)
     return (addr + size) <= ROMmem_size;
 }
 
-static uae_u8 REGPARAM3 *ROMmem_xlate(uaecptr addr)
+static uae_u8 * REGPARAM3 ROMmem_xlate(uaecptr addr)
 {
     addr -= ROMmem_start & ROMmem_mask;
     addr &= ROMmem_mask;
@@ -1075,7 +1075,7 @@ static int REGPARAM3 IdeMem_check(uaecptr addr, uae_u32 size)
     return (addr + size) <= IdeMem_size;
 }
 
-static uae_u8 REGPARAM3 *IdeMem_xlate(uaecptr addr)
+static uae_u8 * REGPARAM3 IdeMem_xlate(uaecptr addr)
 {
     addr -= IdeMem_start;
     addr &= IdeMem_mask;
@@ -1095,7 +1095,7 @@ static int REGPARAM3 IOmem_check(uaecptr addr, uae_u32 size)
     return (addr + size) <= IOmem_size;
 }
 
-static uae_u8 REGPARAM3 *IOmem_xlate(uaecptr addr)
+static uae_u8 * REGPARAM3 IOmem_xlate(uaecptr addr)
 {
     addr -= IOmem_start;
     addr &= IOmem_mask;
@@ -1504,12 +1504,21 @@ bool memory_region_bus_error ( uaecptr addr )
 {
 	return mem_banks[bankindex(addr)] == &BusErrMem_bank;
 }
+
+/*
+ * Check if an address points to the IO memory region
+ * Returns true if it's the case
+ */
+bool memory_region_iomem ( uaecptr addr )
+{
+	return mem_banks[bankindex(addr)] == &IOmem_bank;
+}
 #endif
 
 
 /*
  * Initialize some extra parameters for the memory banks in CE mode
- * By default, we set all banks to CHIP16 and not cachable
+ * By default, we set all banks to CHIP16 and not cacheable
  *
  * Possible values for ce_banktype :
  *  CE_MEMBANK_CHIP16	shared between CPU and DMA, bus width = 16 bits
@@ -1519,9 +1528,9 @@ bool memory_region_bus_error ( uaecptr addr )
  *  CE_MEMBANK_CIA	Amiga only, for CIA chips
  *
  * Possible values for ce_cachable :
- *  bit 0 : cachable yes/no for data
+ *  bit 0 : cacheable yes/no for data
  *  bit 1 : burst mode allowed when caching data yes/no
- *  bit 7 : cachable yes/no for instructions
+ *  bit 7 : cacheable yes/no for instructions
  *  bit 6 : burst mode allowed when caching instructions yes/no
  */
 static void init_ce_banks (void)
@@ -1529,13 +1538,13 @@ static void init_ce_banks (void)
 	/* Default to CHIP16 */
 	memset (ce_banktype, CE_MEMBANK_CHIP16, sizeof ce_banktype);
 
-	/* Default to not cachable */
+	/* Default to not cacheable */
 	memset (ce_cachable, 0, sizeof ce_cachable);
 }
 
 
 /*
- * For CE mode, set banktype and cachable for a memory region
+ * For CE mode, set banktype and cacheable for a memory region
  */
 static void fill_ce_banks (int start, int size, int banktype, int cachable )
 {
@@ -1769,12 +1778,17 @@ void memory_init(uae_u32 NewSTMemSize, uae_u32 NewTTMemSize, uae_u32 NewRomMemSt
     IOmem_bank.start = IOmem_start;
     init_bank ( &IOmem_bank , IOmem_size );
 
-    /* IDE controller memory region: */
-    map_banks_ce(&IdeMem_bank, IdeMem_start >> 16, 0x1, 0, CE_MEMBANK_CHIP16, CE_MEMBANK_NOT_CACHABLE);	/* IDE controller on the Falcon */
-    IdeMem_bank.baseaddr = IdeMemory;
-    IdeMem_bank.mask = IdeMem_mask;
-    IdeMem_bank.start = IdeMem_start ;
-    init_bank ( &IdeMem_bank , IdeMem_size );
+    /* IDE controller memory region at 0xF00000 (for Falcon or can be forced for other machines, else it's a bus error region) */
+    if (Ide_IsAvailable())
+    {
+	map_banks_ce(&IdeMem_bank, IdeMem_start >> 16, 0x1, 0, CE_MEMBANK_CHIP16, CE_MEMBANK_NOT_CACHABLE);	/* IDE controller on the Falcon */
+	IdeMem_bank.baseaddr = IdeMemory;
+	IdeMem_bank.mask = IdeMem_mask;
+	IdeMem_bank.start = IdeMem_start ;
+	init_bank ( &IdeMem_bank , IdeMem_size );
+    }
+    else
+	map_banks_ce(&BusErrMem_bank, IdeMem_start >> 16, 0x1, 0, CE_MEMBANK_CHIP16, CE_MEMBANK_NOT_CACHABLE);
 
     /* Illegal memory regions cause a bus error on the ST: */
     map_banks_ce(&BusErrMem_bank, 0xF10000 >> 16, 0x9, 0, CE_MEMBANK_CHIP16, CE_MEMBANK_NOT_CACHABLE);
@@ -1839,7 +1853,7 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 #else
 	int bnr;
 	unsigned long int hioffs = 0, endhioffs = 0x100;
-	uae_u32 realstart __attribute__((unused)) = start;
+	NOWARN_UNUSED(uae_u32 realstart) = start;
 #endif
 
 //printf ( "map %x %x 24=%d\n" , start<<16 , size<<16 , currprefs.address_space_24 );
@@ -1847,7 +1861,7 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 	if (quick <= 0)
 		old = debug_bankchange (-1);
 #endif
-	flush_icache_hard (3); /* Sure don't want to keep any old mappings around! */
+	flush_icache(3); /* Sure don't want to keep any old mappings around! */
 #ifdef NATMEM_OFFSET
 	if (!quick)
 		delete_shmmaps (start << 16, size << 16);

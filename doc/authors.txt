@@ -1,9 +1,14 @@
+Contents:
+- Active Hatari developers
+- Contributors
+- Code from other projects
+
 
  Active Hatari developers:
  -------------------------
 
 - Nicolas Pomarede <npomarede at corp.free.fr> : Project admin,
-  improving CPU, video, sound, IKBD and floppy emulation.
+  improving CPU, video, sound, blitter, IKBD and floppy emulation.
 
 - Thomas Huth <huth at tuxfamily.org> : Project initiator and
   admin, currently more or less in hibernation mode.
@@ -27,7 +32,8 @@ Following people contributed code or patches to this projects (listed in
 random order - and if someone is missing here, please remind us!):
 
 - Jean-Baptiste Berlioz <tobe at freemind-tobe.com> : Cycle accurate
-  Blitter emulation.
+  Blitter emulation (although most of the code was rewritten since
+  Hatari 2.3)
 
 - David Savinkoff : More accurate printer emulation, LMC1992 emulation
   patches, IIR/Low Pass filters and many improvements to the YM2149 model
@@ -143,6 +149,17 @@ random order - and if someone is missing here, please remind us!):
 
 - Steven Noonan : patch to prevent a crash if Halt dialog was called
   before SDLGui_SetScreen()
+
+- Christophe de Dinechin : patch to improve Spec512_StoreCyclePalette
+  when using 16 or 32 MHz
+
+- Fredrik Noring (Noring of NoCrew) : Tracked down a bug in the
+  blitter emulation and a bug in the PSG shadow register emulation.
+  Patch to improve clearing borders in fullscreen mode. Patch to fix
+  PNG header alignment when recording AVI files.
+
+See also "thanks.txt" for people who've helped Hatari development in
+other ways than code contributions.
 
 
  Code from other projects

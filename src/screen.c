@@ -24,7 +24,7 @@
   Tyranny by DHS).
 */
 
-const char Screen_fileid[] = "Hatari screen.c : " __DATE__ " " __TIME__;
+const char Screen_fileid[] = "Hatari screen.c";
 
 #include <SDL.h>
 #include <SDL_endian.h>
@@ -109,12 +109,16 @@ SDL_Window *sdlWindow;
 static SDL_Renderer *sdlRenderer;
 static SDL_Texture *sdlTexture;
 static bool bUseSdlRenderer;            /* true when using SDL2 renderer */
+static bool bIsSoftwareRenderer;
 
 void SDL_UpdateRects(SDL_Surface *screen, int numrects, SDL_Rect *rects)
 {
 	if (bUseSdlRenderer)
 	{
 		SDL_UpdateTexture(sdlTexture, NULL, screen->pixels, screen->pitch);
+		/* Need to clear the renderer context for certain accelerated cards */
+		if (!bIsSoftwareRenderer)
+			SDL_RenderClear(sdlRenderer);
 		SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, NULL);
 		SDL_RenderPresent(sdlRenderer);
 	}
@@ -410,10 +414,12 @@ bool Screen_SetSDLVideoSize(int width, int height, int bitdepth, bool bForceChan
 
 	psSdlVideoDriver = SDL_getenv("SDL_VIDEODRIVER");
 	bUseDummyMode = psSdlVideoDriver && !strcmp(psSdlVideoDriver, "dummy");
+#if !WITH_SDL2
 	if (bUseDummyMode)
 	{
 		ConfigureParams.Screen.DisableVideo = true;
 	}
+#endif
 
 	if (bInFullScreen)
 	{
@@ -506,6 +512,7 @@ bool Screen_SetSDLVideoSize(int width, int height, int bitdepth, bool bForceChan
 	if (bUseSdlRenderer)
 	{
 		int rm, bm, gm;
+		SDL_RendererInfo sRenderInfo = { 0 };
 
 		sdlRenderer = SDL_CreateRenderer(sdlWindow, -1, 0);
 		if (!sdlRenderer)
@@ -515,15 +522,18 @@ bool Screen_SetSDLVideoSize(int width, int height, int bitdepth, bool bForceChan
 			exit(1);
 		}
 
+		if (bInFullScreen)
+			SDL_RenderSetLogicalSize(sdlRenderer, width, height);
+		else
+			SDL_RenderSetScale(sdlRenderer, scale, scale);
+
 		/* Force to black to stop side bar artifacts on 16:9 monitors. */
 		SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);
 		SDL_RenderClear(sdlRenderer);
 		SDL_RenderPresent(sdlRenderer);
 
-		if (bInFullScreen)
-			SDL_RenderSetLogicalSize(sdlRenderer, width, height);
-		else
-			SDL_RenderSetScale(sdlRenderer, scale, scale);
+		SDL_GetRendererInfo(sdlRenderer, &sRenderInfo);
+		bIsSoftwareRenderer = sRenderInfo.flags & SDL_RENDERER_SOFTWARE;
 
 		if (bitdepth == 16)
 		{
@@ -545,6 +555,7 @@ bool Screen_SetSDLVideoSize(int width, int height, int bitdepth, bool bForceChan
 	else
 	{
 		sdlscrn = SDL_GetWindowSurface(sdlWindow);
+		bIsSoftwareRenderer = true;
 	}
 
 #else	/* !WITH_SDL2 */
@@ -1665,7 +1676,7 @@ static void Convert_StartFrame(void)
  * as-is, or halve its intensity, depending on bScrDoubleY.
  *
  * Source line is already in host format, so we don't need to
- * care about endianess.
+ * care about endianness.
  *
  * Return address to next line after the copy
  */

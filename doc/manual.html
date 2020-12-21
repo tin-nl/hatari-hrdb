@@ -24,7 +24,7 @@
 <h1 class="pageheader">Hatari User's Manual</h1>
 
 <p class="pageheader">
-Version 2.2.1, February 2019
+Version 2.3, November 2020
 </p>
 <p class="pageheader">
 Manual written by: <strong>Thomas Huth</strong>, <strong>Matthias Arndt</strong>
@@ -339,8 +339,8 @@ and later HW:</p>
   <li>Experimental NCR5380 SCSI emulation for hard drive support (incomplete)</li>
   <li>TOS versions 4.00, 4.02, 4.04 and 4.92 (and 512k EmuTOS) can be used in Falcon
       mode. There is also experimental support for TOS 2.07 (the "Sparrow"-TOS),
-      and for <a href="m68k-linux-for-hatari.txt">Linux</a>, but they are
-      not recommended for use yet</li>
+      and for <a href="m68k-linux.txt">Linux</a>, but they are not recommended
+      for use yet</li>
 </ul>
 <p>
 Both TT and Falcon emulation support NVRAM for persistent OS configuration
@@ -732,7 +732,13 @@ correction (enabled by default)</p>
 <h3>VDI options</h3>
 <p class="parameter">--vdi
 &lt;bool&gt;</p>
-<p class="paramdesc">Whether to use VDI screen mode</p>
+<p class="paramdesc">
+Whether to use VDI screen mode.  Doesn't work with TOS v4. TOS v3
+memory detection isn't compatible with larger VDI modes (i.e. you need
+to skip the detection at boot). Original TOS desktops use wrong window
+size in 2-plane (4 color) VDI mode when screen height &gt;= 400 pixels.
+Because of these issues, using EmuTOS is recommended for VDI mode
+</p>
 <p class="parameter">--vdi-planes
 &lt;x&gt;</p>
 <p class="paramdesc">Use extended VDI resolution with bit
@@ -746,11 +752,12 @@ depth &lt;x&gt; (x = 1, 2 or 4)</p>
 <p class="paramdesc">Use extended VDI resolution with height
 &lt;h&gt; (200 &lt; h &lt;= 1280)</p>
 <p>
-TOS and popular GEM programs add extra restrictions for the VDI screen
-size.  In total screen can take at maximum 300kB, width needs to be
-multiple of 128/planes, and height multiple of 16 pixels (or 8,
-depending on system font height). That translates to following maximum
-standard resolutions for the VDI mode:
+Because TOS and popular GEM programs have problems with certain screen
+sizes, Hatari enforces restrictions on VDI screen size.  In total VDI
+screen size is limited to 32-300kB, width to multiple of 128/planes,
+and height to multiple of 16 pixels (or 8, depending on system font
+height). That translates to following maximum standard resolutions for
+the VDI mode:
 </p>
 <p class="parameter">monochrome</p>
 <p class="paramdesc">
@@ -787,6 +794,8 @@ with clearly smaller CPU overhead.</p>
 <p class="paramdesc">Force AVI frame rate (x = 50/60/71/...)</p>
 <p class="parameter">--avi-file &lt;file&gt;</p>
 <p class="paramdesc">Use &lt;file&gt; to record AVI</p>
+<p class="parameter">--screenshot-dir &lt;dir&gt;</p>
+<p class="paramdesc">Save screenshots in the directory &lt;dir&gt;</p>
 
 <h3>Devices options</h3>
 <p class="parameter">-j,
@@ -1063,7 +1072,7 @@ the (CON:) VT52 console, which vector function catches also EmuTOS panic
 messages and MiNT console output, not just normal BIOS console output.</p>
 <p class="parameter">--disasm &lt;x&gt;</p>
 <p class="paramdesc">Set disassembly options.  'uae' and 'ext' select
-the dissasembly engine to use, bitmask sets output options for the
+the disassembly engine to use, bitmask sets output options for the
 external disassembly engine and 'help' lists them.</p>
 <p class="parameter">--natfeats &lt;bool&gt;</p>
 <p class="paramdesc">Enable/disable (basic) Native Features support.
@@ -1162,7 +1171,7 @@ Click <span class="button">OK</span> to go back and continue the emulation.
 All changed options will be applied.
 </p>
 <p><em>NOTE:</em>Any changes to machine ROM or HW configuration
-mean that emulation is reseted to apply the change.  Don't do that
+mean that emulation is reset to apply the change.  Don't do that
 unless you're OK to lose your current emulation state.</p>
 <p>
 Select the <em>&quot;Reset machine&quot;</em> option if you
@@ -1677,8 +1686,12 @@ certain games. In some other games, it gets worse if you enable this option.</p>
  (select "Mono") and color mode (select one of the other monitor types).
  When you select "TV" and use zoomed low resolution or switch to ST
  medium, you get TV-like screen with half the intensity on every other
- line. Switching between mono and a color monitor acts like a monitor
- switch on a real ST - so beware, this will reboot your emulated system!<br />
+ line. VGA is not a valid setting in ST and STE mode, so if you select
+ VGA for an ST/STE, Hatari will emulate an RGB monitor instead. Switching
+ between mono and a color monitor acts like a monitor switch on a real
+ ST - so beware, this will reboot your emulated system!
+</p>
+<p>
  In TT mode, you can only choose between TT-high resolution ("Mono")
  and normal modes (select one of the other monitor types).
  Finally the Falcon mode supports all four types of monitors. Note that most
@@ -2509,12 +2522,12 @@ been partitioned elsewhere.
 As the IDE disk format (little endian) differs from the ACSI disk format
 (big endian), you need separate disk images for them.  Hatari doesn't
 currently support partitioning IDE disks with AHDI, but you can do it with
-<em>Cecile</em>.
+<em>C&eacute;cile</em>.
 </p>
 <p>
 First create an empty image file with the size of your choice with:
 <span class="commandline">dd if=/dev/zero of=hd.img bs=1k count=xxx</span>.
-Then get the Cecile hard disk driver from
+Then get the C&eacute;cile hard disk driver from
 <a href="http://centek.free.fr/atari/softs/s_cecile.htm">http://centek.free.fr/atari/softs/s_cecile.htm</a>
 and put it on a floppy disk image (e.g. to one named "cecile.st" using:
 <span class="commandline">zip2st.sh cecile.zip</span>).
@@ -2523,7 +2536,7 @@ and put it on a floppy disk image (e.g. to one named "cecile.st" using:
 Run Hatari with
 <span class="commandline">hatari --machine falcon --tos tos404.rom
 --ide-master hd.img cecile.st</span>, switch to larger color resolution
-and warm up your French language skills. Then start the Cecile hard
+and warm up your French language skills. Then start the C&eacute;cile hard
 disk driver CECILE.PRG and run CC_TOOLS.APP to partition your hard
 disk image. Click the "Partition" button, select "Hatari IDE disk" and set
 suitable partition size with the arrows (below type field). Then click
@@ -2531,9 +2544,9 @@ suitable partition size with the arrows (below type field). Then click
 </p>
 <p>
 If you only want to use your HD image in Falcon mode, you can install
-the Cecile hard disk driver to the image from the Cecile CC_TOOLS.APP:
-Click the "Installer" button and save the Cecile driver to the
-1st partition on "Hatari IDE disk". If you want to also use your HD
+the C&eacute;cile hard disk driver to the image from the C&eacute;cile
+CC_TOOLS.APP: Click the "Installer" button and save the C&eacute;cile driver
+to the 1st partition on "Hatari IDE disk". If you want to also use your HD
 image in ST/STE mode, you need to get and install either HD Driver or
 AHDI 6 driver on it instead (see <a href="#ACSI_hard_drive_emulation">ASCI
 hard drive emulation</a> section).
@@ -2565,9 +2578,8 @@ in its partition table/type support.</p>
 
 <h3 id="Using_HD_Driver_with_GEMDOS_partitions">Using HD Driver with GEMDOS partitions</h3>
 
-<p>Uwe Seimet's <a href="https://wwww.hddriver.net">HD
-Driver</a> works fine with both the Hatari GEMDOS HD partitions and normal
-hard disk images.
+<p>Uwe Seimet's <a href="https://www.hddriver.net/">HD Driver</a> works
+fine with both the Hatari GEMDOS HD partitions and normal hard disk images.
 </p>
 
 <p>First copy the HDDRIVER.PRG binary into your GEMDOS HD emulation
@@ -2611,13 +2623,13 @@ with Hatari can be used to create such an image.
 <p>
 Inside the Hatari emulator, EmuTOS can access partition(s) on these
 kind of images directly without any driver software.  Of the Atari HD
-drivers mentioned above, Centek's Cecile and Uwe Seimet's HD Driver
+drivers mentioned above, Centek's C&eacute;cile and Uwe Seimet's HD Driver
 (demo) work fine with these partitions. E.g. AHDI and CBHD don't.
-Cecile works only with TT or Falcon.
+C&eacute;cile works only with TT or Falcon.
 </p>
 <p>
 To summarise; if EmuTOS is enough, use that. Otherwise, if you want to
-use TT or Falcon emulation, use Cecile (or full HD Driver version if
+use TT or Falcon emulation, use C&eacute;cile (or full HD Driver version if
 you have it), otherwise use HD Driver (demo).
 </p>
 <p>
@@ -2694,7 +2706,7 @@ have a noticeable effect on performance.</p>
 Hatari can be sped up considerably by giving up some emulation or
 emulator accuracy.  With ST/STe emulation, these options should be
 needed only on slow devices, typically ARM and/or mobile ones (e.g.
-Rasberry Pi).
+Raspberry Pi).
 </p>
 
 

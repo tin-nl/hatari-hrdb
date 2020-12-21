@@ -2,7 +2,7 @@
 
                                     Hatari
 
-                             Version 2.2.1, February 2019
+                             Version 2.3.0, February 2020
 
                             http://hatari.tuxfamily.org/
 
@@ -17,6 +17,7 @@ Contents:
    3.3 Notes for Linux distribution packagers
        3.3.1 Known distro problems
 4. Running Hatari
+   4.1 Known Windows (SDL) issues
 5. Hatari tools and their run-time dependencies
 6. Hatari source subdirectory contents
 7. Contact
@@ -49,7 +50,7 @@ permission to combine Hatari with free software programs or libraries that are
 released under the GNU LGPL and with code included in the standard release
 of the IPF support library (a.k.a. libcapsimage, see http://www.softpres.org/
 for more information) under the Software Preservation Society Licence Agreement
-as it has been defined for IPF library version 4.2 and 5.1. Linking against modified
+as it has been defined for IPF library version 5.1. Linking against modified
 versions of the IPF library is also allowed, as long as neither the license
 nor the purpose of the library (accessing .ipf or .ctr disk images) was changed.
 You may copy and distribute such a system following the terms of the GNU GPL
@@ -73,9 +74,9 @@ For using Hatari, you need to have installed the following libraries:
 
 Required:
 - The SDL library v1.2.10 or newer (http://www.libsdl.org)
-- The zlib compression library (http://www.gzip.org/zlib/)
 
 Optional:
+- The zlib compression library (http://www.gzip.org/zlib/)
 - The PNG image library for PNG format screenshots and to decrease
   AVI video recording file sizes (http://www.libpng.org/)
 - The GNU Readline library for Hatari debugger command line editing
@@ -96,14 +97,11 @@ For compiling Hatari, you need a C compiler that supports the C99 standard
 see http://www.cmake.org/ for details.
 
 CMake can generate makefiles for various flavours of "Make" (like GNU-Make)
-and various IDEs like Xcode on macOS. To run CMake, you've got to pass the
-path to the sources of Hatari as parameter, for example run the following if
-you are in the topmost directory of the Hatari source tree:
-	cmake .
+and various IDEs like Xcode on macOS. To run CMake, you have to pass the
+path to the sources of Hatari as parameter. For example, run the following
+command sequence to configure the build of Hatari in a separate build directory
+(assuming that the current working directory is the top of the source tree):
 
-If you're tracking Hatari version control, it's preferable to do
-the build in a separate build directory as above would overwrite
-the (non-CMake) Makefiles coming with Hatari:
 	mkdir -p build
 	cd build
 	cmake ..
@@ -116,10 +114,16 @@ For your convenience we also ship an old-fashioned configure script which can
 be used as a wrapper for running cmake. Type "./configure --help" to see the
 options of this script.
 
-Assuming that you've used the Makefile generator of CMake, and cmake finished
-the configuration successfully, you can compile Hatari by typing "make". If all
-works fine, you'll get the executable "hatari" in the src/ subdirectory of the
-build tree. You can then install the emulator by typing "make install".
+Once you have successfully configured the build settings, you can compile
+Hatari with:
+
+	cmake --build . -j $(getconf _NPROCESSORS_ONLN)
+
+If all works fine, you should get the executable "hatari" in the src/ sub-
+directory of the build tree. You can then either run the executable from
+there, or install the emulator system-wide by typing:
+
+	cmake --install .
 
 
  3.1) WinUAE and "old" UAE CPU cores
@@ -147,24 +151,14 @@ Hatari can use the optional capsimage library to access IPF and CTR
 files. Those files are created using the Kryoflux board and allow to
 record MFM exact copies of original games, including the protection.
 
-Version 4.2 of the library allows to access IPF files, while the more recent
-version 5.1 fixes some bugs, as well as adding support for CTR files.
-
-Hatari defaults to version 5.1, but you can also use the older 4.2 version
-if 5.1 is not available for your OS. You can change this by modifying
-"SET(CAPSIMAGE_VERSION 5)" into cmake/FindCapsImage.cmake
+Hatari supports version 5.1 of the library (previous support for older
+version 4.2 was removed as it is not used anymore)
 
 Refer to http://softpres.org/download and get the corresponding file
 from the "User Distribution" section that matches your OS.
 
-For version 4.2, you should have the following files in your include path :
-/usr/local/include/caps/
-	capsimage.h
-	fdc.h
-	form.h
-
 For version 5.1, you should have the following files in your include path :
-/usr/local/include/caps5/
+/usr/local/include/caps/
 	CapsAPI.h
 	CapsFDC.h
 	CapsForm.h
@@ -175,7 +169,7 @@ For version 5.1, you should have the following files in your include path :
 	CommonTypes.h
 
 You should also copy the libcapsimage.so* files in your library path,
-for example in /usr/local/lib/caps/ or /usr/local/lib/caps5/
+for example in /usr/local/lib/caps/
 
 
  3.3) Notes for Linux distribution packagers
@@ -190,7 +184,7 @@ If Hatari package will have two application menu entries for Hatari,
 one for the Python UI embedding Hatari, and another one for the plain
 SDL version, the latter could open also a terminal window for Hatari
 command line debugger and its console messages:
-x-terminal-emulator -T "Hatari debug window, invoke debugger with AltGr+Pause" -e hatari
+x-terminal-emulator -T "Hatari debugger, invoke with AltGr+Pause" -e hatari
 
 tools/hatari-tos-register.sh is a minimal example of Linux init script
 registering Hatari as a (binfmt_misc) handler for TOS binaries.
@@ -224,10 +218,6 @@ To get CMake readline detection and linking working on them,
 you need to give these as extra arguments to the "cmake" command:
    -DCMAKE_C_FLAGS=-lncurses -DCMAKE_EXE_LINKER_FLAGS=-lncurses
 
-They also have too old Python/PyGtk version for the python based
-Hatari scripts.  Here are patches for Hatari v1.5/v1.6 Python UI:
-http://listengine.tuxfamily.org/lists.tuxfamily.org/hatari-devel/2012/01/msg00008.html
-
 
  4) Running Hatari
  -----------------
@@ -248,6 +238,25 @@ doc/manual.html. Here are just some hints for the impatient people:
 * While the emulator is running, you can open the configuration menu
   by pressing F12, the F11 key will toggle fullscreen/windowed mode.
   Pressing ALTGR-q will quit the emulator.
+
+
+ 4.1) Known Windows (SDL) issues
+
+On Windows, Hatari console output doesn't go to console like on other
+platforms.
+
+This is because Windows SDL v1 library redirects all console output
+(including help!) to stdout.txt and stderr.txt files (by default), and
+SDL v2 library discards all that output.
+
+To see Hatari help/warning/trace output, and to interact with Hatari
+debugger, there are two options:
+- Run Hatari with "-W" option, or
+- Compile Hatari with "-mconsole" option (as last --linker flag) to
+  build Hatari for the Windows console subsystem
+
+Because these cause separate console output window to be opened (in
+addition to the Hatari window), they are not enabled by default. 
 
 
  5) Hatari tools and their run-time dependencies
@@ -285,8 +294,11 @@ Their main run-time dependencies are:
   - gui-sdl/ -- builtin SDL v1 / v2 GUI for Hatari
   - gui-win/ -- MS Windows console code + icon
 * tests/ -- shell/python scripts & programs for testing emulator functionality
+  - keymap/ -- programs showing keycodes to use in Hatari keymap files
+  - natfeats/ -- test and example Atari code for using Hatari features
+  - etc.
 * tools/ -- shell/python scripts & programs useful with Hatari
-  - debugger/ -- debug symbol conversion scripts & profile data post-processing tools
+  - debugger/ -- debug symbol conversion scripts & profile data tools
   - hconsole/ -- out-of-process Hatari control / automation tool
   - hmsa/ -- floppy image format conversion tool
 

@@ -14,7 +14,7 @@ set(SOURCES
 # Disk image code is shared with the hmsa tool, so we put it into a library:
 add_library(Floppy createBlankImage.c dim.c msa.c st.c zip.c)
 
-# When building for macOS, define specific sources for gui and ressources
+# When building for macOS, define specific sources for gui and resources
 if(ENABLE_OSX_BUNDLE)
 	set(GUIOSX_SOURCES
 	    gui-osx/AlertHooks.m gui-osx/PrefsController.m gui-osx/Shared.m
@@ -33,10 +33,13 @@ endif()
 
 # When building for Windows, define specific sources for gui and resources
 # and set the subsystem of the resulting .exe to "windows GUI" instead of "console"
+# Recent mingw version sets _FORTIFY_SOURCE, which requires to link with lib ssp.
+# We use "--as-needed" to keep compatibility with older mingw that don't require lib ssp
 if(WIN32)
 	set(GUIWIN_SOURCES gui-win/opencon.c)
 	set(GUIWIN_RES gui-win/hatari-winicon.rc)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mwindows")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--as-needed -lssp")
 endif(WIN32)
 
 if(ENABLE_WINUAE_CPU)

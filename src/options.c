@@ -11,7 +11,7 @@
   - Add the option information to HatariOptions[]
   - Add required actions for that ID to switch in Opt_ParseParameters()
 */
-const char Options_fileid[] = "Hatari options.c : " __DATE__ " " __TIME__;
+const char Options_fileid[] = "Hatari options.c";
 
 #include <ctype.h>
 #include <stdio.h>
@@ -101,6 +101,7 @@ enum {
 	OPT_AVI_PNG_LEVEL,
 	OPT_AVIRECORD_FPS,
 	OPT_AVIRECORD_FILE,
+	OPT_SCRSHOT_DIR,
 	OPT_JOYSTICK,		/* device options */
 	OPT_JOYSTICK0,
 	OPT_JOYSTICK1,
@@ -309,6 +310,8 @@ static const opt_t HatariOptions[] = {
 	  "<x>", "Force AVI frame rate (x = 50/60/71/...)" },
 	{ OPT_AVIRECORD_FILE, NULL, "--avi-file",
 	  "<file>", "Use <file> to record AVI" },
+	{ OPT_SCRSHOT_DIR, NULL, "--screenshot-dir",
+	  "<dir>", "Save screenshots in the directory <dir>" },
 
 	{ OPT_HEADER, NULL, NULL, NULL, "Devices" },
 	{ OPT_JOYSTICK,  "-j", "--joystick",
@@ -399,7 +402,7 @@ static const opt_t HatariOptions[] = {
 	  "<x>", "ST RAM size (x = size in MiB from 0 to 14, 0 = 512KiB ; else size in KiB)" },
 #if ENABLE_WINUAE_CPU
 	{ OPT_TT_RAM,   NULL, "--ttram",
-	  "<x>", "TT RAM size (x = size in MiB from 0 to 256)" },
+	  "<x>", "TT RAM size (x = size in MiB from 0 to 512)" },
 #endif
 	{ OPT_MEMSTATE,   NULL, "--memstate",
 	  "<file>", "Load memory snap-shot <file>" },
@@ -456,7 +459,7 @@ static const opt_t HatariOptions[] = {
 	{ OPT_SOUND,   NULL, "--sound",
 	  "<x>", "Sound frequency (x=off/6000-50066, off=fastest)" },
 	{ OPT_SOUNDBUFFERSIZE,   NULL, "--sound-buffer-size",
-	  "<x>", "Sound buffer size in ms (x=0/10-100, 0=default)" },
+	  "<x>", "Sound buffer size in ms (x=0/10-100, 0=SDL default)" },
 	{ OPT_SOUNDSYNC,   NULL, "--sound-sync",
 	  "<bool>", "Sound synchronized emulation (on|off, off=default)" },
 	{ OPT_YM_MIXING,   NULL, "--ym-mixing",
@@ -1373,6 +1376,11 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 					argv[i], sizeof(ConfigureParams.Video.AviRecordFile), NULL);
 			break;
 
+		case OPT_SCRSHOT_DIR:
+			i += 1;
+			Paths_SetScreenShotDir(argv[i]);
+			break;
+
 			/* VDI options */
 		case OPT_VDI:
 			ok = Opt_Bool(argv[++i], OPT_VDI, &ConfigureParams.Screen.bUseExtVdiResolutions);
@@ -1658,7 +1666,7 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 		case OPT_ACSIHDIMAGE:
 			i += 1;
 			str = argv[i];
-			if (strlen(str) > 2 && isdigit(str[0]) && str[1] == '=')
+			if (strlen(str) > 2 && isdigit((unsigned char)str[0]) && str[1] == '=')
 			{
 				drive = str[0] - '0';
 				if (drive < 0 || drive >= MAX_ACSI_DEVS)
@@ -1681,7 +1689,7 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 		case OPT_SCSIHDIMAGE:
 			i += 1;
 			str = argv[i];
-			if (strlen(str) > 2 && isdigit(str[0]) && str[1] == '=')
+			if (strlen(str) > 2 && isdigit((unsigned char)str[0]) && str[1] == '=')
 			{
 				drive = str[0] - '0';
 				if (drive < 0 || drive >= MAX_SCSI_DEVS)
@@ -1726,7 +1734,7 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 		case OPT_IDEBYTESWAP:
 			i += 1;
 			str = argv[i];
-			if (strlen(str) > 2 && isdigit(str[0]) && str[1] == '=')
+			if (strlen(str) > 2 && isdigit((unsigned char)str[0]) && str[1] == '=')
 			{
 				drive = str[0] - '0';
 				if (drive < 0 || drive > 1)
@@ -1915,7 +1923,7 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 			{
 				ConfigureParams.System.nMachineType = MACHINE_MEGA_STE;
 				ConfigureParams.System.nCpuLevel = 0;
-				Configuration_ChangeCpuFreq ( 16 );
+				Configuration_ChangeCpuFreq ( 8 );
 			}
 			else if (strcasecmp(argv[i], "tt") == 0)
 			{
@@ -2219,7 +2227,7 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 
 		case OPT_PARSE:
 			i += 1;
-			ok = DebugUI_SetParseFile(argv[i]);
+			ok = DebugUI_AddParseFile(argv[i]);
 			break;
 
 		case OPT_SAVECONFIG:

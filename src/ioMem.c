@@ -28,7 +28,7 @@
   Also note the 'mirror' (or shadow) registers of the PSG - this is used by most
   games.
 */
-const char IoMem_fileid[] = "Hatari ioMem.c : " __DATE__ " " __TIME__;
+const char IoMem_fileid[] = "Hatari ioMem.c";
 
 #include "main.h"
 #include "configuration.h"
@@ -791,6 +791,27 @@ void REGPARAM3 IoMem_lput(uaecptr addr, uae_u32 val)
 	{
 		M68000_BusError(IoAccessFullAddress, BUS_ERROR_WRITE, BUS_ERROR_SIZE_LONG, BUS_ERROR_ACCESS_DATA, val);
 	}
+}
+
+
+/*-------------------------------------------------------------------------*/
+/**
+ * Check if an address inside the IO mem region would return a bus error in case of a read/write access
+ * We only check if it would give a bus error on read access, as in our case it would give
+ * a bus error too in case of a write
+ */
+bool	IoMem_CheckBusError ( Uint32 addr )
+{
+	addr &= 0xffff;
+
+	if ( addr < 0x8000 )
+		return true;
+
+	if ( ( pInterceptReadTable[ addr - 0x8000 ] == IoMem_BusErrorOddReadAccess )
+	  || ( pInterceptReadTable[ addr - 0x8000 ] == IoMem_BusErrorEvenReadAccess ) )
+		return true;
+
+	return false;
 }
 
 

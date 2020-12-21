@@ -33,10 +33,8 @@ function (check_large_file)
 	check_type_size("off_t" SIZEOF_OFF_T )
 
 	if ( SIZEOF_OFF_T GREATER 7 )
-		message ( "   -> Size of off_t=${SIZEOF_OFF_T}, Large File Support is available" )
 		set ( HATARI_HAVE_LFS 1 CACHE INTERNAL "Large file Support" )
 	else()
-		message ( "   -> Size of off_t=${SIZEOF_OFF_T}, Large File Support is not available" )
 		set ( HATARI_HAVE_LFS 0 CACHE INTERNAL "Large file Support" )
 	endif()
 endfunction (check_large_file)
@@ -79,6 +77,13 @@ if(ASAN_AVAILABLE)
 	set(ENABLE_ASAN 0
 	    CACHE BOOL "Enable GCC/LLVM run-time stack/pointer debugging (~2x slowdown)")
 endif(ASAN_AVAILABLE)
+
+find_program(GZIP gzip)
+if(UNIX AND GZIP)
+	set(ENABLE_MAN_PAGES 1 CACHE BOOL "Built and install man pages")
+else()
+	set(ENABLE_MAN_PAGES 0 CACHE BOOL "Built and install man pages")
+endif()
 
 if(APPLE)
 	set(ENABLE_OSX_BUNDLE 1
@@ -406,9 +411,9 @@ else()
 endif(PortMidi_FOUND)
 
 if(CapsImage_FOUND)
-  message( "  - capsimage :\tv${CAPSIMAGE_VERSION} found, allow to use .IPF, .RAW and .CTR disk images" )
+  message( "  - capsimage :\tv5 found, allow to use .IPF, .RAW and .CTR disk images" )
 else()
-  message( "  - capsimage :\tv${CAPSIMAGE_VERSION} not found, install it to use .IPF, .RAW and .CTR disk images" )
+  message( "  - capsimage :\tv5 not found, install it to use .IPF, .RAW and .CTR disk images" )
 endif(CapsImage_FOUND)
 
 if(Udev_FOUND)
@@ -421,15 +426,17 @@ else()
   endif()
 endif(Udev_FOUND)
 
+if (HATARI_HAVE_LFS)
+	message("  - LFS :\tLarge File Support is available (size of off_t = ${SIZEOF_OFF_T}),")
+	message("         \tAVI recording and HD image files can be bigger than 2 GB")
+else()
+	message("  - LFS :\tLarge File Support is NOT available (size of off_t = ${SIZEOF_OFF_T}),")
+	message("         \tAVI recording and HD image files will be limited to 2 GB")
+endif()
+
 if(NOT HAVE_SYS_TIMES_H)
   message("\n  Note: times() function is missing (sys/times.h is not available)")
   message("        ==> using inaccurate SDL_GetTicks() instead")
 endif()
-
-if ( NOT HATARI_HAVE_LFS )
-  message("\n  Note: Large File Support (64 bit file offset) is not available")
-  message("        ==> AVI recording will be limited to 2 GB")
-endif()
-
 
 message( "" )

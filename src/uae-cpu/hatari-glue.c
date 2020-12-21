@@ -7,7 +7,7 @@
   This file contains some code to glue the UAE CPU core to the rest of the
   emulator and Hatari's "illegal" opcodes.
 */
-const char HatariGlue_fileid[] = "Hatari hatari-glue.c : " __DATE__ " " __TIME__;
+const char HatariGlue_fileid[] = "Hatari hatari-glue.c";
 
 
 #include <stdio.h>
@@ -53,7 +53,7 @@ void customreset(void)
 	/* Reset the IKBD */
 	IKBD_Reset ( false );
 
-	/* Reseting the GLUE video chip should also set freq/res register to 0 */
+	/* Resetting the GLUE video chip should also set freq/res register to 0 */
 	Video_Reset_Glue ();
 
 	/* Reset the YM2149 (stop any sound) */

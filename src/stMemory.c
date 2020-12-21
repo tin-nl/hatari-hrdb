@@ -6,7 +6,7 @@
 
   ST Memory access functions.
 */
-const char STMemory_fileid[] = "Hatari stMemory.c : " __DATE__ " " __TIME__;
+const char STMemory_fileid[] = "Hatari stMemory.c";
 
 #include "stMemory.h"
 #include "configuration.h"
@@ -52,6 +52,12 @@ static int	STMemory_MMU_Size_TT ( Uint8 MMU_conf );
 
 static Uint32	STMemory_MMU_Translate_Addr_STF ( Uint32 addr_logical , int RAM_Bank_Size , int MMU_Bank_Size );
 static Uint32	STMemory_MMU_Translate_Addr_STE ( Uint32 addr_logical , int RAM_Bank_Size , int MMU_Bank_Size );
+
+
+#define	DMA_READ_WORD_BUS_ERR	0x0000		/* This value is returned when reading a word using DMA (blitter, sound) */
+						/* in a region that would cause a bus error */
+						/* [NP] FIXME : for now we return a constant, but it should depend on the bus activity */
+#define	DMA_READ_BYTE_BUS_ERR	0x00
 
 
 
@@ -511,14 +517,27 @@ bool	STMemory_CheckAreaType ( Uint32 addr , int size , int mem_type )
 
 
 /**
- * Check if an address points to a memory region that causes bus error
+ * Check if an address access would cause a bus error (read or write)
  * This is used for blitter and other DMA chips that should not cause
- * a bus error when accessing such regions (on the contrary of the CPU)
- * Returns true if region gives bus error
+ * a bus error when accessing directly such regions (on the contrary of the CPU)
+ * Bus error can come from :
+ *  - an access to a bus error region
+ *  - an access to a part of the IO region that cause a bus error
+ * Returns true if address would give a bus error
  */
-bool	STMemory_CheckRegionBusError ( Uint32 addr )
+bool	STMemory_CheckAddrBusError ( Uint32 addr )
 {
-	return memory_region_bus_error ( addr );
+	/* Check if it's a whole "bus error" region */
+	if ( memory_region_bus_error ( addr ) )
+		return true;
+
+	/* In case of IO region, bus error can happen at various addresses, depending on the machine type */
+	if ( memory_region_iomem ( addr ) && IoMem_CheckBusError ( addr ) )
+		return true;
+
+	/* TODO : in case of the Falcon, we should also check IDE region 0xF0xxxx for possible bus error */
+
+	return false;
 }
 
 
@@ -664,6 +683,59 @@ Uint16	STMemory_ReadWord ( Uint32 addr )
 Uint8	STMemory_ReadByte ( Uint32 addr )
 {
 	return (Uint8)STMemory_Read ( addr , 1 );
+}
+
+
+
+/**
+ * Access memory when using DMA
+ * Contrary to the CPU, when DMA is used there should be no bus error
+ */
+Uint16	STMemory_DMA_ReadWord ( Uint32 addr )
+{
+	Uint16 value;
+
+	/* When reading from a bus error region, just return a constant */
+	if ( STMemory_CheckAddrBusError ( addr ) )
+		value = DMA_READ_WORD_BUS_ERR;
+	else
+		value = (Uint16)get_word ( addr );
+//fprintf ( stderr , "readw %x %x %x\n" , addr , value , STMemory_CheckAddrBusError(addr) );
+	return value;
+}
+
+
+void	STMemory_DMA_WriteWord ( Uint32 addr , Uint16 value )
+{
+	/* Call put_word only if the address doesn't point to a bus error region */
+	/* (also see SysMem_wput for addr < 0x8) */
+	if ( STMemory_CheckAddrBusError ( addr ) == false )
+		put_word ( addr , (Uint32)(value) );
+//fprintf ( stderr , "writew %x %x %x\n" , addr , value , STMemory_CheckAddrBusError(addr) );
+}
+
+
+Uint8	STMemory_DMA_ReadByte ( Uint32 addr )
+{
+	Uint8 value;
+
+	/* When reading from a bus error region, just return a constant */
+	if ( STMemory_CheckAddrBusError ( addr ) )
+		value = DMA_READ_BYTE_BUS_ERR;
+	else
+		value = (Uint8)get_byte ( addr );
+//fprintf ( stderr , "readb %x %x %x\n" , addr , value , STMemory_CheckAddrBusError(addr) );
+	return value;
+}
+
+
+void	STMemory_DMA_WriteByte ( Uint32 addr , Uint8 value )
+{
+	/* Call put_word only if the address doesn't point to a bus error region */
+	/* (also see SysMem_wput for addr < 0x8) */
+	if ( STMemory_CheckAddrBusError ( addr ) == false )
+		put_byte ( addr , (Uint32)(value) );
+//fprintf ( stderr , "writeb %x %x %x\n" , addr , value , STMemory_CheckAddrBusError(addr) );
 }
 
 

@@ -26,6 +26,10 @@ autostart/
   Allows testing whether problems in autostarted programs are due to
   TOS starting them too fast for all TOS facilities to be present
 
+blitter/
+- "make test" tests for different blitter combinations of xcount
+  and nfsr
+
 buserror/
 - "make test" tests for IO memory addresses which cause bus errors
   on real machines
@@ -38,7 +42,7 @@ cycles/
 
 debugger/
 - "make test" test code & data for Hatari debugger.
-  test-scripting.sh script for manual testing of debugger scripting
+  test-scripting.sh is script for manual testing of debugger scripting
 
 gemdos/
 - "make test" test code for GEMDOS APIs used by GEMDOS HD emulation
@@ -51,14 +55,19 @@ natfeats/
 - "make test" test for Native Features emulator interface, and
    example code for different compilers / assemblers on how to use it
 
+screen/
+- "make test" tests for a fullscreen demo
+
 serial/
 - "make test" tests for Hatari serial interfaces
 
 tosboot/
-- tester for automatically running all (specified) TOS versions with
-  relevant Hatari configurations to afterwards verify from produced
-  screenshots that they they all booted fine.  And a script that
-  compares the screenshots against earlier reference screenshots
+- Tester for automatically running all (specified) TOS versions with
+  relevant Hatari configurations and for checking basic device and
+  GEMDOS functionality. From screenshots saved at end of each test,
+  one can manually verify that they all really booted up fine. There's
+  also a script for comparing the screenshots against earlier
+  reference screenshots
 
 xbios/
 - "make test" tests for Hatari --bios-intercept facilities

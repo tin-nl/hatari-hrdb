@@ -16,7 +16,7 @@
   reduce redundancy and the function 'MemorySnapShot_Store' decides if it
   should save or restore the data.
 */
-const char MemorySnapShot_fileid[] = "Hatari memorySnapShot.c : " __DATE__ " " __TIME__;
+const char MemorySnapShot_fileid[] = "Hatari memorySnapShot.c";
 
 #include <SDL_types.h>
 #include <errno.h>
@@ -222,7 +222,7 @@ static bool MemorySnapShot_OpenFile(const char *pszFileName, bool bSave, bool bC
 			Log_AlertDlg(LOG_ERROR,
 				     "Unable to restore Hatari memory state.\n"
 				     "Given state file is compatible only with\n"
-				     "Hatari version " VERSION_STRING ".");
+				     "Hatari version %s", VersionString);
 			bCaptureError = true;
 			return false;
 		}

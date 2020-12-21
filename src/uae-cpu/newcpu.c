@@ -137,7 +137,7 @@
 /* 2015/02/11	[NP]	Replace BusErrorPC by regs.instruction_pc, to get similar code to WinUAE's cpu	*/
 
 
-const char NewCpu_fileid[] = "Hatari newcpu.c : " __DATE__ " " __TIME__;
+const char NewCpu_fileid[] = "Hatari newcpu.c";
 
 #include "sysdeps.h"
 #include "hatari-glue.h"
@@ -164,12 +164,6 @@ const char NewCpu_fileid[] = "Hatari newcpu.c : " __DATE__ " " __TIME__;
 #include "debugcpu.h"
 #include "68kDisass.h"
 #include "stMemory.h"
-
-#ifdef HAVE_CAPSIMAGE
-#if CAPSIMAGE_VERSION == 5
-#include <caps5/CapsLibAll.h>
-#endif
-#endif
 
 //#define DEBUG_PREFETCH
 
@@ -201,6 +195,8 @@ cpuop_func *cpufunctbl[65536];
 
 int OpcodeFamily;
 int BusCyclePenalty = 0;
+
+bool cpu_bus_rmw = false;
 
 #define COUNT_INSTRS 0
 
