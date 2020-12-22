@@ -304,6 +304,13 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         syms.AddComplete(); // cache the address map lookup
         m_pTargetModel->SetSymbolTable(syms, cmd.m_uid);
     }
+    else if (type == "exmask")
+    {
+        std::string maskStr = splitResp.Split(' ');
+        uint32_t mask;
+        if (!StringParsers::ParseHexString(maskStr.c_str(), mask))
+            return;
+    }
 }
 
 void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)

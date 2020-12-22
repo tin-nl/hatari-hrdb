@@ -309,7 +309,6 @@ void MainWindow::PopulateRegisters()
         Disassembler::print(m_disasm.lines[0].inst, m_disasm.lines[0].address, ref);
     ref << "     ;" << FindSymbol(regs.m_value[Registers::PC] & 0xffffff);
     ref << "<br>";
-
     ref << DispReg16(Registers::SR, m_prevRegs, regs) << "   ";
 	ref << DispSR(m_prevRegs, regs, 15, "T");
 	ref << DispSR(m_prevRegs, regs, 14, "T");
@@ -325,6 +324,9 @@ void MainWindow::PopulateRegisters()
 	ref << DispSR(m_prevRegs, regs, 2, "Z");
 	ref << DispSR(m_prevRegs, regs, 1, "V");
 	ref << DispSR(m_prevRegs, regs, 0, "C");
+    if (regs.m_value[Registers::EX] != 0)
+        ref << "<br>" << "EXCEPTION: " << regs.m_value[Registers::EX];
+
     ref << "<br><br>";
     ref << DispReg32(Registers::D0, m_prevRegs, regs) << " " << DispReg32(Registers::A0, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A0] & 0xffffff) << "<br>";
     ref << DispReg32(Registers::D1, m_prevRegs, regs) << " " << DispReg32(Registers::A1, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A1] & 0xffffff) << "<br>";

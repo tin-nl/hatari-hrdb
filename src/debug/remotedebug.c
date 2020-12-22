@@ -36,6 +36,7 @@
 #include "stMemory.h"
 #include "breakcond.h"
 #include "symbols.h"
+#include "log.h"
 
 #define REMOTE_DEBUG_PORT          (56001)
 #define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
@@ -57,7 +58,7 @@ static void send_str(int fd, const char* pStr)
 static void send_hex(int fd, uint32_t val)
 {
 	char str[9];
-	sprintf(str, "%08X", val);
+	sprintf(str, "%X", val);
 	send(fd, str, strlen(str), 0);
 }
 
@@ -327,6 +328,34 @@ static int RemoteDebug_symlist(int nArgc, char *psArgs[], int fd)
 }
 
 // -----------------------------------------------------------------------------
+/* "exmask" -- Read or set exception mask */
+static int RemoteDebug_exmask(int nArgc, char *psArgs[], int fd)
+{
+	int arg = 1;
+	Uint32 mask;
+	int offset;
+	const char* err_str;
+
+	printf("args: %d\n", nArgc);
+
+	if (nArgc == 1)
+	{
+		send_str(fd, "OK ");
+		send_hex(fd, ExceptionDebugMask);
+		return 0;
+	}
+
+	// Assumed to set the mask
+	err_str = Eval_Expression(psArgs[arg], &mask, &offset, false);
+	if (err_str)
+		return 1;
+	printf("mask to %x\n", mask);
+	ExceptionDebugMask = mask;
+	send_str(fd, "OK");
+	return 0;
+}
+
+// -----------------------------------------------------------------------------
 /* DebugUI command structure */
 typedef struct
 {
@@ -347,6 +376,7 @@ static const rdbcommand_t remoteDebugCommandList[] = {
 	{ RemoteDebug_bplist,	"bplist"	, true		},
 	{ RemoteDebug_bpdel,	"bpdel"		, true		},
 	{ RemoteDebug_symlist,	"symlist"	, true		},
+	{ RemoteDebug_exmask,	"exmask"	, true		},
 
 	/* Terminator */
 	{ NULL, NULL }
