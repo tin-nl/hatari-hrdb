@@ -387,6 +387,7 @@ void MainWindow::updateButtonEnable()
 
     m_pStepIntoButton->setEnabled(isConnected && !isRunning);
     m_pStepOverButton->setEnabled(isConnected && !isRunning);
+    m_pRunToButton->setEnabled(isConnected && !isRunning);
 }
 
 void MainWindow::menuConnect()
