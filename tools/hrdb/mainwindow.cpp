@@ -27,6 +27,10 @@ MainWindow::MainWindow(QWidget *parent)
     m_pStartStopButton = new QPushButton("Break", this);
     m_pStepIntoButton = new QPushButton("Step Into", this);
     m_pStepOverButton = new QPushButton("Step Over", this);
+    m_pRunToButton = new QPushButton("Run To:", this);
+    m_pRunToCombo = new QComboBox(this);
+    m_pRunToCombo->insertItem(0, "RTS");
+    m_pRunToCombo->insertItem(1, "RTE");
 
     // Register/status window
     m_pRegistersTextEdit = new QTextEdit("", this);
@@ -43,6 +47,10 @@ MainWindow::MainWindow(QWidget *parent)
     m_pMemoryViewWidget0 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 0);
     m_pMemoryViewWidget1 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 1);
 
+    // Set up menus
+    createActions();
+    createMenus();
+
     // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
     QVBoxLayout *vlayout = new QVBoxLayout;
     QHBoxLayout *hlayout = new QHBoxLayout;
@@ -53,6 +61,9 @@ MainWindow::MainWindow(QWidget *parent)
     hlayout->addWidget(m_pStartStopButton);
     hlayout->addWidget(m_pStepIntoButton);
     hlayout->addWidget(m_pStepOverButton);
+    hlayout->addWidget(m_pRunToButton);
+    hlayout->addWidget(m_pRunToCombo);
+
     pTopGroupBox->setLayout(hlayout);
 
     vlayout->addWidget(pTopGroupBox);
@@ -70,10 +81,6 @@ MainWindow::MainWindow(QWidget *parent)
     m_pMemoryViewWidget1->hide();
     m_pDisasmWidget1->hide();
 
-    // Set up menus
-    createActions();
-    createMenus();
-
 	// Listen for target changes
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &MainWindow::registersChangedSlot);
@@ -86,6 +93,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pStartStopButton, &QAbstractButton::clicked, this, &MainWindow::startStopClicked);
     connect(m_pStepIntoButton, &QAbstractButton::clicked, this, &MainWindow::singleStepClicked);
     connect(m_pStepOverButton, &QAbstractButton::clicked, this, &MainWindow::nextClicked);
+    connect(m_pRunToButton, &QAbstractButton::clicked, this, &MainWindow::runToClicked);
 
     // Wire up menu appearance
     connect(windowMenu, &QMenu::aboutToShow, this, &MainWindow::updateWindowMenu);
@@ -227,6 +235,20 @@ void MainWindow::nextClicked()
     {
         m_pDispatcher->SendCommandPacket("step");
     }
+}
+
+void MainWindow::runToClicked()
+{
+    if (m_pTargetModel->IsRunning())
+        return;
+
+    if (m_pRunToCombo->currentIndex() == 0)
+        m_pDispatcher->SetBreakpoint("(pc).w = $4e75 : once");
+    else if (m_pRunToCombo->currentIndex() == 1)
+        m_pDispatcher->SetBreakpoint("(pc).w = $4e73 : once");
+    else
+        return;
+    m_pDispatcher->SendCommandPacket("run");
 }
 
 // Network

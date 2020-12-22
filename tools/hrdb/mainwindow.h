@@ -16,6 +16,7 @@ class QLabel;
 class QTcpSocket;
 class QTextEdit;
 class QActionGroup;
+class QComboBox;
 
 class Dispatcher;
 class TargetModel;
@@ -31,7 +32,7 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-public slots:
+private slots:
     void connectChangedSlot();
 	void startStopChangedSlot();
     void registersChangedSlot(uint64_t commandId);
@@ -42,7 +43,7 @@ public slots:
     void startStopClicked();
     void singleStepClicked();
     void nextClicked();
-private slots:
+    void runToClicked();
     void updateWindowMenu();
     void menuConnect();
     void menuDisconnect();
@@ -67,7 +68,8 @@ private:
     QPushButton*	m_pStartStopButton;
     QPushButton*	m_pStepIntoButton;
     QPushButton*	m_pStepOverButton;
-
+    QPushButton*	m_pRunToButton;
+    QComboBox*      m_pRunToCombo;
 	QTextEdit*		m_pRegistersTextEdit;
     QWidget*        m_pRunningSquare;
 
