@@ -310,6 +310,10 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         uint32_t mask;
         if (!StringParsers::ParseHexString(maskStr.c_str(), mask))
             return;
+
+        ExceptionMask maskObj;
+        maskObj.m_mask = (uint16_t)mask;
+        m_pTargetModel->SetExceptionMask(maskObj);
     }
 }
 

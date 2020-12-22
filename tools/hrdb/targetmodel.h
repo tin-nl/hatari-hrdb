@@ -17,6 +17,7 @@
 #include "memory.h"
 #include "symboltable.h"
 #include "registers.h"
+#include "exceptionmask.h"
 
 class QTimer;
 
@@ -36,6 +37,7 @@ public:
     void SetMemory(MemorySlot slot, const Memory* pMem, uint64_t commandId);
     void SetBreakpoints(const Breakpoints& bps, uint64_t commandId);
     void SetSymbolTable(const SymbolTable& syms, uint64_t commandId);
+    void SetExceptionMask(const ExceptionMask& mask);
 
 	// NOTE: all these return copies to avoid data contention
     int IsConnected() const { return m_bConnected; }
@@ -69,6 +71,8 @@ signals:
 
     void breakpointsChangedSignal(uint64_t commandId);
     void symbolTableChangedSignal(uint64_t commandId);
+    void exceptionMaskChanged();
+
 private slots:
 
     // Called shortly after stop notification received
@@ -85,6 +89,8 @@ private:
     Breakpoints m_breakpoints;  // Current breakpoint list
 
     SymbolTable m_symbolTable;
+
+    ExceptionMask   m_exceptionMask;
 
     QTimer*     m_pTimer;
 };

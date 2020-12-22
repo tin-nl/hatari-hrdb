@@ -100,6 +100,12 @@ void TargetModel::SetSymbolTable(const SymbolTable& syms, uint64_t commandId)
     emit symbolTableChangedSignal(commandId);
 }
 
+void TargetModel::SetExceptionMask(const ExceptionMask &mask)
+{
+    m_exceptionMask = mask;
+    emit exceptionMaskChanged();
+}
+
 void TargetModel::delayedTimer()
 {
     m_pTimer->stop();

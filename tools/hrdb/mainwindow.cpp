@@ -11,6 +11,7 @@
 
 #include "disasmwidget.h"
 #include "memoryviewwidget.h"
+#include "exceptionmask.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -147,6 +148,7 @@ void MainWindow::startStopChangedSlot()
 		// TODO this is where all windows should put in requests for data
         m_pDispatcher->SendCommandPacket("regs");
         m_pDispatcher->SendCommandPacket("bplist");
+        m_pDispatcher->SendCommandPacket("exmask");
         m_pDispatcher->RequestMemory(MemorySlot::kMainPC, m_pTargetModel->GetPC(), 10);
 
         // Only re-request symbols if we didn't find any the first time
@@ -324,8 +326,10 @@ void MainWindow::PopulateRegisters()
 	ref << DispSR(m_prevRegs, regs, 2, "Z");
 	ref << DispSR(m_prevRegs, regs, 1, "V");
 	ref << DispSR(m_prevRegs, regs, 0, "C");
-    if (regs.m_value[Registers::EX] != 0)
-        ref << "<br>" << "EXCEPTION: " << regs.m_value[Registers::EX];
+
+    uint16_t ex = (uint16_t)regs.m_value[Registers::EX];
+    if (ex != 0)
+        ref << "<br>" << "EXCEPTION: " << ExceptionMask::GetName(ex);
 
     ref << "<br><br>";
     ref << DispReg32(Registers::D0, m_prevRegs, regs) << " " << DispReg32(Registers::A0, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A0] & 0xffffff) << "<br>";
