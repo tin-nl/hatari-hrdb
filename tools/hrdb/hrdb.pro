@@ -31,7 +31,8 @@ SOURCES += \
     stringsplitter.cpp \
     symboltable.cpp \
     symboltablemodel.cpp \
-    exceptionmask.cpp
+    exceptionmask.cpp \
+    exceptiondialog.cpp
 
 HEADERS += \
     disassembler.h \
@@ -51,7 +52,8 @@ HEADERS += \
     symboltable.h \
     registers.h \
     symboltablemodel.h \
-    exceptionmask.h
+    exceptionmask.h \
+    exceptiondialog.h
     
 RESOURCES     = hrdb.qrc    
 

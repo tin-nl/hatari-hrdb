@@ -8,10 +8,11 @@
 
 #include "dispatcher.h"
 #include "targetmodel.h"
+#include "exceptionmask.h"
 
 #include "disasmwidget.h"
 #include "memoryviewwidget.h"
-#include "exceptionmask.h"
+#include "exceptiondialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -47,6 +48,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_pDisasmWidget1 = new DisasmWidget(this, m_pTargetModel, m_pDispatcher, 1);
     m_pMemoryViewWidget0 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 0);
     m_pMemoryViewWidget1 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 1);
+
+    m_pExceptionDialog = new ExceptionDialog(this);
 
     // Set up menus
     createActions();
@@ -266,6 +269,12 @@ void MainWindow::Disconnect()
     tcpSocket->disconnectFromHost();
 }
 
+void MainWindow::ExceptionsDialog()
+{
+    m_pExceptionDialog->setModal(true);
+    m_pExceptionDialog->show();
+}
+
 QString DispReg16(int regIndex, const Registers& prevRegs, const Registers& regs)
 {
     const char* col = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]) ? "red" : "black";
@@ -448,6 +457,11 @@ void MainWindow::createActions()
     disconnectAct->setStatusTip(tr("Disconnect from Hatari"));
     connect(disconnectAct, &QAction::triggered, this, &MainWindow::Disconnect);
 
+    // Edit
+    exceptionsAct = new QAction(tr("&Exceptions..."), this);
+    exceptionsAct->setStatusTip(tr("Disconnect from Hatari"));
+    connect(exceptionsAct, &QAction::triggered, this, &MainWindow::ExceptionsDialog);
+
     // "Window"
     disasmWindowAct0 = new QAction(tr("&Disassembly 1"), this);
     disasmWindowAct0->setStatusTip(tr("Show the memory window"));
@@ -490,12 +504,8 @@ void MainWindow::createMenus()
     fileMenu->addAction(disconnectAct);
 
     editMenu = menuBar()->addMenu(tr("&Edit"));
-    //editMenu->addAction(undoAct);
-    //editMenu->addAction(redoAct);
     editMenu->addSeparator();
-    //editMenu->addAction(cutAct);
-    //editMenu->addAction(copyAct);
-    //editMenu->addAction(pasteAct);
+    editMenu->addAction(exceptionsAct);
     editMenu->addSeparator();
 
     windowMenu = menuBar()->addMenu(tr("&Window"));

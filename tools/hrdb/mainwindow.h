@@ -24,6 +24,8 @@ class TargetModel;
 class DisasmWidget;
 class MemoryViewWidget;
 
+class ExceptionDialog;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -58,6 +60,8 @@ private:
     void Connect();
     void Disconnect();
 
+    void ExceptionsDialog();
+
 	// Populaters
 	void PopulateRegisters();
     QString FindSymbol(uint32_t addr);
@@ -72,6 +76,9 @@ private:
     QComboBox*      m_pRunToCombo;
 	QTextEdit*		m_pRegistersTextEdit;
     QWidget*        m_pRunningSquare;
+
+    // Dialogs
+    ExceptionDialog*    m_pExceptionDialog;
 
     // Docking windows
     DisasmWidget*       m_pDisasmWidget0;
@@ -99,6 +106,8 @@ private:
 
     QAction *connectAct;
     QAction *disconnectAct;
+
+    QAction *exceptionsAct;
 
     QAction *disasmWindowAct0;
     QAction *disasmWindowAct1;
