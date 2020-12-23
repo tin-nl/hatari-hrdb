@@ -33,6 +33,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_pRunToCombo = new QComboBox(this);
     m_pRunToCombo->insertItem(0, "RTS");
     m_pRunToCombo->insertItem(1, "RTE");
+    m_pRunToCombo->insertItem(2, "Next VBL");
+    m_pRunToCombo->insertItem(3, "Next HBL");
 
     // Register/status window
     m_pRegistersTextEdit = new QTextEdit("", this);
@@ -249,9 +251,14 @@ void MainWindow::runToClicked()
         return;
 
     if (m_pRunToCombo->currentIndex() == 0)
-        m_pDispatcher->SetBreakpoint("(pc).w = $4e75 : once");
+        m_pDispatcher->SetBreakpoint("(pc).w = $4e75 : once");      // RTS
     else if (m_pRunToCombo->currentIndex() == 1)
-        m_pDispatcher->SetBreakpoint("(pc).w = $4e73 : once");
+        m_pDispatcher->SetBreakpoint("(pc).w = $4e73 : once");      // RTE
+    else if (m_pRunToCombo->currentIndex() == 2)
+        m_pDispatcher->SetBreakpoint("VBL ! VBL : once");        // VBL
+        //m_pDispatcher->SetBreakpoint("pc = ($70).l : once");        // VBL interrupt code
+    else if (m_pRunToCombo->currentIndex() == 3)
+        m_pDispatcher->SetBreakpoint("HBL ! HBL : once");        // VBL
     else
         return;
     m_pDispatcher->SendCommandPacket("run");
@@ -398,12 +405,19 @@ void MainWindow::updateButtonEnable()
     bool isConnected = m_pTargetModel->IsConnected();
     bool isRunning = m_pTargetModel->IsRunning();
 
+    // Buttons...
     m_pStartStopButton->setEnabled(isConnected);
     m_pStartStopButton->setText(isRunning ? "Break" : "Run");
 
     m_pStepIntoButton->setEnabled(isConnected && !isRunning);
     m_pStepOverButton->setEnabled(isConnected && !isRunning);
     m_pRunToButton->setEnabled(isConnected && !isRunning);
+
+    // Menu items...
+    connectAct->setEnabled(!isConnected);
+    disconnectAct->setEnabled(isConnected);
+
+    exceptionsAct->setEnabled(isConnected);
 }
 
 void MainWindow::menuConnect()
