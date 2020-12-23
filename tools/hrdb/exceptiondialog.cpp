@@ -11,16 +11,25 @@ ExceptionDialog::ExceptionDialog(QWidget *parent, TargetModel* pTargetModel, Dis
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher)
 {
+    this->setWindowTitle(tr("Set Enabled Exceptions"));
+
+    QPushButton* pOkButton = new QPushButton("&OK", this);
+    pOkButton->setDefault(true);
+    QPushButton* pCancelButton = new QPushButton("&Cancel", this);
+
+    QHBoxLayout* pHLayout = new QHBoxLayout(this);
+    pHLayout->addWidget(pOkButton);
+    pHLayout->addWidget(pCancelButton);
+    QWidget* pButtonContainer = new QWidget(this);
+    pButtonContainer->setLayout(pHLayout);
+
     QVBoxLayout* pLayout = new QVBoxLayout(this);
     for (int i = 0; i < ExceptionMask::kExceptionCount; ++i)
     {
         m_pCheckboxes[i] = new QCheckBox(ExceptionMask::GetName(i + 2), this);
         pLayout->addWidget(m_pCheckboxes[i]);
     }
-    QPushButton* pOkButton = new QPushButton("OK", this);
-    pLayout->addWidget(pOkButton);
-    QPushButton* pCancelButton = new QPushButton("Cancel", this);
-    pLayout->addWidget(pCancelButton);
+    pLayout->addWidget(pButtonContainer);
 
     connect(pOkButton, &QPushButton::clicked, this, &ExceptionDialog::okClicked);
 
