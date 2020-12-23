@@ -576,7 +576,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     int charWidth = fm.width("W");
     m_pTableView->horizontalHeader()->setMinimumSectionSize(12);
     m_pTableView->setColumnWidth(DisasmTableModel::kColSymbol, charWidth * 15);
-    m_pTableView->setColumnWidth(DisasmTableModel::kColAddress, charWidth * 9);      // Windows needs more
+    m_pTableView->setColumnWidth(DisasmTableModel::kColAddress, charWidth * 12);      // Mac needs most
     m_pTableView->setColumnWidth(DisasmTableModel::kColBreakpoint, charWidth * 4);
     m_pTableView->setColumnWidth(DisasmTableModel::kColDisasm, charWidth * 30);
     m_pTableView->setColumnWidth(DisasmTableModel::kColComments, 300);

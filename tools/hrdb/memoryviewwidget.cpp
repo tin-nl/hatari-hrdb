@@ -394,7 +394,7 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     int r;
     int charWidth = fm.maxWidth();
     m_pTableView->getContentsMargins(&l, nullptr, &r, nullptr);
-    m_pTableView->setColumnWidth(MemoryViewTableModel::kColAddress, l + r + charWidth * 9);
+    m_pTableView->setColumnWidth(MemoryViewTableModel::kColAddress, l + r + charWidth * 12);    // Mac needs most
     m_pTableView->setColumnWidth(MemoryViewTableModel::kColData,    l + r + charWidth * 16 * 3);
     m_pTableView->setColumnWidth(MemoryViewTableModel::kColAscii,   l + r + charWidth * (16 + 2));
 
