@@ -50,6 +50,7 @@ public:
     }
     const Breakpoints& GetBreakpoints() const { return m_breakpoints; }
     const SymbolTable& GetSymbolTable() const { return m_symbolTable; }
+    const ExceptionMask& GetExceptionMask() const { return m_exceptionMask; }
 
 public slots:
 

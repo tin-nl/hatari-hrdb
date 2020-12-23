@@ -42,9 +42,14 @@ static bool ParseDecChar(char c, uint8_t& result)
 bool StringParsers::ParseHexString(const char *pText, uint32_t& result)
 {
     result = 0;
+
+    // Pre-check to see if the first char is hex
+    uint8_t val;
+    if (!ParseHexChar(*pText, val))
+        return false;
+
     while (*pText != 0)
     {
-        uint8_t val;
         if (!ParseHexChar(*pText, val))
         {
             result = 0;

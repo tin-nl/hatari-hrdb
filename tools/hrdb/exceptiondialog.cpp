@@ -3,6 +3,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
+#include "targetmodel.h"
 #include "dispatcher.h"
 
 ExceptionDialog::ExceptionDialog(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher) :
@@ -18,15 +19,34 @@ ExceptionDialog::ExceptionDialog(QWidget *parent, TargetModel* pTargetModel, Dis
     }
     QPushButton* pOkButton = new QPushButton("OK", this);
     pLayout->addWidget(pOkButton);
-    //QPushButton* pCancelButton = new QPushButton("Cancel", this);
+    QPushButton* pCancelButton = new QPushButton("Cancel", this);
+    pLayout->addWidget(pCancelButton);
 
     connect(pOkButton, &QPushButton::clicked, this, &ExceptionDialog::okClicked);
+
+    connect(pOkButton, &QPushButton::clicked, this, &ExceptionDialog::accept);
+    connect(pCancelButton, &QPushButton::clicked, this, &ExceptionDialog::reject);
     this->setLayout(pLayout);
 }
 
 ExceptionDialog::~ExceptionDialog()
 {
 
+}
+
+void ExceptionDialog::showEvent(QShowEvent *event)
+{
+    const ExceptionMask& mask = m_pTargetModel->GetExceptionMask();
+    m_pCheckboxes[0]->setChecked(mask.Get(ExceptionMask::kBus));
+    m_pCheckboxes[1]->setChecked(mask.Get(ExceptionMask::kAddress));
+    m_pCheckboxes[2]->setChecked(mask.Get(ExceptionMask::kIllegal));
+    m_pCheckboxes[3]->setChecked(mask.Get(ExceptionMask::kZeroDiv));
+    m_pCheckboxes[4]->setChecked(mask.Get(ExceptionMask::kChk));
+    m_pCheckboxes[5]->setChecked(mask.Get(ExceptionMask::kTrapv));
+    m_pCheckboxes[6]->setChecked(mask.Get(ExceptionMask::kPrivilege));
+    m_pCheckboxes[7]->setChecked(mask.Get(ExceptionMask::kTrace));
+
+    QDialog::showEvent(event);
 }
 
 void ExceptionDialog::okClicked()
@@ -44,5 +64,7 @@ void ExceptionDialog::okClicked()
     if (m_pCheckboxes[7]->isChecked()) mask.Set(ExceptionMask::kTrace);
 
     // Send to target
+    // NOTE: sending this returns a response with the set exmask,
+    // so update in the target model is automatic.
     m_pDispatcher->SendCommandPacket(QString::asprintf("exmask %u", mask.m_mask).toStdString().c_str());
 }

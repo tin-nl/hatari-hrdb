@@ -329,6 +329,7 @@ static int RemoteDebug_symlist(int nArgc, char *psArgs[], int fd)
 
 // -----------------------------------------------------------------------------
 /* "exmask" -- Read or set exception mask */
+/* returns "OK <mask val>"" */
 static int RemoteDebug_exmask(int nArgc, char *psArgs[], int fd)
 {
 	int arg = 1;
@@ -336,22 +337,19 @@ static int RemoteDebug_exmask(int nArgc, char *psArgs[], int fd)
 	int offset;
 	const char* err_str;
 
-	printf("args: %d\n", nArgc);
-
-	if (nArgc == 1)
+	if (nArgc == 2)
 	{
-		send_str(fd, "OK ");
-		send_hex(fd, ExceptionDebugMask);
-		return 0;
+		// Assumed to set the mask
+		err_str = Eval_Expression(psArgs[arg], &mask, &offset, false);
+		if (err_str)
+			return 1;
+		ExceptionDebugMask = mask;
 	}
 
-	// Assumed to set the mask
-	err_str = Eval_Expression(psArgs[arg], &mask, &offset, false);
-	if (err_str)
-		return 1;
-	printf("mask to %x\n", mask);
-	ExceptionDebugMask = mask;
-	send_str(fd, "OK");
+	// Always respond with the mask value, so that setting comes back
+	// to the remote debugger
+	send_str(fd, "OK ");
+	send_hex(fd, ExceptionDebugMask);
 	return 0;
 }
 

@@ -32,6 +32,11 @@ public:
 
     ExceptionMask();
 
+    bool Get(Type exceptionType) const
+    {
+        return (m_mask & (1U << exceptionType)) != 0;
+    }
+
     void Set(Type exceptionType)
     {
         m_mask |= (1U << exceptionType);

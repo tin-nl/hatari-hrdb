@@ -15,6 +15,9 @@ public:
     ExceptionDialog(QWidget* parent, TargetModel* pTargetModel, Dispatcher* pDispatcher);
     virtual ~ExceptionDialog();
 
+protected:
+    void showEvent(QShowEvent *event);
+
 private slots:
     void okClicked();
 
