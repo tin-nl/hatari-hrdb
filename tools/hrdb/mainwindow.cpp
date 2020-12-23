@@ -152,6 +152,8 @@ void MainWindow::startStopChangedSlot()
 	{
         // STOPPED
 		// TODO this is where all windows should put in requests for data
+
+        // Do all the "essentials" straight away.
         m_pDispatcher->SendCommandPacket("regs");
         m_pDispatcher->SendCommandPacket("bplist");
         m_pDispatcher->SendCommandPacket("exmask");
@@ -322,11 +324,12 @@ void MainWindow::PopulateRegisters()
 
 	Registers regs = m_pTargetModel->GetRegs();
 
-    ref << "<font face=\"Courier\">";
+    ref << "<pre>";
+
     ref << DispReg32(Registers::PC, m_prevRegs, regs) << "   ";
     if (m_disasm.lines.size() > 0)
         Disassembler::print(m_disasm.lines[0].inst, m_disasm.lines[0].address, ref);
-    ref << "     ;" << FindSymbol(regs.m_value[Registers::PC] & 0xffffff);
+    ref << "     ;" << FindSymbol(GET_REG(regs, PC) & 0xffffff);
     ref << "<br>";
     ref << DispReg16(Registers::SR, m_prevRegs, regs) << "   ";
 	ref << DispSR(m_prevRegs, regs, 15, "T");
@@ -344,7 +347,7 @@ void MainWindow::PopulateRegisters()
 	ref << DispSR(m_prevRegs, regs, 1, "V");
 	ref << DispSR(m_prevRegs, regs, 0, "C");
 
-    uint16_t ex = (uint16_t)regs.m_value[Registers::EX];
+    uint16_t ex = (uint16_t)GET_REG(regs, EX);
     if (ex != 0)
         ref << "<br>" << "EXCEPTION: " << ExceptionMask::GetName(ex);
 
@@ -357,7 +360,10 @@ void MainWindow::PopulateRegisters()
     ref << DispReg32(Registers::D5, m_prevRegs, regs) << " " << DispReg32(Registers::A5, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A5] & 0xffffff) << "<br>";
     ref << DispReg32(Registers::D6, m_prevRegs, regs) << " " << DispReg32(Registers::A6, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A6] & 0xffffff) << "<br>";
     ref << DispReg32(Registers::D7, m_prevRegs, regs) << " " << DispReg32(Registers::A7, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A7] & 0xffffff) << "<br>";
-    ref << "</font>";
+    ref << "<br>";
+    ref << QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(regs, VBL), GET_REG(regs, FrameCycles)) << "<br>";
+    ref << QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(regs, HBL), GET_REG(regs, LineCycles)) << "<br>";
+    ref << "</pre>";
     m_pRegistersTextEdit->setHtml(regsText);
 }
 

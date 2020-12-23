@@ -214,7 +214,6 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         Registers regs;
 		while (true)
         {
-
             std::string reg = splitResp.Split(':');
 			if (reg.size() == 0)
 				break;
@@ -224,6 +223,8 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
                 return;
 
 			// Write this value into register structure
+            // NOTE: this is tolerant to not matching the name
+            // since we use "Vars"
 			int reg_id = RegNameToEnum(reg.c_str());
 			if (reg_id != Registers::REG_COUNT)
 				regs.m_value[reg_id] = value;

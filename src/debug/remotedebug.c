@@ -37,6 +37,7 @@
 #include "breakcond.h"
 #include "symbols.h"
 #include "log.h"
+#include "vars.h"
 
 #define REMOTE_DEBUG_PORT          (56001)
 #define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
@@ -155,21 +156,29 @@ static int RemoteDebug_Run(int nArgc, char *psArgs[], int fd)
 
 /**
  * Dump register contents. 
+ * This also includes Hatari variables, which we treat as a subset of regs.
+ * 
  * Input: "regs\n"
  * 
  * Output: "regs <reg:value>*N\n"
  */
 static int RemoteDebug_Regs(int nArgc, char *psArgs[], int fd)
 {
+	int regIdx;
+	Uint32 varIndex;
+	varIndex = 0;
+	const var_addr_t* var;
+
 	static const int regIds[] = {
 		REG_D0, REG_D1, REG_D2, REG_D3, REG_D4, REG_D5, REG_D6, REG_D7,
 		REG_A0, REG_A1, REG_A2, REG_A3, REG_A4, REG_A5, REG_A6, REG_A7 };
 	static const char *regNames[] = {
 		"D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7",
 		"A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7" };
-	int regIdx;
 
 	send_str(fd, "OK ");
+
+	// Normal regs
 	for (regIdx = 0; regIdx < ARRAY_SIZE(regIds); ++regIdx)
 		send_key_value(fd, regNames[regIdx], Regs[regIds[regIdx]]);
 		
@@ -179,6 +188,16 @@ static int RemoteDebug_Regs(int nArgc, char *psArgs[], int fd)
 	send_key_value(fd, "ISP", regs.isp);
 	send_key_value(fd, "SR", M68000_GetSR());
 	send_key_value(fd, "EX", regs.exception);
+
+	// Variables
+	while (Vars_QueryVariable(varIndex, &var))
+	{
+		Uint32 value;
+		value = Vars_GetValue(var);
+		send_key_value(fd, var->name, value);
+		++varIndex;
+	}
+
 	return 0;
 }
 

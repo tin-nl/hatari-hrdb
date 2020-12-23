@@ -4,11 +4,23 @@
 #include <stdint.h>
 #include <assert.h>
 
+#define GET_REG(regs, index)    regs.Get(Registers::index)
+
+/*
+ * As well as registers, this contains many useful Hatari variables,
+ * like cycle counts, HBL/VBL
+ */
 class Registers
 {
 public:
     Registers();
 
+    // Useful accessors
+    uint32_t Get(uint32_t reg) const
+    {
+        assert(reg < REG_COUNT);
+        return m_value[reg];
+    }
     uint32_t GetDReg(uint32_t index) const
     {
         assert(index <= 7);
@@ -42,6 +54,31 @@ public:
         USP,
         ISP,
         EX,			// Exception number
+
+        // Variables
+        AesOpcode,
+        Basepage,
+        BiosOpcode,
+        BSS,
+        CpuInstr,
+        CpuOpcodeType,
+        CycleCounter,
+        DATA,
+        DspInstr,
+        DspOpcodeType,
+        FrameCycles,
+        GemdosOpcode,
+        HBL,
+        LineAOpcode,
+        LineCycles,
+        LineFOpcode,
+        NextPC,
+        OsCallParam,
+        TEXT,
+        TEXTEnd,
+        VBL,
+        VdiOpcode,
+        XbiosOpcode,
         REG_COUNT
     };
     uint32_t	m_value[REG_COUNT];

@@ -292,3 +292,14 @@ int Vars_List(int nArgc, char *psArgv[])
 	}
 	return DEBUGGER_CMDDONE;
 }
+
+bool Vars_QueryVariable(Uint32 position, const var_addr_t **result)
+{
+	*result = NULL;
+	if (position >= ARRAY_SIZE(hatari_vars))
+		return false;
+
+	const var_addr_t *hvar = hatari_vars + position;
+	*result = hvar;
+	return true;
+}
