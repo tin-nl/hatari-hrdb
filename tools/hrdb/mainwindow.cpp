@@ -49,7 +49,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_pMemoryViewWidget0 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 0);
     m_pMemoryViewWidget1 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 1);
 
-    m_pExceptionDialog = new ExceptionDialog(this);
+    m_pExceptionDialog = new ExceptionDialog(this, m_pTargetModel, m_pDispatcher);
 
     // Set up menus
     createActions();

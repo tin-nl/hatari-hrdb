@@ -5,7 +5,7 @@
 class ExceptionMask
 {
 public:
-    enum
+    enum Type
     {
         kBus = 0,
         kAddress = 1,
@@ -14,7 +14,8 @@ public:
         kChk = 4,
         kTrapv = 5,
         kPrivilege = 6,
-        kTrace = 7
+        kTrace = 7,
+        kExceptionCount = 8
     };
 
     // Exception numbers in EX "register"
@@ -31,10 +32,14 @@ public:
 
     ExceptionMask();
 
+    void Set(Type exceptionType)
+    {
+        m_mask |= (1U << exceptionType);
+    }
+
     uint16_t m_mask;
 
     static const char* GetName(uint16_t exceptionId);
-
 };
 
 #endif // EXCEPTIONMASK_H
