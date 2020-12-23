@@ -106,6 +106,7 @@ private:
 
     QAction *connectAct;
     QAction *disconnectAct;
+    QAction *exitAct;
 
     QAction *exceptionsAct;
 

@@ -68,6 +68,7 @@ MainWindow::MainWindow(QWidget *parent)
     hlayout->addWidget(m_pRunToButton);
     hlayout->addWidget(m_pRunToCombo);
 
+    //hlayout->setAlignment(m_pRunToCombo, Qt::Align);
     pTopGroupBox->setLayout(hlayout);
 
     vlayout->addWidget(pTopGroupBox);
@@ -457,6 +458,11 @@ void MainWindow::createActions()
     disconnectAct->setStatusTip(tr("Disconnect from Hatari"));
     connect(disconnectAct, &QAction::triggered, this, &MainWindow::Disconnect);
 
+    exitAct = new QAction(tr("E&xit"), this);
+    exitAct->setShortcuts(QKeySequence::Quit);
+    exitAct->setStatusTip(tr("Exit the application"));
+    connect(exitAct, &QAction::triggered, this, &QWidget::close);
+
     // Edit
     exceptionsAct = new QAction(tr("&Exceptions..."), this);
     exceptionsAct->setStatusTip(tr("Disconnect from Hatari"));
@@ -502,6 +508,8 @@ void MainWindow::createMenus()
     fileMenu = menuBar()->addMenu(tr("&File"));
     fileMenu->addAction(connectAct);
     fileMenu->addAction(disconnectAct);
+    fileMenu->addSeparator();
+    fileMenu->addAction(exitAct);
 
     editMenu = menuBar()->addMenu(tr("&Edit"));
     editMenu->addSeparator();
