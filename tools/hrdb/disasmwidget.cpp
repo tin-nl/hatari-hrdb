@@ -95,6 +95,13 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
                     line.address, ref);
             return str;
         }
+        else if (index.column() == kColHex)
+        {
+            QString str;
+            for (uint32_t i = 0; i < line.inst.byte_count; ++i)
+                str += QString::asprintf("%02x", line.mem[i]);
+            return str;
+        }
         else if (index.column() == kColComments)
         {
             QString str;
@@ -147,6 +154,7 @@ QVariant DisasmTableModel::headerData(int section, Qt::Orientation orientation, 
             case kColSymbol: return QString("Symbol");
             case kColAddress: return QString("Address");
             case kColBreakpoint: return QString("");    // Too narrow
+            case kColHex: return QString("Hex");    // Too narrow
             case kColDisasm: return QString("Disassembly");
             case kColComments: return QString("");
             }
@@ -578,6 +586,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pTableView->setColumnWidth(DisasmTableModel::kColSymbol, charWidth * 15);
     m_pTableView->setColumnWidth(DisasmTableModel::kColAddress, charWidth * 12);      // Mac needs most
     m_pTableView->setColumnWidth(DisasmTableModel::kColBreakpoint, charWidth * 4);
+    m_pTableView->setColumnWidth(DisasmTableModel::kColHex, charWidth * 4);
     m_pTableView->setColumnWidth(DisasmTableModel::kColDisasm, charWidth * 30);
     m_pTableView->setColumnWidth(DisasmTableModel::kColComments, 300);
 

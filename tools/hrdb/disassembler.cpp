@@ -142,8 +142,20 @@ int Disassembler::decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t a
         line.address = buf.get_pos() + address;
 
         // decode uses a copy of the buffer state
-        buffer_reader buf_copy(buf);
-        decode(buf_copy, line.inst);
+        {
+            buffer_reader buf_copy(buf);
+            decode(buf_copy, line.inst);
+        }
+
+        // Save copy of instruction memory
+        {
+            uint16_t count = line.inst.byte_count;
+            if (count > 10)
+                count = 10;
+
+            buffer_reader buf_copy(buf);
+            buf_copy.read(line.mem, count);
+        }
 
         // Handle failure
         disasm.lines.push_back(line);

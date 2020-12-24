@@ -21,6 +21,7 @@ public:
         kColSymbol,
         kColAddress,
         kColBreakpoint,
+        kColHex,
         kColDisasm,
         kColComments,
 

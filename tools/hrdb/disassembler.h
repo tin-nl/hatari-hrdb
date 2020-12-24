@@ -17,6 +17,7 @@ public:
     {
         uint32_t    address;
         instruction inst;
+        uint8_t     mem[10];            // Copy of instruction memory
 
         uint32_t    GetEnd() const
         {
