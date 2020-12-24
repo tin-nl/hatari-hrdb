@@ -88,7 +88,9 @@ MainWindow::MainWindow(QWidget *parent)
     m_pMemoryViewWidget1->hide();
     m_pDisasmWidget1->hide();
 
-	// Listen for target changes
+    readSettings();
+
+    // Listen for target changes
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &MainWindow::registersChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,   this, &MainWindow::connectChangedSlot);
@@ -124,6 +126,7 @@ MainWindow::~MainWindow()
 	delete m_pDispatcher;
     delete m_pTargetModel;
 }
+
 
 void MainWindow::connectChangedSlot()
 {
@@ -553,4 +556,39 @@ void MainWindow::toggleVis(QWidget* pWidget)
         pWidget->hide();
     else
         pWidget->show();
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if (true) {
+        writeSettings();
+        event->accept();
+    } else{
+        event->ignore();
+    }
+}
+
+void MainWindow::readSettings()
+{
+    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    settings.setDefaultFormat(QSettings::Format::IniFormat);
+
+    const QByteArray geometry = settings.value("geometry", QByteArray()).toByteArray();
+    if (geometry.isEmpty()) {
+        QWindow wid;
+        const QRect availableGeometry = wid.screen()->availableGeometry();
+        resize(availableGeometry.width() / 3, availableGeometry.height() / 2);
+        move((availableGeometry.width() - width()) / 2,
+             (availableGeometry.height() - height()) / 2);
+    } else {
+        restoreGeometry(geometry);
+    }
+
+
+}
+
+void MainWindow::writeSettings()
+{
+    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    settings.setValue("geometry", saveGeometry());
 }

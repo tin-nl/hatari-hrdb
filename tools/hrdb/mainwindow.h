@@ -34,6 +34,9 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+protected:
+    virtual void closeEvent(QCloseEvent *event);
+
 private slots:
     void connectChangedSlot();
 	void startStopChangedSlot();
@@ -116,5 +119,7 @@ private:
     QAction *memoryWindowAct1;
     QAction *aboutAct;
     QAction *aboutQtAct;
+    void readSettings();
+    void writeSettings();
 };
 #endif // MAINWINDOW_H
