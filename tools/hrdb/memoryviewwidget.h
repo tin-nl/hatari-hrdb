@@ -3,7 +3,6 @@
 
 #include <QDockWidget>
 #include <QTableView>
-#include "disassembler.h"
 #include "memory.h"
 
 class TargetModel;

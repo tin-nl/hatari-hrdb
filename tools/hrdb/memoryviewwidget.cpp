@@ -177,9 +177,6 @@ void MemoryViewTableModel::RecalcText()
     if (pMem->GetAddress() != m_address)
         return;
 
-    // Fetch underlying data
-    buffer_reader MemoryViewBuf(pMem->GetData(), pMem->GetSize());
-
     // We should just save the memory block here and format on demand
     // Build up the text area
     uint32_t rowCount = m_rowCount;
