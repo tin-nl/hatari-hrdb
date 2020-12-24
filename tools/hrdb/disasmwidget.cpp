@@ -38,6 +38,7 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &DisasmTableModel::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::breakpointsChangedSignal, this, &DisasmTableModel::breakpointsChangedSlot);
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &DisasmTableModel::symbolTableChangedSlot);
+    connect(m_pTargetModel, &TargetModel::connectChangedSignal, this, &DisasmTableModel::connectChangedSlot);
 }
 
 int DisasmTableModel::rowCount(const QModelIndex &parent) const
@@ -309,6 +310,16 @@ void DisasmTableModel::startStopChangedSlot()
             // Just request what we had already.
             RequestMemory();
         }
+    }
+}
+
+void DisasmTableModel::connectChangedSlot()
+{
+    if (!m_pTargetModel->IsConnected())
+    {
+        m_disasm.lines.clear();
+        m_rowCount = 1;
+        m_memory.Clear();
     }
 }
 

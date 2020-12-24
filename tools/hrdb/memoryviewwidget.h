@@ -55,6 +55,7 @@ public:
 public slots:
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void startStopChangedSlot();
+    void connectChangedSlot();
 
 private:
     void RequestMemory();

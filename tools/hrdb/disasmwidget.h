@@ -58,6 +58,7 @@ signals:
 
 private slots:
     void startStopChangedSlot();
+    void connectChangedSlot();
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void breakpointsChangedSlot(uint64_t commandId);
     void symbolTableChangedSlot(uint64_t commandId);

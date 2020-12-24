@@ -30,6 +30,7 @@ MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTarget
     m_memSlot = (MemorySlot)(MemorySlot::kMemoryView0 + m_windowIndex);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryViewTableModel::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryViewTableModel::startStopChangedSlot);
+    connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &MemoryViewTableModel::connectChangedSlot);
 }
 
 void MemoryViewTableModel::SetAddress(uint32_t address)
@@ -239,6 +240,14 @@ void MemoryViewTableModel::startStopChangedSlot()
     {
         RequestMemory();
     }
+}
+
+void MemoryViewTableModel::connectChangedSlot()
+{
+    m_rows.clear();
+    m_address = 0;
+    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, 1));
+    m_rowCount = 0;
 }
 
 void MemoryViewTableModel::RequestMemory()

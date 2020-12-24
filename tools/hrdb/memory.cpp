@@ -14,6 +14,14 @@ Memory::~Memory()
     delete [] m_pData;
 }
 
+void Memory::Clear()
+{
+    delete [] m_pData;
+    m_pData = nullptr;
+    m_addr = 0;
+    m_size = 0;
+}
+
 Memory& Memory::operator=(const Memory &other)
 {
     this->m_size = other.m_size;

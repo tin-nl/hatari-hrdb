@@ -25,6 +25,8 @@ public:
 
     ~Memory();
 
+    void Clear();
+
     void Set(uint32_t offset, uint8_t val)
     {
         assert(offset < m_size);
