@@ -12,6 +12,7 @@
 
 #include "disasmwidget.h"
 #include "memoryviewwidget.h"
+#include "graphicsinspector.h"
 #include "exceptiondialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -50,6 +51,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_pDisasmWidget1 = new DisasmWidget(this, m_pTargetModel, m_pDispatcher, 1);
     m_pMemoryViewWidget0 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 0);
     m_pMemoryViewWidget1 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 1);
+    m_pGraphicsInspector = new GraphicsInspectorWidget(this, m_pTargetModel, m_pDispatcher);
 
     m_pExceptionDialog = new ExceptionDialog(this, m_pTargetModel, m_pDispatcher);
 
@@ -85,6 +87,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->addDockWidget(Qt::RightDockWidgetArea, m_pMemoryViewWidget0);
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pMemoryViewWidget1);
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWidget1);
+    this->addDockWidget(Qt::LeftDockWidgetArea, m_pGraphicsInspector);
     m_pMemoryViewWidget1->hide();
     m_pDisasmWidget1->hide();
 

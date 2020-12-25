@@ -23,7 +23,7 @@ class TargetModel;
 
 class DisasmWidget;
 class MemoryViewWidget;
-
+class GraphicsInspectorWidget;
 class ExceptionDialog;
 
 class MainWindow : public QMainWindow
@@ -88,6 +88,7 @@ private:
     DisasmWidget*       m_pDisasmWidget1;
     MemoryViewWidget*   m_pMemoryViewWidget0;
     MemoryViewWidget*   m_pMemoryViewWidget1;
+    GraphicsInspectorWidget*  m_pGraphicsInspector;
 
     // Low-level data
 	QTcpSocket* 	tcpSocket;

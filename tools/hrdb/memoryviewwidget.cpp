@@ -416,7 +416,6 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     // Make the data first
     pModel = new MemoryViewTableModel(this, pTargetModel, pDispatcher, windowIndex);
 
-    m_pLineEdit = new QLineEdit(this);
     m_pComboBox = new QComboBox(this);
     m_pComboBox->insertItem(MemoryViewTableModel::kModeByte, "Byte");
     m_pComboBox->insertItem(MemoryViewTableModel::kModeWord, "Word");
@@ -428,6 +427,7 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     m_pTableView = new MemoryTableView(this, pModel, m_pTargetModel);
     m_pTableView->setModel(pModel);
 
+    m_pLineEdit = new QLineEdit(this);
     m_pSymbolTableModel = new SymbolTableModel(this, m_pTargetModel->GetSymbolTable());
     QCompleter* pCompl = new QCompleter(m_pSymbolTableModel, this);
     pCompl->setCaseSensitivity(Qt::CaseSensitivity::CaseInsensitive);

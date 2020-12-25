@@ -14,6 +14,9 @@ enum MemorySlot
 
     kMemoryView0,   // general memory view memory
     kMemoryView1,   // second memory view window
+
+    kGraphicsInspector,         // gfx bitmap
+    kGraphicsInspectorPalette,  // gfx palette
     kMemorySlotCount
 };
 
