@@ -4,6 +4,7 @@
 #include <QGroupBox>
 #include <QLineEdit>
 #include <QComboBox>
+#include <QCheckBox>
 #include <QVBoxLayout>
 #include <QHeaderView>
 #include <QStringListModel>
@@ -20,6 +21,7 @@ MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTarget
     QAbstractTableModel(parent),
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher),
+    m_isLocked(false),
     m_address(0),
     m_bytesPerRow(16),
     m_mode(kModeByte),
@@ -31,6 +33,20 @@ MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTarget
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryViewTableModel::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryViewTableModel::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &MemoryViewTableModel::connectChangedSlot);
+}
+
+bool MemoryViewTableModel::SetAddress(std::string expression)
+{
+    uint32_t addr;
+    if (!StringParsers::ParseExpression(expression.c_str(), addr,
+                                        m_pTargetModel->GetSymbolTable(),
+                                        m_pTargetModel->GetRegs()))
+    {
+        return false;
+    }
+    SetAddress(addr);
+    m_addressExpression = expression;
+    return true;
 }
 
 void MemoryViewTableModel::SetAddress(uint32_t address)
@@ -48,6 +64,19 @@ void MemoryViewTableModel::SetRowCount(uint32_t rowCount)
         RequestMemory();
         emit endResetModel();
     }
+}
+
+void MemoryViewTableModel::SetLock(bool locked)
+{
+    if (!locked != m_isLocked)
+    {
+        if (locked)
+        {
+            // Recalculate this expression for locking
+            SetAddress(m_addressExpression);
+        }
+    }
+    m_isLocked = locked;
 }
 
 void MemoryViewTableModel::SetMode(MemoryViewTableModel::Mode mode)
@@ -235,6 +264,18 @@ void MemoryViewTableModel::startStopChangedSlot()
     // Request new memory for the view
     if (!m_pTargetModel->IsRunning())
     {
+        // Recalc a locked expression
+        uint32_t addr;
+        if (m_isLocked)
+        {
+            if (StringParsers::ParseExpression(m_addressExpression.c_str(), addr,
+                                                m_pTargetModel->GetSymbolTable(),
+                                                m_pTargetModel->GetRegs()))
+            {
+                SetAddress(addr);
+            }
+        }
+
         RequestMemory();
     }
 }
@@ -382,6 +423,8 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     m_pComboBox->insertItem(MemoryViewTableModel::kModeLong, "Long");
     m_pComboBox->setCurrentIndex(pModel->GetMode());
 
+    m_pLockCheckBox = new QCheckBox(tr("Lock"), this);
+
     m_pTableView = new MemoryTableView(this, pModel, m_pTargetModel);
     m_pTableView->setModel(pModel);
 
@@ -415,6 +458,7 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     auto pTopRegion = new QWidget(this);      // top buttons/edits
 
     pTopLayout->addWidget(m_pLineEdit);
+    pTopLayout->addWidget(m_pLockCheckBox);
     pTopLayout->addWidget(m_pComboBox);
 
     pMainLayout->addWidget(pTopRegion);
@@ -426,17 +470,18 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
 
     // Listen for start/stop, so we can update our memory request
     connect(m_pLineEdit, &QLineEdit::returnPressed,         this, &MemoryViewWidget::textEditChangedSlot);
+    connect(m_pLockCheckBox, &QCheckBox::stateChanged,      this, &MemoryViewWidget::lockChangedSlot);
     connect(m_pComboBox, SIGNAL(currentIndexChanged(int)),  SLOT(modeComboBoxChanged(int)));
 }
 
 void MemoryViewWidget::textEditChangedSlot()
 {
-    uint32_t addr;
-    if (!StringParsers::ParseExpression(m_pLineEdit->text().toStdString().c_str(), addr,
-                                        m_pTargetModel->GetSymbolTable(),
-                                        m_pTargetModel->GetRegs()))
-        return;
-    pModel->SetAddress(addr);
+    pModel->SetAddress(m_pLineEdit->text().toStdString());
+}
+
+void MemoryViewWidget::lockChangedSlot()
+{
+    pModel->SetLock(m_pLockCheckBox->isChecked());
 }
 
 void MemoryViewWidget::modeComboBoxChanged(int index)

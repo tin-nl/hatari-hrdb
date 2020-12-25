@@ -8,6 +8,7 @@
 class TargetModel;
 class Dispatcher;
 class QComboBox;
+class QCheckBox;
 
 class MemoryViewTableModel : public QAbstractTableModel
 {
@@ -33,8 +34,10 @@ public:
     uint32_t GetRowCount() const { return m_rowCount; }
     Mode GetMode() const { return m_mode; }
 
-    void SetAddress(uint32_t address);
+    // returns false if expression is invalid
+    bool SetAddress(std::string expression);
     void SetRowCount(uint32_t rowCount);
+    void SetLock(bool locked);
     void SetMode(Mode mode);
 
     void MoveUp();
@@ -57,6 +60,7 @@ public slots:
     void connectChangedSlot();
 
 private:
+    void SetAddress(uint32_t address);
     void RequestMemory();
     void RecalcText();
 
@@ -71,6 +75,9 @@ private:
     };
 
     std::vector<Row> m_rows;
+
+    std::string m_addressExpression;
+    bool    m_isLocked;
     uint32_t m_address;
 
     uint32_t m_bytesPerRow;
@@ -113,11 +120,13 @@ public:
 
 public slots:
     void textEditChangedSlot();
+    void lockChangedSlot();
     void modeComboBoxChanged(int index);
 
 private:
     QLineEdit*           m_pLineEdit;
     QComboBox*           m_pComboBox;
+    QCheckBox*           m_pLockCheckBox;
     MemoryTableView*     m_pTableView;
 
     MemoryViewTableModel* pModel;
