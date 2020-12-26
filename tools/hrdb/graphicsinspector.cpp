@@ -7,6 +7,9 @@
 #include <QCompleter>
 #include <QSpinBox>
 
+#include <QPainter>
+#include <QStyle>
+
 #include "dispatcher.h"
 #include "targetmodel.h"
 #include "symboltablemodel.h"
@@ -26,8 +29,10 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     this->setObjectName(name);
     this->setWindowTitle(name);
 
-    m_pPictureLabel = new QLabel(this);
-    m_pPictureLabel->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
+    m_pPictureLabel = new NonAntiAliasImage(this);
+    m_pPictureLabel->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
+    //m_pPictureLabel->setFixedSize(640, 400);
+    //m_pPictureLabel->setScaledContents(true);
 
     m_pLineEdit = new QLineEdit(this);
     m_pSymbolTableModel = new SymbolTableModel(this, m_pTargetModel->GetSymbolTable());
@@ -128,7 +133,8 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
     for (uint32_t i = 0; i < 16; ++i)
         colours.append(i * 0x203040 | 0xff000000);
     img.setColorTable(colours);
-    m_pPictureLabel->setPixmap(QPixmap::fromImage(img));
+    QPixmap pm = QPixmap::fromImage(img);
+    m_pPictureLabel->setPixmap(pm);
 
     delete [] pBitmap;
     m_requestId = 0;
@@ -165,4 +171,11 @@ void GraphicsInspectorWidget::RequestMemory()
 {
     uint32_t size = m_height * m_width * 8;
     m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspector, m_address, size);
+}
+
+void NonAntiAliasImage::paintEvent(QPaintEvent *)
+{
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, false);
+    style()->drawItemPixmap(&painter, rect(), Qt::AlignCenter, m_pixmap.scaled(rect().size()));
 }

@@ -13,6 +13,30 @@ class QSpinBox;
 class TargetModel;
 class Dispatcher;
 
+// Taken from https://forum.qt.io/topic/94996/qlabel-and-image-antialiasing/5
+class NonAntiAliasImage : public QWidget{
+    Q_OBJECT
+    Q_DISABLE_COPY(NonAntiAliasImage)
+public:
+    explicit NonAntiAliasImage(QWidget* parent = Q_NULLPTR)
+        : QWidget(parent)
+    {}
+    const QPixmap& pixmap() const
+    {
+        return m_pixmap;
+    }
+    void setPixmap(const QPixmap& px)
+    {
+        m_pixmap = px;
+        update();
+    }
+protected:
+    void paintEvent(QPaintEvent*);
+private:
+    QPixmap m_pixmap;
+};
+
+
 class GraphicsInspectorWidget : public QDockWidget
 {
     Q_OBJECT
@@ -35,7 +59,7 @@ private:
     QLineEdit*      m_pLineEdit;
     QSpinBox*       m_pWidthSpinBox;
     QSpinBox*       m_pHeightSpinBox;
-    QLabel*         m_pPictureLabel;
+    NonAntiAliasImage*         m_pPictureLabel;
 
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
