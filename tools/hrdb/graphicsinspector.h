@@ -60,6 +60,7 @@ private slots:
 
 private:
     void RequestMemory();
+    void DisplayAddress();
 
     QLineEdit*      m_pLineEdit;
     QSpinBox*       m_pWidthSpinBox;

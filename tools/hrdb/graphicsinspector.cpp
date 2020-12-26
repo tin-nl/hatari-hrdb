@@ -214,6 +214,7 @@ void GraphicsInspectorWidget::pageUp()
     int size = m_height * m_width * 8;
     m_address -= size;
     RequestMemory();
+    DisplayAddress();
 }
 
 void GraphicsInspectorWidget::pageDown()
@@ -223,6 +224,7 @@ void GraphicsInspectorWidget::pageDown()
     int size = m_height * m_width * 8;
     m_address += size;
     RequestMemory();
+    DisplayAddress();
 }
 
 void GraphicsInspectorWidget::lineUp()
@@ -232,6 +234,7 @@ void GraphicsInspectorWidget::lineUp()
     int size = m_width * 8;
     m_address -= size;
     RequestMemory();
+    DisplayAddress();
 }
 
 void GraphicsInspectorWidget::lineDown()
@@ -241,6 +244,7 @@ void GraphicsInspectorWidget::lineDown()
     int size = m_width * 8;
     m_address += size;
     RequestMemory();
+    DisplayAddress();
 }
 
 // Request enough memory based on m_rowCount and m_logicalAddr
@@ -251,4 +255,9 @@ void GraphicsInspectorWidget::RequestMemory()
 
     int size = m_height * m_width * 8;
     m_requestIdBitmap = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspector, m_address, size);
+}
+
+void GraphicsInspectorWidget::DisplayAddress()
+{
+    m_pLineEdit->setText(QString::asprintf("$%x", m_address));
 }
