@@ -7,6 +7,7 @@
 #include <QCompleter>
 #include <QSpinBox>
 #include <QShortcut>
+#include <QKeyEvent>
 
 #include <QPainter>
 #include <QStyle>
@@ -39,10 +40,10 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     QString name("Graphics Inspector");
     this->setObjectName(name);
     this->setWindowTitle(name);
+    this->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
 
     m_pImageWidget = new NonAntiAliasImage(this);
     m_pImageWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
-    m_pImageWidget->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
     //m_pPictureLabel->setFixedSize(640, 400);
     //m_pPictureLabel->setScaledContents(true);
 
@@ -83,17 +84,45 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     connect(m_pLineEdit,     &QLineEdit::returnPressed,                   this, &GraphicsInspectorWidget::textEditChangedSlot);
     connect(m_pWidthSpinBox, SIGNAL(valueChanged(int)),                   SLOT(widthChangedSlot(int)));
     connect(m_pHeightSpinBox,SIGNAL(valueChanged(int)),                   SLOT(heightChangedSlot(int)));
-
-    new QShortcut(QKeySequence(QKeySequence::StandardKey::MoveToPreviousPage), this, SLOT(pageUp()));
-    new QShortcut(QKeySequence(QKeySequence::StandardKey::MoveToNextPage    ), this, SLOT(pageDown()));
-    new QShortcut(QKeySequence(QKeySequence::StandardKey::MoveToPreviousLine), this, SLOT(lineUp()));
-    new QShortcut(QKeySequence(QKeySequence::StandardKey::MoveToNextLine    ), this, SLOT(lineDown()));
-    new QShortcut(QKeySequence("Left"), this, SLOT(moveLeft()));
-    new QShortcut(QKeySequence("Right"), this, SLOT(moveRight()));
 }
 
 GraphicsInspectorWidget::~GraphicsInspectorWidget()
 {
+
+}
+
+void GraphicsInspectorWidget::keyPressEvent(QKeyEvent* ev)
+{
+    int offset = 0;
+
+    if (ev->key() == Qt::Key::Key_Up)
+        offset = -m_width * 8;
+    else if (ev->key() == Qt::Key::Key_Down)
+        offset = +m_width * 8;
+    else if (ev->key() == Qt::Key::Key_PageUp)
+        offset = m_height * -m_width * 8;
+    else if (ev->key() == Qt::Key::Key_PageDown)
+        offset = m_height * m_width * 8;
+    else if (ev->key() == Qt::Key::Key_Left)
+        offset = -2;
+    else if (ev->key() == Qt::Key::Key_Right)
+        offset = 2;
+
+    if (offset && m_requestIdBitmap == 0)
+    {
+        // Going up or down by a small amount is OK
+        if (offset > 0 || m_address > -offset)
+        {
+            m_address += offset;
+        }
+        else {
+            m_address = 0;
+        }
+        RequestMemory();
+        DisplayAddress();
+        return;
+    }
+    QDockWidget::keyPressEvent(ev);
 
 }
 
@@ -214,64 +243,6 @@ void GraphicsInspectorWidget::heightChangedSlot(int value)
 {
     m_height = value;
     RequestMemory();
-}
-
-void GraphicsInspectorWidget::pageUp()
-{
-    if (m_requestIdBitmap != 0)
-        return;
-    int size = m_height * m_width * 8;
-    m_address -= size;
-    RequestMemory();
-    DisplayAddress();
-}
-
-void GraphicsInspectorWidget::pageDown()
-{
-    if (m_requestIdBitmap != 0)
-        return;
-    int size = m_height * m_width * 8;
-    m_address += size;
-    RequestMemory();
-    DisplayAddress();
-}
-
-void GraphicsInspectorWidget::lineUp()
-{
-    if (m_requestIdBitmap != 0)
-        return;
-    int size = m_width * 8;
-    m_address -= size;
-    RequestMemory();
-    DisplayAddress();
-}
-
-void GraphicsInspectorWidget::lineDown()
-{
-    if (m_requestIdBitmap != 0)
-        return;
-    int size = m_width * 8;
-    m_address += size;
-    RequestMemory();
-    DisplayAddress();
-}
-
-void GraphicsInspectorWidget::moveLeft()
-{
-    if (m_requestIdBitmap != 0)
-        return;
-    m_address -= 2;
-    RequestMemory();
-    DisplayAddress();
-}
-
-void GraphicsInspectorWidget::moveRight()
-{
-    if (m_requestIdBitmap != 0)
-        return;
-    m_address += 2;
-    RequestMemory();
-    DisplayAddress();
 }
 
 // Request enough memory based on m_rowCount and m_logicalAddr

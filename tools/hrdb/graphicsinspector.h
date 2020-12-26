@@ -52,15 +52,11 @@ public:
 public slots:
     void widthChangedSlot(int width);
     void heightChangedSlot(int height);
-private slots:
-    void pageUp();
-    void pageDown();
-    void lineUp();
-    void lineDown();
-    void moveLeft();
-    void moveRight();
+protected:
+    virtual void keyPressEvent(QKeyEvent *ev);
 
 private:
+
     void RequestMemory();
     void DisplayAddress();
 
