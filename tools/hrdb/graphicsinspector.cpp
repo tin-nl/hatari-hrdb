@@ -6,6 +6,7 @@
 #include <QLineEdit>
 #include <QCompleter>
 #include <QSpinBox>
+#include <QShortcut>
 
 #include <QPainter>
 #include <QStyle>
@@ -75,6 +76,11 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     connect(m_pLineEdit,     &QLineEdit::returnPressed,                   this, &GraphicsInspectorWidget::textEditChangedSlot);
     connect(m_pWidthSpinBox, SIGNAL(valueChanged(int)),                   SLOT(widthChangedSlot(int)));
     connect(m_pHeightSpinBox,SIGNAL(valueChanged(int)),                   SLOT(heightChangedSlot(int)));
+
+    new QShortcut(QKeySequence(QKeySequence::StandardKey::MoveToPreviousPage), this, SLOT(pageUp()));
+    new QShortcut(QKeySequence(QKeySequence::StandardKey::MoveToNextPage    ), this, SLOT(pageDown()));
+    new QShortcut(QKeySequence(QKeySequence::StandardKey::MoveToPreviousLine), this, SLOT(lineUp()));
+    new QShortcut(QKeySequence(QKeySequence::StandardKey::MoveToNextLine    ), this, SLOT(lineDown()));
 }
 
 GraphicsInspectorWidget::~GraphicsInspectorWidget()
@@ -171,6 +177,7 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
             colour |= 0xff000000;
             m_colours.append(colour);
         }
+        m_requestIdPalette = 0;
     }
 }
 
@@ -197,6 +204,42 @@ void GraphicsInspectorWidget::widthChangedSlot(int value)
 void GraphicsInspectorWidget::heightChangedSlot(int value)
 {
     m_height = value;
+    RequestMemory();
+}
+
+void GraphicsInspectorWidget::pageUp()
+{
+    if (m_requestIdBitmap != 0)
+        return;
+    int size = m_height * m_width * 8;
+    m_address -= size;
+    RequestMemory();
+}
+
+void GraphicsInspectorWidget::pageDown()
+{
+    if (m_requestIdBitmap != 0)
+        return;
+    int size = m_height * m_width * 8;
+    m_address += size;
+    RequestMemory();
+}
+
+void GraphicsInspectorWidget::lineUp()
+{
+    if (m_requestIdBitmap != 0)
+        return;
+    int size = m_width * 8;
+    m_address -= size;
+    RequestMemory();
+}
+
+void GraphicsInspectorWidget::lineDown()
+{
+    if (m_requestIdBitmap != 0)
+        return;
+    int size = m_width * 8;
+    m_address += size;
     RequestMemory();
 }
 

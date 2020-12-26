@@ -52,6 +52,11 @@ public:
 public slots:
     void widthChangedSlot(int width);
     void heightChangedSlot(int height);
+private slots:
+    void pageUp();
+    void pageDown();
+    void lineUp();
+    void lineDown();
 
 private:
     void RequestMemory();
