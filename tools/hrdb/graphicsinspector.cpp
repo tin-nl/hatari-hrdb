@@ -42,6 +42,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
 
     m_pImageWidget = new NonAntiAliasImage(this);
     m_pImageWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
+    m_pImageWidget->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
     //m_pPictureLabel->setFixedSize(640, 400);
     //m_pPictureLabel->setScaledContents(true);
 
@@ -81,6 +82,8 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     new QShortcut(QKeySequence(QKeySequence::StandardKey::MoveToNextPage    ), this, SLOT(pageDown()));
     new QShortcut(QKeySequence(QKeySequence::StandardKey::MoveToPreviousLine), this, SLOT(lineUp()));
     new QShortcut(QKeySequence(QKeySequence::StandardKey::MoveToNextLine    ), this, SLOT(lineDown()));
+    new QShortcut(QKeySequence("Left"), this, SLOT(moveLeft()));
+    new QShortcut(QKeySequence("Right"), this, SLOT(moveRight()));
 }
 
 GraphicsInspectorWidget::~GraphicsInspectorWidget()
@@ -243,6 +246,24 @@ void GraphicsInspectorWidget::lineDown()
         return;
     int size = m_width * 8;
     m_address += size;
+    RequestMemory();
+    DisplayAddress();
+}
+
+void GraphicsInspectorWidget::moveLeft()
+{
+    if (m_requestIdBitmap != 0)
+        return;
+    m_address -= 2;
+    RequestMemory();
+    DisplayAddress();
+}
+
+void GraphicsInspectorWidget::moveRight()
+{
+    if (m_requestIdBitmap != 0)
+        return;
+    m_address += 2;
     RequestMemory();
     DisplayAddress();
 }

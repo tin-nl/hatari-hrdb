@@ -57,6 +57,8 @@ private slots:
     void pageDown();
     void lineUp();
     void lineDown();
+    void moveLeft();
+    void moveRight();
 
 private:
     void RequestMemory();
