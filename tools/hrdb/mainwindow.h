@@ -50,12 +50,16 @@ private slots:
     void nextClicked();
     void runToClicked();
     void updateWindowMenu();
+
+    // Menu item callbacks
     void menuConnect();
     void menuDisconnect();
     void menuDisasmWindow0();
     void menuDisasmWindow1();
     void menuMemoryWindow0();
     void menuMemoryWindow1();
+    void menuGraphicsInspector();
+
     void about();
     void aboutQt();
 private:
@@ -118,6 +122,8 @@ private:
     QAction *disasmWindowAct1;
     QAction *memoryWindowAct0;
     QAction *memoryWindowAct1;
+    QAction *graphicsInspectorAct;
+
     QAction *aboutAct;
     QAction *aboutQtAct;
     void readSettings();

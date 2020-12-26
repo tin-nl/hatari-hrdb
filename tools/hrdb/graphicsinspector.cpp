@@ -15,6 +15,15 @@
 #include "symboltablemodel.h"
 #include "stringparsers.h"
 
+
+void NonAntiAliasImage::paintEvent(QPaintEvent *)
+{
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, false);
+    style()->drawItemPixmap(&painter, rect(), Qt::AlignCenter, m_pixmap.scaled(rect().size()));
+}
+
+
 GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
                                                  TargetModel* pTargetModel, Dispatcher* pDispatcher) :
     QDockWidget(parent),
@@ -23,14 +32,15 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_address(0U),
     m_width(20),
     m_height(200),
-    m_requestId(0U)
+    m_requestIdBitmap(0U),
+    m_requestIdPalette(0U)
 {
     QString name("Graphics Inspector");
     this->setObjectName(name);
     this->setWindowTitle(name);
 
-    m_pPictureLabel = new NonAntiAliasImage(this);
-    m_pPictureLabel->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
+    m_pImageWidget = new NonAntiAliasImage(this);
+    m_pImageWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     //m_pPictureLabel->setFixedSize(640, 400);
     //m_pPictureLabel->setScaledContents(true);
 
@@ -53,7 +63,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     vlayout->addWidget(m_pLineEdit);
     vlayout->addWidget(m_pWidthSpinBox);
     vlayout->addWidget(m_pHeightSpinBox);
-    vlayout->addWidget(m_pPictureLabel);
+    vlayout->addWidget(m_pImageWidget);
     vlayout->setAlignment(Qt::Alignment(Qt::AlignTop));
     pMainGroupBox->setFlat(true);
     pMainGroupBox->setLayout(vlayout);
@@ -85,59 +95,83 @@ void GraphicsInspectorWidget::startStopChangedSlot()
 void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t commandId)
 {
     // Only update for the last request we added
-    if (commandId != m_requestId)
-        return;
-
-    const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspector);
-    if (!pMemOrig)
-        return;
-
-    // Need to redraw here
-    uint8_t* pBitmap = new uint8_t[m_width*16*m_height];
-
-    // Uncompress
-    // NO CHECK ensure we have the right size memory
-    if (pMemOrig->GetSize() < m_width * 8 * m_height)
-        return;
-
-    const uint8_t* pChunk = pMemOrig->GetData();
-    uint8_t* pDestPixels = pBitmap;
-    for (int i = 0; i < m_width * m_height; ++i)
+    if (commandId == m_requestIdBitmap)
     {
-        uint16_t pSrc[4];
-        pSrc[0] = (pChunk[0] << 8) | pChunk[1];
-        pSrc[1] = (pChunk[2] << 8) | pChunk[3];
-        pSrc[2] = (pChunk[4] << 8) | pChunk[5];
-        pSrc[3] = (pChunk[6] << 8) | pChunk[7];
-        for (int pix = 15; pix >= 0; --pix)
+        const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspector);
+        if (!pMemOrig)
+            return;
+
+        // Uncompress
+        int required = m_width * 8 * m_height;
+
+        // Ensure we have the right size memory
+        if (pMemOrig->GetSize() < required)
+            return;
+
+        // Need to redraw here
+        uint8_t* pBitmap = new uint8_t[m_width * 16 * m_height];
+
+        const uint8_t* pChunk = pMemOrig->GetData();
+        uint8_t* pDestPixels = pBitmap;
+        for (int i = 0; i < m_width * m_height; ++i)
         {
-            uint8_t val;
-            val  = (pSrc[0] & 1); val <<= 1;
-            val |= (pSrc[1] & 1); val <<= 1;
-            val |= (pSrc[2] & 1); val <<= 1;
-            val |= (pSrc[3] & 1);
+            uint16_t pSrc[4];
+            pSrc[3] = (pChunk[0] << 8) | pChunk[1];
+            pSrc[2] = (pChunk[2] << 8) | pChunk[3];
+            pSrc[1] = (pChunk[4] << 8) | pChunk[5];
+            pSrc[0] = (pChunk[6] << 8) | pChunk[7];
+            for (int pix = 15; pix >= 0; --pix)
+            {
+                uint8_t val;
+                val  = (pSrc[0] & 1); val <<= 1;
+                val |= (pSrc[1] & 1); val <<= 1;
+                val |= (pSrc[2] & 1); val <<= 1;
+                val |= (pSrc[3] & 1);
 
-            pDestPixels[pix] = val;
-            pSrc[0] >>= 1;
-            pSrc[1] >>= 1;
-            pSrc[2] >>= 1;
-            pSrc[3] >>= 1;
+                pDestPixels[pix] = val;
+                pSrc[0] >>= 1;
+                pSrc[1] >>= 1;
+                pSrc[2] >>= 1;
+                pSrc[3] >>= 1;
+            }
+            pChunk += 8;
+            pDestPixels += 16;
         }
-        pChunk += 8;
-        pDestPixels += 16;
+
+        // Update image in the widget
+        QImage img(pBitmap, m_width * 16, m_height, QImage::Format_Indexed8);
+        img.setColorTable(m_colours);
+        QPixmap pm = QPixmap::fromImage(img);
+        m_pImageWidget->setPixmap(pm);
+
+        delete [] pBitmap;
+        m_requestIdBitmap = 0;
+        return;
     }
+    else if (commandId == m_requestIdPalette)
+    {
+        const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorPalette);
+        if (!pMemOrig)
+            return;
 
-    QImage img(pBitmap, m_width * 16, m_height, QImage::Format_Indexed8);
-    QVector<QRgb> colours;
-    // Colours are ARGB
-    for (uint32_t i = 0; i < 16; ++i)
-        colours.append(i * 0x203040 | 0xff000000);
-    img.setColorTable(colours);
-    QPixmap pm = QPixmap::fromImage(img);
-    m_pPictureLabel->setPixmap(pm);
+        if (pMemOrig->GetSize() != 32)
+            return;
 
-    delete [] pBitmap;
-    m_requestId = 0;
+        // Colours are ARGB
+        m_colours.clear();
+        for (int i = 0; i < 16; ++i)
+        {
+            uint8_t  r = pMemOrig->GetData()[i * 2];
+            uint8_t gb = pMemOrig->GetData()[i * 2 + 1];
+
+            uint32_t colour = 0U;
+            colour |= ( r & 0x07) << (24 - 3);
+            colour |= (gb & 0x70) << (16 - 4 - 3);
+            colour |= (gb & 0x07) << (8 - 3);
+            colour |= 0xff000000;
+            m_colours.append(colour);
+        }
+    }
 }
 
 void GraphicsInspectorWidget::textEditChangedSlot()
@@ -169,13 +203,9 @@ void GraphicsInspectorWidget::heightChangedSlot(int value)
 // Request enough memory based on m_rowCount and m_logicalAddr
 void GraphicsInspectorWidget::RequestMemory()
 {
-    uint32_t size = m_height * m_width * 8;
-    m_requestId = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspector, m_address, size);
-}
+    // Palette first
+    m_requestIdPalette = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspectorPalette, 0xff8240, 32);
 
-void NonAntiAliasImage::paintEvent(QPaintEvent *)
-{
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing, false);
-    style()->drawItemPixmap(&painter, rect(), Qt::AlignCenter, m_pixmap.scaled(rect().size()));
+    int size = m_height * m_width * 8;
+    m_requestIdBitmap = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspector, m_address, size);
 }

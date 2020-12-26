@@ -410,6 +410,8 @@ void MainWindow::updateWindowMenu()
     disasmWindowAct1->setChecked(m_pDisasmWidget1->isVisible());
     memoryWindowAct0->setChecked(m_pMemoryViewWidget0->isVisible());
     memoryWindowAct1->setChecked(m_pMemoryViewWidget1->isVisible());
+    graphicsInspectorAct->setChecked(m_pGraphicsInspector->isVisible());
+
 }
 
 void MainWindow::updateButtonEnable()
@@ -462,6 +464,11 @@ void MainWindow::menuMemoryWindow1()
     toggleVis(m_pMemoryViewWidget1);
 }
 
+void MainWindow::menuGraphicsInspector()
+{
+    toggleVis(m_pGraphicsInspector);
+}
+
 void MainWindow::about()
 {
     QMessageBox::about(this, tr("hrdb"),
@@ -510,10 +517,15 @@ void MainWindow::createActions()
     memoryWindowAct0->setCheckable(true);
     connect(memoryWindowAct0, &QAction::triggered, this, &MainWindow::menuMemoryWindow0);
 
-    memoryWindowAct1 = new QAction(tr("&Memory 2"), this);
+    memoryWindowAct1 = new QAction(tr("Memory 2"), this);
     memoryWindowAct1->setStatusTip(tr("Show the memory window"));
     memoryWindowAct1->setCheckable(true);
     connect(memoryWindowAct1, &QAction::triggered, this, &MainWindow::menuMemoryWindow1);
+
+    graphicsInspectorAct = new QAction(tr("&Graphics Inspector"), this);
+    graphicsInspectorAct->setStatusTip(tr("Show the Graphics Inspector"));
+    graphicsInspectorAct->setCheckable(true);
+    connect(graphicsInspectorAct, &QAction::triggered, this, &MainWindow::menuGraphicsInspector);
 
     // "About"
     aboutAct = new QAction(tr("&About"), this);
@@ -547,6 +559,7 @@ void MainWindow::createMenus()
     windowMenu->addAction(disasmWindowAct1);
     windowMenu->addAction(memoryWindowAct0);
     windowMenu->addAction(memoryWindowAct1);
+    windowMenu->addAction(graphicsInspectorAct);
 
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAct);

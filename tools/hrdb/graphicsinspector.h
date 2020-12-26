@@ -59,16 +59,19 @@ private:
     QLineEdit*      m_pLineEdit;
     QSpinBox*       m_pWidthSpinBox;
     QSpinBox*       m_pHeightSpinBox;
-    NonAntiAliasImage*         m_pPictureLabel;
+    NonAntiAliasImage*         m_pImageWidget;
 
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
     QAbstractItemModel* m_pSymbolTableModel;
+    QVector<QRgb>   m_colours;
 
     uint32_t        m_address;
     int             m_width;
     int             m_height;
-    uint64_t        m_requestId;
+
+    uint64_t        m_requestIdBitmap;
+    uint64_t        m_requestIdPalette;
 };
 
 #endif // GRAPHICSINSPECTOR_H
