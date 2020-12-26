@@ -59,15 +59,21 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_pHeightSpinBox = new QSpinBox(this);
     m_pHeightSpinBox->setRange(16, 256);
     m_pHeightSpinBox->setValue(m_height);
-    auto pMainGroupBox = new QGroupBox(this);
+    auto pMainGroupBox = new QWidget(this);
+
+    QHBoxLayout *hlayout = new QHBoxLayout();
+    hlayout->addWidget(m_pLineEdit);
+    hlayout->addWidget(new QLabel(tr("Width"), this));
+    hlayout->addWidget(m_pWidthSpinBox);
+    hlayout->addWidget(new QLabel(tr("Height"), this));
+    hlayout->addWidget(m_pHeightSpinBox);
+    QWidget* pTopContainer = new QWidget(this);
+    pTopContainer->setLayout(hlayout);
 
     QVBoxLayout *vlayout = new QVBoxLayout;
-    vlayout->addWidget(m_pLineEdit);
-    vlayout->addWidget(m_pWidthSpinBox);
-    vlayout->addWidget(m_pHeightSpinBox);
+    vlayout->addWidget(pTopContainer);
     vlayout->addWidget(m_pImageWidget);
     vlayout->setAlignment(Qt::Alignment(Qt::AlignTop));
-    pMainGroupBox->setFlat(true);
     pMainGroupBox->setLayout(vlayout);
 
     setWidget(pMainGroupBox);
