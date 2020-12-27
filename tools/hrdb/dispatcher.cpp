@@ -30,6 +30,7 @@ Dispatcher::Dispatcher(QTcpSocket* tcpSocket, TargetModel* pTargetModel) :
 	m_pTcpSocket(tcpSocket),
     m_pTargetModel(pTargetModel),
     m_responseUid(100),
+    m_portConnected(false),
     m_waitingConnectionAck(false)
 {
 	connect(m_pTcpSocket, &QAbstractSocket::connected, this, &Dispatcher::connected);
@@ -137,11 +138,10 @@ void Dispatcher::connected()
     // Clear any accidental button clicks that sent messages while disconnected
     DeletePending();
 
-    // Flag for the UI to request the data it wants
-    m_pTargetModel->SetConnected(1);
+    m_portConnected = true;
 
 	// THIS HAPPENS ON THE EVENT LOOP
-    std::cout << "Host connected" << std::endl;
+    std::cout << "Host connected, awaiting ack" << std::endl;
 }
 
 void Dispatcher::disconnected()
@@ -153,6 +153,7 @@ void Dispatcher::disconnected()
 
     // THIS HAPPENS ON THE EVENT LOOP
     std::cout << "Host disconnected" << std::endl;
+    m_portConnected = false;
 }
 
 void Dispatcher::readyRead()
@@ -182,12 +183,16 @@ void Dispatcher::readyRead()
 
 uint64_t Dispatcher::SendCommandShared(MemorySlot slot, std::string command)
 {
+    assert(m_portConnected && !m_waitingConnectionAck);
     RemoteCommand* pNewCmd = new RemoteCommand();
     pNewCmd->m_cmd = command;
     pNewCmd->m_memorySlot = slot;
     pNewCmd->m_uid = m_responseUid++;
     m_sentCommands.push_front(pNewCmd);
     m_pTcpSocket->write(command.c_str(), command.size() + 1);
+#ifdef DISPATCHER_DEBUG
+    std::cout << "COMMAND:" << pNewCmd->m_cmd << std::endl;
+#endif
     return pNewCmd->m_uid;
 }
 
@@ -343,6 +348,8 @@ void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
         // Allow new command responses to be processed.
         m_waitingConnectionAck = false;
         std::cout << "Connection acknowleged by server" << std::endl;
+        // Flag for the UI to request the data it wants
+        m_pTargetModel->SetConnected(1);
     }
 }
 

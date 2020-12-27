@@ -182,7 +182,8 @@ void DisasmTableModel::RequestMemory()
     uint32_t addr = m_logicalAddr;
     uint32_t lowAddr = (addr > 100) ? addr - 100 : 0;
     uint32_t size = ((m_rowCount * 10) + 100);
-    m_requestId = m_pDispatcher->RequestMemory(m_memSlot, lowAddr, size);
+    if (m_pTargetModel->IsConnected())
+        m_requestId = m_pDispatcher->RequestMemory(m_memSlot, lowAddr, size);
 }
 
 bool DisasmTableModel::SetAddress(std::string addrStr)

@@ -256,7 +256,7 @@ void MemoryViewTableModel::RecalcText()
     }
 
     m_requestId = 0;    // flag request is complete
-    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, 1));
+    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rows.size(), 1));
 }
 
 void MemoryViewTableModel::startStopChangedSlot()
@@ -291,7 +291,8 @@ void MemoryViewTableModel::connectChangedSlot()
 void MemoryViewTableModel::RequestMemory()
 {
     uint32_t size = ((m_rowCount * 16));
-    m_requestId = m_pDispatcher->RequestMemory(m_memSlot, m_address, size);
+    if (m_pTargetModel->IsConnected())
+        m_requestId = m_pDispatcher->RequestMemory(m_memSlot, m_address, size);
 }
 
 //-----------------------------------------------------------------------------

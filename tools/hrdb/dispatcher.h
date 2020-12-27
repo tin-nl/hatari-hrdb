@@ -54,6 +54,7 @@ private:
 
     /* If true, drop incoming packets since they are assumed to be
      * from a previous connection. */
+    bool                            m_portConnected;
     bool                            m_waitingConnectionAck;
 };
 
