@@ -26,6 +26,8 @@ Memory& Memory::operator=(const Memory &other)
 {
     this->m_size = other.m_size;
     this->m_addr = other.m_addr;
+    delete [] this->m_pData;
+
     this->m_pData = new uint8_t[other.m_size];
     memcpy(this->m_pData, other.m_pData, other.m_size);
     return *this;
