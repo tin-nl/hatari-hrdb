@@ -9,6 +9,8 @@ enum MemorySlot
     kNone,          // e.g. regs
     kMainPC,        // Memory around the stopped PC for the main view (to allow stepping etc)
 
+    kVideo,         // memory from $ff8200 to $ff8270
+
     kDisasm0,       // general disassembly view memory
     kDisasm1,       // secondary disassembly
 
@@ -45,6 +47,13 @@ public:
     uint32_t GetAddress() const
     {
         return m_addr;
+    }
+
+    uint8_t ReadAddressByte(uint32_t address) const
+    {
+        uint32_t offset = address - m_addr;
+        assert(offset < m_size);
+        return Get(offset);
     }
 
     uint32_t GetSize() const

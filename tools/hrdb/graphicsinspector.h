@@ -9,6 +9,7 @@ class QLabel;
 class QLineEdit;
 class QAbstractItemModel;
 class QSpinBox;
+class QCheckBox;
 
 class TargetModel;
 class Dispatcher;
@@ -48,6 +49,7 @@ public:
     void startStopChangedSlot();
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void textEditChangedSlot();
+    void followVideoChangedSlot();
 
 public slots:
     void widthChangedSlot(int width);
@@ -56,13 +58,16 @@ protected:
     virtual void keyPressEvent(QKeyEvent *ev);
 
 private:
-
+    void UpdateCheckBoxes();
     void RequestMemory();
+    bool SetAddressFromVideo();
     void DisplayAddress();
 
     QLineEdit*      m_pLineEdit;
     QSpinBox*       m_pWidthSpinBox;
     QSpinBox*       m_pHeightSpinBox;
+    QCheckBox*      m_pFollowVideoCheckBox;
+
     NonAntiAliasImage*         m_pImageWidget;
 
     TargetModel*    m_pTargetModel;
@@ -74,6 +79,7 @@ private:
     int             m_width;
     int             m_height;
 
+    bool            m_bLockToVideo;
     uint64_t        m_requestIdBitmap;
     uint64_t        m_requestIdPalette;
 };

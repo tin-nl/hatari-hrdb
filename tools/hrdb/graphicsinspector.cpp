@@ -8,6 +8,7 @@
 #include <QSpinBox>
 #include <QShortcut>
 #include <QKeyEvent>
+#include <QCheckBox>
 
 #include <QPainter>
 #include <QStyle>
@@ -34,6 +35,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_address(0U),
     m_width(20),
     m_height(200),
+    m_bLockToVideo(true),
     m_requestIdBitmap(0U),
     m_requestIdPalette(0U)
 {
@@ -60,6 +62,8 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_pHeightSpinBox = new QSpinBox(this);
     m_pHeightSpinBox->setRange(16, 256);
     m_pHeightSpinBox->setValue(m_height);
+    m_pFollowVideoCheckBox = new QCheckBox(tr("Follow Video Pointer"), this);
+
     auto pMainGroupBox = new QWidget(this);
 
     QHBoxLayout *hlayout = new QHBoxLayout();
@@ -73,6 +77,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
 
     QVBoxLayout *vlayout = new QVBoxLayout;
     vlayout->addWidget(pTopContainer);
+    vlayout->addWidget(m_pFollowVideoCheckBox);
     vlayout->addWidget(m_pImageWidget);
     vlayout->setAlignment(Qt::Alignment(Qt::AlignTop));
     pMainGroupBox->setLayout(vlayout);
@@ -82,8 +87,13 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     connect(m_pTargetModel,  &TargetModel::startStopChangedSignalDelayed, this, &GraphicsInspectorWidget::startStopChangedSlot);
     connect(m_pTargetModel,  &TargetModel::memoryChangedSignal,           this, &GraphicsInspectorWidget::memoryChangedSlot);
     connect(m_pLineEdit,     &QLineEdit::returnPressed,                   this, &GraphicsInspectorWidget::textEditChangedSlot);
+    connect(m_pFollowVideoCheckBox,
+                             &QCheckBox::stateChanged,                    this, &GraphicsInspectorWidget::followVideoChangedSlot);
     connect(m_pWidthSpinBox, SIGNAL(valueChanged(int)),                   SLOT(widthChangedSlot(int)));
     connect(m_pHeightSpinBox,SIGNAL(valueChanged(int)),                   SLOT(heightChangedSlot(int)));
+
+    UpdateCheckBoxes();
+    DisplayAddress();
 }
 
 GraphicsInspectorWidget::~GraphicsInspectorWidget()
@@ -118,6 +128,7 @@ void GraphicsInspectorWidget::keyPressEvent(QKeyEvent* ev)
         else {
             m_address = 0;
         }
+        m_bLockToVideo = false;
         RequestMemory();
         DisplayAddress();
         return;
@@ -131,6 +142,11 @@ void GraphicsInspectorWidget::startStopChangedSlot()
     // Request new memory for the view
     if (!m_pTargetModel->IsRunning())
     {
+        if (m_bLockToVideo)
+        {
+            SetAddressFromVideo();
+        }
+
         // Just request what we had already.
         RequestMemory();
     }
@@ -230,7 +246,18 @@ void GraphicsInspectorWidget::textEditChangedSlot()
         return;
     }
     m_address = addr;
+    m_bLockToVideo = false;
     RequestMemory();
+}
+
+void GraphicsInspectorWidget::followVideoChangedSlot()
+{
+    m_bLockToVideo = m_pFollowVideoCheckBox->isChecked();
+    if (m_bLockToVideo)
+    {
+        // ....
+        RequestMemory();
+    }
 }
 
 void GraphicsInspectorWidget::widthChangedSlot(int value)
@@ -248,6 +275,9 @@ void GraphicsInspectorWidget::heightChangedSlot(int value)
 // Request enough memory based on m_rowCount and m_logicalAddr
 void GraphicsInspectorWidget::RequestMemory()
 {
+    if (!m_pTargetModel->IsConnected())
+        return;
+
     // Palette first
     m_requestIdPalette = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspectorPalette, 0xff8240, 32);
 
@@ -255,7 +285,28 @@ void GraphicsInspectorWidget::RequestMemory()
     m_requestIdBitmap = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspector, m_address, size);
 }
 
+bool GraphicsInspectorWidget::SetAddressFromVideo()
+{
+    // Update to current video regs
+    const Memory* pVideoRegs = m_pTargetModel->GetMemory(MemorySlot::kVideo);
+    if (pVideoRegs->GetSize() > 0)
+    {
+        uint8_t hi = pVideoRegs->ReadAddressByte(0xff8201);
+        uint8_t mi = pVideoRegs->ReadAddressByte(0xff8203);
+        uint8_t lo = pVideoRegs->ReadAddressByte(0xff820d);
+        m_address = (hi << 16) | (mi << 8) | lo;
+        DisplayAddress();
+        return true;
+    }
+    return false;
+}
+
 void GraphicsInspectorWidget::DisplayAddress()
 {
     m_pLineEdit->setText(QString::asprintf("$%x", m_address));
+}
+
+void GraphicsInspectorWidget::UpdateCheckBoxes()
+{
+    m_pFollowVideoCheckBox->setChecked(m_bLockToVideo);
 }
