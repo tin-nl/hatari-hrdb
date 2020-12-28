@@ -39,6 +39,7 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     connect(m_pTargetModel, &TargetModel::breakpointsChangedSignal, this, &DisasmTableModel::breakpointsChangedSlot);
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &DisasmTableModel::symbolTableChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal, this, &DisasmTableModel::connectChangedSlot);
+    connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &DisasmTableModel::CalcEAs);
 }
 
 int DisasmTableModel::rowCount(const QModelIndex &parent) const
@@ -184,6 +185,18 @@ void DisasmTableModel::RequestMemory()
     uint32_t size = ((m_rowCount * 10) + 100);
     if (m_pTargetModel->IsConnected())
         m_requestId = m_pDispatcher->RequestMemory(m_memSlot, lowAddr, size);
+}
+
+bool DisasmTableModel::GetEA(uint32_t row, int operandIndex, uint32_t &addr)
+{
+    if (row >= m_opAddresses.size())
+        return false;
+
+    if (operandIndex >= 2)
+        return false;
+
+    addr = m_opAddresses[row].address[operandIndex];
+    return m_opAddresses[row].valid[operandIndex];
 }
 
 bool DisasmTableModel::SetAddress(std::string addrStr)
@@ -379,6 +392,24 @@ void DisasmTableModel::CalcDisasm()
     buffer_reader disasmBuf(m_memory.GetData() + offset, size);
     m_disasm.lines.clear();
     Disassembler::decode_buf(disasmBuf, m_disasm, m_logicalAddr, m_rowCount);
+    CalcEAs();
+}
+
+void DisasmTableModel::CalcEAs()
+{
+    // Precalc EAs
+    m_opAddresses.clear();
+    m_opAddresses.resize(m_disasm.lines.size());
+    const Registers& regs = m_pTargetModel->GetRegs();
+    for (size_t i = 0; i < m_disasm.lines.size(); ++i)
+    {
+        const instruction& inst = m_disasm.lines[i].inst;
+        OpAddresses& addrs = m_opAddresses[i];
+        bool useRegs = (i == 0);
+        addrs.valid[0] = Disassembler::calc_fixed_ea(inst.op0, useRegs, regs, m_disasm.lines[i].address, addrs.address[0]);
+        addrs.valid[1] = Disassembler::calc_fixed_ea(inst.op1, useRegs, regs, m_disasm.lines[i].address, addrs.address[1]);
+    }
+
 }
 
 void DisasmTableModel::ToggleBreakpoint(int row)
@@ -460,20 +491,36 @@ void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_
 DisasmTableView::DisasmTableView(QWidget* parent, DisasmTableModel* pModel, TargetModel* pTargetModel) :
     QTableView(parent),
     m_pTableModel(pModel),
+    m_pTargetModel(pTargetModel),
     m_rightClickMenu(this),
     m_rightClickRow(-1)
 {
     // Actions for right-click menu
     m_pRunUntilAction = new QAction(tr("Run to here"), this);
-    connect(m_pRunUntilAction, &QAction::triggered, this, &DisasmTableView::runToCursorRightClick);
     m_pBreakpointAction = new QAction(tr("Toggle Breakpoint"), this);
+
+    m_pMemViewAddress[0] = new QAction("", this);
+    m_pMemViewAddress[1] = new QAction("", this);
+    m_pDisassembleAddress[0] = new QAction("", this);
+    m_pDisassembleAddress[1] = new QAction("", this);
+
     m_rightClickMenu.addAction(m_pRunUntilAction);
     m_rightClickMenu.addAction(m_pBreakpointAction);
+    m_rightClickMenu.addAction(m_pMemViewAddress[0]);
+    m_rightClickMenu.addAction(m_pMemViewAddress[1]);
+    m_rightClickMenu.addAction(m_pDisassembleAddress[0]);
+    m_rightClickMenu.addAction(m_pDisassembleAddress[1]);
 
     new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
     new QShortcut(QKeySequence(tr("F9", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
 
-    connect(m_pBreakpointAction, &QAction::triggered,                  this, &DisasmTableView::toggleBreakpointRightClick);
+    connect(m_pRunUntilAction,       &QAction::triggered,                  this, &DisasmTableView::runToCursorRightClick);
+    connect(m_pBreakpointAction,     &QAction::triggered,                  this, &DisasmTableView::toggleBreakpointRightClick);
+    connect(m_pMemViewAddress[0],    &QAction::triggered,                  this, &DisasmTableView::memoryViewAddr0);
+    connect(m_pMemViewAddress[1],    &QAction::triggered,                  this, &DisasmTableView::memoryViewAddr1);
+    connect(m_pDisassembleAddress[0],&QAction::triggered,                  this, &DisasmTableView::disasmViewAddr0);
+    connect(m_pDisassembleAddress[1],&QAction::triggered,                  this, &DisasmTableView::disasmViewAddr1);
+
     connect(pTargetModel,        &TargetModel::startStopChangedSignal, this, &DisasmTableView::RecalcRowCount);
 
     // This table gets the focus from the parent docking widget
@@ -487,8 +534,26 @@ void DisasmTableView::contextMenuEvent(QContextMenuEvent *event)
         return;
 
     m_rightClickRow = index.row();
-    m_rightClickMenu.exec(event->globalPos());
 
+    // Set up relevant menu items
+    for (uint32_t op = 0; op < 2; ++op)
+    {
+        if (m_pTableModel->GetEA(m_rightClickRow, op, m_rightClickAddr[op]))
+        {
+            m_pMemViewAddress[op]->setText(QString::asprintf("Show Memory at $%x", m_rightClickAddr[op]));
+            m_pMemViewAddress[op]->setVisible(true);
+            m_pDisassembleAddress[op]->setText(QString::asprintf("Disassemble at $%x", m_rightClickAddr[op]));
+            m_pDisassembleAddress[op]->setVisible(true);
+        }
+        else
+        {
+            m_pMemViewAddress[op]->setVisible(false);
+            m_pDisassembleAddress[op]->setVisible(false);
+        }
+    }
+
+    // Run it
+    m_rightClickMenu.exec(event->globalPos());
 }
 
 void DisasmTableView::runToCursorRightClick()
@@ -501,6 +566,26 @@ void DisasmTableView::toggleBreakpointRightClick()
 {
     m_pTableModel->ToggleBreakpoint(m_rightClickRow);
     m_rightClickRow = -1;
+}
+
+void DisasmTableView::memoryViewAddr0()
+{
+    emit m_pTargetModel->addressRequested(1, true, m_rightClickAddr[0]);
+}
+
+void DisasmTableView::memoryViewAddr1()
+{
+    emit m_pTargetModel->addressRequested(1, true, m_rightClickAddr[1]);
+}
+
+void DisasmTableView::disasmViewAddr0()
+{
+    emit m_pTargetModel->addressRequested(1, false, m_rightClickAddr[0]);
+}
+
+void DisasmTableView::disasmViewAddr1()
+{
+    emit m_pTargetModel->addressRequested(1, false, m_rightClickAddr[1]);
 }
 
 void DisasmTableView::runToCursor()
@@ -572,7 +657,8 @@ void DisasmTableView::RecalcRowCount()
 DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher, int windowIndex) :
     QDockWidget(parent),
     m_pTargetModel(pTargetModel),
-    m_pDispatcher(pDispatcher)
+    m_pDispatcher(pDispatcher),
+    m_windowIndex(windowIndex)
 {
     // Create model early
     m_pTableModel = new DisasmTableModel(this, pTargetModel, pDispatcher, windowIndex);
@@ -642,6 +728,20 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     connect(m_pFollowPC,    &QCheckBox::clicked,                  this, &DisasmWidget::followPCClickedSlot);
 
     this->resizeEvent(nullptr);
+}
+
+void DisasmWidget::requestAddress(int windowIndex, bool isMemory, uint32_t address)
+{
+    if (isMemory)
+        return;
+
+    if (windowIndex != m_windowIndex)
+        return;
+
+    m_pTableModel->SetAddress(std::to_string(address));
+    m_pTableModel->SetFollowPC(false);
+    m_pFollowPC->setChecked(false);
+    setVisible(true);
 }
 
 void DisasmWidget::cellClickedSlot(const QModelIndex &index)

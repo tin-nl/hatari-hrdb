@@ -42,6 +42,7 @@ public:
     uint32_t GetAddress() const { return m_logicalAddr; }
     int GetRowCount() const     { return m_rowCount; }
     bool GetFollowPC() const    { return m_bFollowPC; }
+    bool GetEA(uint32_t row, int operandIndex, uint32_t &addr);
 
     bool SetAddress(std::string addr);
     void MoveUp();
@@ -52,7 +53,6 @@ public:
     void ToggleBreakpoint(int row);
     void SetRowCount(int count);
     void SetFollowPC(bool follow);
-
 signals:
     void addressChanged(uint64_t addr);
 
@@ -67,18 +67,27 @@ private:
     void SetAddress(uint32_t addr);
     void RequestMemory();
     void CalcDisasm();
+    void CalcEAs();
     void printEA(const operand &op, const Registers &regs, uint32_t address, QTextStream &ref) const;
     TargetModel* m_pTargetModel;
     Dispatcher*  m_pDispatcher;
 
     // Cached data when the up-to-date request comes through
     Memory       m_memory;
+
+    struct OpAddresses
+    {
+        bool valid[2];
+        uint32_t address[2];
+    };
+
     Disassembler::disassembly m_disasm;
+    std::vector<OpAddresses> m_opAddresses;
+
     Breakpoints m_breakpoints;
     int         m_rowCount;
 
     // Address of the top line of text that was requested
-
     uint32_t m_requestedAddress;    // Most recent address requested
     uint32_t m_logicalAddr;         // Most recent address that can be shown
     uint64_t m_requestId;           // Most recent memory request
@@ -107,6 +116,10 @@ private:
 
     void runToCursorRightClick();
     void toggleBreakpointRightClick();
+    void memoryViewAddr0();
+    void memoryViewAddr1();
+    void disasmViewAddr0();
+    void disasmViewAddr1();
 
     // override -- this doesn't trigger at the start?
     virtual void resizeEvent(QResizeEvent*);
@@ -115,13 +128,19 @@ private slots:
 
 private:
     DisasmTableModel*     m_pTableModel;
+    TargetModel*          m_pTargetModel;   // for inter-window
     // Actions
     QAction*              m_pRunUntilAction;
     QAction*              m_pBreakpointAction;
+
+    QAction*              m_pMemViewAddress[2];
+    QAction*              m_pDisassembleAddress[2];
+
     QMenu                 m_rightClickMenu;
 
     // Remembers which row we right-clicked on
     int                   m_rightClickRow;
+    uint32_t              m_rightClickAddr[2];
 };
 
 class DisasmWidget : public QDockWidget
@@ -129,6 +148,9 @@ class DisasmWidget : public QDockWidget
     Q_OBJECT
 public:
     DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher, int windowIndex);
+
+public slots:
+    void requestAddress(int windowIndex, bool isMemory, uint32_t address);
 
 protected:
 
@@ -155,6 +177,8 @@ private:
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
     QAbstractItemModel* m_pSymbolTableModel;
+
+    int             m_windowIndex;
 };
 
 #endif // DISASMWINDOW_H

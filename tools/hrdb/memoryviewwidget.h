@@ -119,6 +119,8 @@ public:
     MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher, int windowIndex);
 
 public slots:
+    void requestAddress(int windowIndex, bool isMemory, uint32_t address);
+
     void textEditChangedSlot();
     void lockChangedSlot();
     void modeComboBoxChanged(int index);
@@ -130,9 +132,10 @@ private:
     MemoryTableView*     m_pTableView;
 
     MemoryViewTableModel* pModel;
-    TargetModel*    m_pTargetModel;
-    Dispatcher*     m_pDispatcher;
+    TargetModel*        m_pTargetModel;
+    Dispatcher*         m_pDispatcher;
     QAbstractItemModel* m_pSymbolTableModel;
+    int                 m_windowIndex;
 };
 
 #endif // MEMORYVIEWWIDGET_H

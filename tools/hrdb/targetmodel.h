@@ -74,6 +74,10 @@ signals:
     void symbolTableChangedSignal(uint64_t commandId);
     void exceptionMaskChanged();
 
+    // UI BODGE
+    // Qt seems to have no central message dispatch
+    void addressRequested(int windowId, bool isMemory, uint32_t address);
+
 private slots:
 
     // Called shortly after stop notification received

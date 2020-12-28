@@ -410,7 +410,8 @@ void MemoryTableView::RecalcRowCount()
 MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher, int windowIndex) :
     QDockWidget(parent),
     m_pTargetModel(pTargetModel),
-    m_pDispatcher(pDispatcher)
+    m_pDispatcher(pDispatcher),
+    m_windowIndex(windowIndex)
 {
     this->setWindowTitle(QString::asprintf("Memory %d", windowIndex + 1));
 
@@ -473,6 +474,20 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     connect(m_pLineEdit, &QLineEdit::returnPressed,         this, &MemoryViewWidget::textEditChangedSlot);
     connect(m_pLockCheckBox, &QCheckBox::stateChanged,      this, &MemoryViewWidget::lockChangedSlot);
     connect(m_pComboBox, SIGNAL(currentIndexChanged(int)),  SLOT(modeComboBoxChanged(int)));
+}
+
+void MemoryViewWidget::requestAddress(int windowIndex, bool isMemory, uint32_t address)
+{
+    if (!isMemory)
+        return;
+
+    if (windowIndex != m_windowIndex)
+        return;
+
+    pModel->SetLock(false);
+    pModel->SetAddress(std::to_string(address));
+    m_pLockCheckBox->setChecked(false);
+    setVisible(true);
 }
 
 void MemoryViewWidget::textEditChangedSlot()
