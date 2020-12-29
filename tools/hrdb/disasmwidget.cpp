@@ -74,8 +74,22 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
         {
             uint32_t addr = line.address;
             Symbol sym;
-            if (m_pTargetModel->GetSymbolTable().Find(addr, sym))
-                return QString::fromStdString(sym.name) + ":";
+            if (row == 0)
+            {
+                // show symbol + offset if necessary for the top line
+                if (m_pTargetModel->GetSymbolTable().FindLowerOrEqual(addr, sym))
+                {
+                    if (addr == sym.address)
+                        return QString::fromStdString(sym.name) + ":";
+                    else {
+                        return QString::asprintf("%s+$%x:", sym.name.c_str(), addr - sym.address);
+                    }
+                }
+            }
+            else {
+                if (m_pTargetModel->GetSymbolTable().Find(addr, sym))
+                    return QString::fromStdString(sym.name) + ":";
+            }
         }
         else if (index.column() == kColAddress)
         {
@@ -479,7 +493,7 @@ void DisasmTableModel::printEA(const operand& op, const Registers& regs, uint32_
         {
             uint32_t offset = ea - sym.address;
             if (offset)
-                ref << " " << QString::fromStdString(sym.name) << "+" << offset;
+                ref << QString::asprintf(" %s+$%x", sym.name.c_str(), offset);
             else
                 ref << " " << QString::fromStdString(sym.name);
         }
