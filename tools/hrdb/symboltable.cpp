@@ -16,67 +16,87 @@ public:
 
 void SymbolTable::AddHardware()
 {
-    ADD_SYM(vid_memconf		, 0xff8001, 1)	// memory controller
-    ADD_SYM(vid_dbaseh		, 0xff8201, 1)
-    ADD_SYM(vid_dbasel		, 0xff8203, 1)	// display base low, high
-    ADD_SYM(vid_vcounthi	, 0xff8205, 1)	// display counter low, medium, high
-    ADD_SYM(vid_vcountmid	, 0xff8207, 1)
-    ADD_SYM(vid_vcountlow	, 0xff8209, 1)
-    ADD_SYM(vid_syncmode	, 0xff820a, 1)	// video	sync mode
-    ADD_SYM(vid_color0		, 0xff8240, 2)	// color registers 0..15
-    ADD_SYM(vid_color1		, 0xff8242, 2)
-    ADD_SYM(vid_color2		, 0xff8244, 2)
-    ADD_SYM(vid_color3		, 0xff8246, 2)
-    ADD_SYM(vid_color4		, 0xff8248, 2)
-    ADD_SYM(vid_color5		, 0xff824a, 2)
-    ADD_SYM(vid_color6		, 0xff824c, 2)
-    ADD_SYM(vid_color7		, 0xff824e, 2)
-    ADD_SYM(vid_color8		, 0xff8250, 2)
-    ADD_SYM(vid_color9		, 0xff8252, 2)
-    ADD_SYM(vid_color10		, 0xff8254, 2)
-    ADD_SYM(vid_color11		, 0xff8256, 2)
-    ADD_SYM(vid_color12		, 0xff8258, 2)
-    ADD_SYM(vid_color13		, 0xff825a, 2)
-    ADD_SYM(vid_color14		, 0xff825c, 2)
-    ADD_SYM(vid_color15		, 0xff825e, 2)
-    ADD_SYM(vid_shiftmd		, 0xff8260, 1)	// shifter mode (resolution)
-    ADD_SYM(dma_diskctl		, 0xff8604, 1)	// disk controller data access
-    ADD_SYM(dma_fifo		, 0xff8606, 1)	// DMA mode control
-    ADD_SYM(dma_dmahigh		, 0xff8609, 1)	// DMA base high, medium, low
-    ADD_SYM(dma_dmamid		, 0xff860b, 1)
-    ADD_SYM(dma_dmalow		, 0xff860d, 1)
-    ADD_SYM(ym_giselect     , 0xff8800, 1)	// (W) sound chip register select
-    ADD_SYM(ym_giread		, 0xff8800, 1)	// (R) sound chip read-data
-    ADD_SYM(ym_giwrite		, 0xff8802, 1)	// (W) sound chip write-data
-    ADD_SYM(mfp_gpip        , 0xfffa00+1	, 1)		// general purpose I/O
-    ADD_SYM(mfp_aer         , 0xfffa00+3	, 1)		// active edge reg
-    ADD_SYM(mfp_ddr         , 0xfffa00+5	, 1)		// data direction reg
-    ADD_SYM(mfp_iera        , 0xfffa00+7	, 1)		// interrupt enable A & B
-    ADD_SYM(mfp_ierb        , 0xfffa00+9    , 1)
-    ADD_SYM(mfp_ipra        , 0xfffa00+0xb	, 1)	// interrupt pending A & B
-    ADD_SYM(mfp_iprb        , 0xfffa00+0xd  , 1)
-    ADD_SYM(mfp_isra        , 0xfffa00+0xf	, 1)	// interrupt inService A & B
-    ADD_SYM(mfp_isrb        , 0xfffa00+0x11 , 1)
-    ADD_SYM(mfp_imra        , 0xfffa00+0x13	, 1)	// interrupt mask A & B
-    ADD_SYM(mfp_imrb        , 0xfffa00+0x15 , 1)
-    ADD_SYM(mfp_vr          , 0xfffa00+0x17	, 1)	// interrupt vector base
-    ADD_SYM(mfp_tacr        , 0xfffa00+0x19	, 1)	// timer A control
-    ADD_SYM(mfp_tbcr        , 0xfffa00+0x1b	, 1)	// timer B control
-    ADD_SYM(mfp_tcdcr       , 0xfffa00+0x1d	, 1)	// timer C & D control
-    ADD_SYM(mfp_tadr        , 0xfffa00+0x1f	, 1)	// timer A data
-    ADD_SYM(mfp_tbdr        , 0xfffa00+0x21	, 1)	// timer B data
-    ADD_SYM(mfp_tcdr        , 0xfffa00+0x23	, 1)	// timer C data
-    ADD_SYM(mfp_tddr        , 0xfffa00+0x25	, 1)	// timer D data
-    ADD_SYM(mfp_scr         , 0xfffa00+0x27	, 1)	// sync char
-    ADD_SYM(mfp_ucr         , 0xfffa00+0x29	, 1)	// USART control reg
-    ADD_SYM(mfp_rsr         , 0xfffa00+0x2b	, 1)	// receiver status
-    ADD_SYM(mfp_tsr         , 0xfffa00+0x2d	, 1)	// transmit status
-    ADD_SYM(mfp_udr         , 0xfffa00+0x2f	, 1)	// USART data
-    ADD_SYM(acia_keyctl     , 0xfffc00, 1)		// keyboard ACIA control
-    ADD_SYM(acia_keybd      , 0xfffc02, 1)		// keyboard data
-    ADD_SYM(acia_midictl	, 0xfffc04, 1)		// MIDI ACIA control
-    ADD_SYM(acia_midi       , 0xfffc06, 1)		// MIDI data
+    ADD_SYM(VID_MEMCONF		, 0xff8001, 1)	// memory controller
+    ADD_SYM(VID_DBASEH		, 0xff8201, 1)
+    ADD_SYM(VID_DBASEL		, 0xff8203, 1)	// display base low, high
+    ADD_SYM(VID_VCOUNTHI	, 0xff8205, 1)	// display counter low, medium, high
+    ADD_SYM(VID_VCOUNTMID	, 0xff8207, 1)
+    ADD_SYM(VID_VCOUNTLOW	, 0xff8209, 1)
+    ADD_SYM(VID_SYNCMODE	, 0xff820a, 1)	// video	sync mode
+    ADD_SYM(VID_COLOR0		, 0xff8240, 2)	// color registers 0..15
+    ADD_SYM(VID_COLOR1		, 0xff8242, 2)
+    ADD_SYM(VID_COLOR2		, 0xff8244, 2)
+    ADD_SYM(VID_COLOR3		, 0xff8246, 2)
+    ADD_SYM(VID_COLOR4		, 0xff8248, 2)
+    ADD_SYM(VID_COLOR5		, 0xff824a, 2)
+    ADD_SYM(VID_COLOR6		, 0xff824c, 2)
+    ADD_SYM(VID_COLOR7		, 0xff824e, 2)
+    ADD_SYM(VID_COLOR8		, 0xff8250, 2)
+    ADD_SYM(VID_COLOR9		, 0xff8252, 2)
+    ADD_SYM(VID_COLOR10		, 0xff8254, 2)
+    ADD_SYM(VID_COLOR11		, 0xff8256, 2)
+    ADD_SYM(VID_COLOR12		, 0xff8258, 2)
+    ADD_SYM(VID_COLOR13		, 0xff825a, 2)
+    ADD_SYM(VID_COLOR14		, 0xff825c, 2)
+    ADD_SYM(VID_COLOR15		, 0xff825e, 2)
+    ADD_SYM(VID_SHIFTMD		, 0xff8260, 1)	// shifter mode (resolution)
+    ADD_SYM(DMA_DISKCTL		, 0xff8604, 1)	// disk controller data access
+    ADD_SYM(DMA_FIFO		, 0xff8606, 1)	// DMA mode control
+    ADD_SYM(DMA_DMAHIGH		, 0xff8609, 1)	// DMA base high, medium, low
+    ADD_SYM(DMA_DMAMID		, 0xff860b, 1)
+    ADD_SYM(DMA_DMALOW		, 0xff860d, 1)
+    ADD_SYM(YM_GISELECT     , 0xff8800, 1)	// (W) sound chip register select
+    ADD_SYM(YM_GIREAD		, 0xff8800, 1)	// (R) sound chip read-data
+    ADD_SYM(YM_GIWRITE		, 0xff8802, 1)	// (W) sound chip write-data
+    ADD_SYM(MFP_GPIP        , 0xfffa00+1	, 1)		// general purpose I/O
+    ADD_SYM(MFP_AER         , 0xfffa00+3	, 1)		// active edge reg
+    ADD_SYM(MFP_DDR         , 0xfffa00+5	, 1)		// data direction reg
+    ADD_SYM(MFP_IERA        , 0xfffa00+7	, 1)		// interrupt enable A & B
+    ADD_SYM(MFP_IERB        , 0xfffa00+9    , 1)
+    ADD_SYM(MFP_IPRA        , 0xfffa00+0xb	, 1)	// interrupt pending A & B
+    ADD_SYM(MFP_IPRB        , 0xfffa00+0xd  , 1)
+    ADD_SYM(MFP_ISRA        , 0xfffa00+0xf	, 1)	// interrupt inService A & B
+    ADD_SYM(MFP_ISRB        , 0xfffa00+0x11 , 1)
+    ADD_SYM(MFP_IMRA        , 0xfffa00+0x13	, 1)	// interrupt mask A & B
+    ADD_SYM(MFP_IMRB        , 0xfffa00+0x15 , 1)
+    ADD_SYM(MFP_VR          , 0xfffa00+0x17	, 1)	// interrupt vector base
+    ADD_SYM(MFP_TACR        , 0xfffa00+0x19	, 1)	// timer A control
+    ADD_SYM(MFP_TBCR        , 0xfffa00+0x1b	, 1)	// timer B control
+    ADD_SYM(MFP_TCDCR       , 0xfffa00+0x1d	, 1)	// timer C & D control
+    ADD_SYM(MFP_TADR        , 0xfffa00+0x1f	, 1)	// timer A data
+    ADD_SYM(MFP_TBDR        , 0xfffa00+0x21	, 1)	// timer B data
+    ADD_SYM(MFP_TCDR        , 0xfffa00+0x23	, 1)	// timer C data
+    ADD_SYM(MFP_TDDR        , 0xfffa00+0x25	, 1)	// timer D data
+    ADD_SYM(MFP_SCR         , 0xfffa00+0x27	, 1)	// sync char
+    ADD_SYM(MFP_UCR         , 0xfffa00+0x29	, 1)	// USART control reg
+    ADD_SYM(MFP_RSR         , 0xfffa00+0x2b	, 1)	// receiver status
+    ADD_SYM(MFP_TSR         , 0xfffa00+0x2d	, 1)	// transmit status
+    ADD_SYM(MFP_UDR         , 0xfffa00+0x2f	, 1)	// USART data
+    ADD_SYM(ACIA_KEYCTL     , 0xfffc00, 1)		// keyboard ACIA control
+    ADD_SYM(ACIA_KEYBD      , 0xfffc02, 1)		// keyboard data
+    ADD_SYM(ACIA_MIDICTL	, 0xfffc04, 1)		// MIDI ACIA control
+    ADD_SYM(ACIA_MIDI       , 0xfffc06, 1)		// MIDI data
 
+
+    // STE
+    ADD_SYM(BLT_HALFTONE_0  , 0xff8a00, 2)
+    ADD_SYM(BLT_SRC_INC_X	, 0xff8a20, 2)
+    ADD_SYM(BLT_SRC_INC_Y	, 0xff8a22, 2)
+    ADD_SYM(BLT_SRC_ADDR_L	, 0xff8a24, 2)
+    ADD_SYM(BLT_ENDMASK_1	, 0xff8a28, 2)
+    ADD_SYM(BLT_ENDMASK_2	, 0xff8a2a, 2)
+    ADD_SYM(BLT_ENDMASK_3	, 0xff8a2c, 2)
+    ADD_SYM(BLT_DST_INC_X	, 0xff8a2e, 2)
+    ADD_SYM(BLT_DST_INC_Y	, 0xff8a30, 2)
+    ADD_SYM(BLT_DST_ADDR_L	, 0xff8a32, 2)
+    ADD_SYM(BLT_COUNT_X     , 0xff8a36, 2)
+    ADD_SYM(BLT_COUNT_Y     , 0xff8a38, 2)
+    ADD_SYM(BLT_HOP         , 0xff8a3a, 1)
+    ADD_SYM(BLT_OP          , 0xff8a3b, 1)	// combine operator (BYTE)
+    ADD_SYM(BLT_MISC_1      , 0xff8a3c, 1)  // Misc. Register (8 Bits)
+    ADD_SYM(BLT_MISC_2      , 0xff8a3d, 1)	// Misc. Register (8 Bits)
+
+    // TOS variables
     ADD_SYM(etv_timer       , 0x400, 4)	// vector for timer interrupt chain
     ADD_SYM(etv_critic      , 0x404, 4)	// vector for critical error chain
     ADD_SYM(etv_term        , 0x408, 4)	// vector for process terminate
