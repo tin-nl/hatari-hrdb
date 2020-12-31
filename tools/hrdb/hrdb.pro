@@ -33,7 +33,8 @@ SOURCES += \
     symboltablemodel.cpp \
     exceptionmask.cpp \
     exceptiondialog.cpp \
-    graphicsinspector.cpp
+    graphicsinspector.cpp \
+    breakpointswidget.cpp
 
 HEADERS += \
     disassembler.h \
@@ -55,7 +56,8 @@ HEADERS += \
     symboltablemodel.h \
     exceptionmask.h \
     exceptiondialog.h \
-    graphicsinspector.h
+    graphicsinspector.h \
+    breakpointswidget.h
     
 RESOURCES     = hrdb.qrc    
 

@@ -24,6 +24,7 @@ class TargetModel;
 class DisasmWidget;
 class MemoryViewWidget;
 class GraphicsInspectorWidget;
+class BreakpointsWidget;
 class ExceptionDialog;
 
 class MainWindow : public QMainWindow
@@ -88,11 +89,12 @@ private:
     ExceptionDialog*    m_pExceptionDialog;
 
     // Docking windows
-    DisasmWidget*       m_pDisasmWidget0;
-    DisasmWidget*       m_pDisasmWidget1;
-    MemoryViewWidget*   m_pMemoryViewWidget0;
-    MemoryViewWidget*   m_pMemoryViewWidget1;
-    GraphicsInspectorWidget*  m_pGraphicsInspector;
+    DisasmWidget*               m_pDisasmWidget0;
+    DisasmWidget*               m_pDisasmWidget1;
+    MemoryViewWidget*           m_pMemoryViewWidget0;
+    MemoryViewWidget*           m_pMemoryViewWidget1;
+    GraphicsInspectorWidget*    m_pGraphicsInspector;
+    BreakpointsWidget*          m_pBreakpointsWidget;
 
     // Low-level data
 	QTcpSocket* 	tcpSocket;

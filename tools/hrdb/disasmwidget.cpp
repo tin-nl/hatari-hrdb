@@ -449,7 +449,7 @@ void DisasmTableModel::ToggleBreakpoint(int row)
     }
     if (!removed)
     {
-        QString cmd = QString::asprintf("pc = %d", addr);
+        QString cmd = QString::asprintf("pc = $%x", addr);
         m_pDispatcher->SetBreakpoint(cmd.toStdString().c_str());
     }
 }
@@ -731,7 +731,6 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
     m_pSymbolTableModel = new SymbolTableModel(this, m_pTargetModel->GetSymbolTable());
     QCompleter* pCompl = new QCompleter(m_pSymbolTableModel, this);
     pCompl->setCaseSensitivity(Qt::CaseSensitivity::CaseInsensitive);
-
     m_pLineEdit->setCompleter(pCompl);
 
     // Listen for start/stop, so we can update our memory request
