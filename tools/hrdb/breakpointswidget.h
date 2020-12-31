@@ -17,6 +17,8 @@ public:
     {
         kColId,
         kColExpression,
+        kColConditionCount,
+        kColHitCount,
         kColCount
     };
 

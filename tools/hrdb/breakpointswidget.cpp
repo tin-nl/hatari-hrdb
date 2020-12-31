@@ -43,6 +43,10 @@ QVariant BreakpointsTableModel::data(const QModelIndex &index, int role) const
 {
     uint32_t row = index.row();
     const Breakpoints& bps = m_pTargetModel->GetBreakpoints();
+    if (row >= bps.m_breakpoints.size())
+        return QVariant();
+    const Breakpoint& bp = bps.m_breakpoints[row];
+
     if (role == Qt::DisplayRole)
     {
         if (index.column() == kColId)
@@ -51,10 +55,27 @@ QVariant BreakpointsTableModel::data(const QModelIndex &index, int role) const
         }
         else if (index.column() == kColExpression)
         {
+            return QString(bp.m_expression.c_str());
+        }
+        else if (index.column() == kColConditionCount)
+        {
             if (row >= bps.m_breakpoints.size())
                 return QVariant();
-            return QString(bps.m_breakpoints[row].m_expression.c_str());
+            return QString::number(bp.m_conditionCount);
         }
+        else if (index.column() == kColHitCount)
+        {
+            if (row >= bps.m_breakpoints.size())
+                return QVariant();
+            return QString::number(bp.m_hitCount);
+        }
+    }
+    if (role == Qt::TextAlignmentRole)
+    {
+        if (index.column() == kColExpression)
+            return Qt::AlignLeft;
+        return Qt::AlignRight;
+
     }
     return QVariant(); // invalid item
 }
@@ -67,13 +88,17 @@ QVariant BreakpointsTableModel::headerData(int section, Qt::Orientation orientat
         {
             switch (section)
             {
-            case kColId:         return QString(tr("ID"));
-            case kColExpression: return QString(tr("Expression"));
+            case kColId:             return QString(tr("ID"));
+            case kColExpression:     return QString(tr("Expression"));
+            case kColConditionCount: return QString(tr("Condition Count"));
+            case kColHitCount:       return QString(tr("Hit Count"));
             }
         }
         if (role == Qt::TextAlignmentRole)
         {
-            return Qt::AlignLeft;
+            if (section == kColExpression)
+                return Qt::AlignLeft;
+            return Qt::AlignRight;
         }
     }
     return QVariant();

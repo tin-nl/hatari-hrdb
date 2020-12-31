@@ -282,6 +282,10 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
             bp.SetExpression(splitResp.Split('`'));
             std::string ccount = splitResp.Split(' ');
             std::string hits = splitResp.Split(' ');
+            if (!StringParsers::ParseHexString(ccount.c_str(), bp.m_conditionCount))
+                return;
+            if (!StringParsers::ParseHexString(hits.c_str(), bp.m_hitCount))
+                return;
             bps.m_breakpoints.push_back(bp);
         }
 
