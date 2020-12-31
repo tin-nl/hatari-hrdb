@@ -19,6 +19,9 @@ public:
         kColExpression,
         kColConditionCount,
         kColHitCount,
+        kColOnce,
+        kColQuiet,
+        kColTrace,
         kColCount
     };
 

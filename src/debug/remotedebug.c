@@ -74,9 +74,13 @@ static void send_hexchar(int fd, uint32_t val)
 // -----------------------------------------------------------------------------
 static void send_char(int fd, char val)
 {
-	char str[2];
-	sprintf(str, "%c", val);
-	send(fd, str, strlen(str), 0);
+	send(fd, &val, 1, 0);
+}
+
+// -----------------------------------------------------------------------------
+static void send_bool(int fd, bool val)
+{
+	send_char(fd, val ? '1' : '0');
 }
 
 // -----------------------------------------------------------------------------
@@ -291,10 +295,11 @@ static int RemoteDebug_bplist(int nArgc, char *psArgs[], int fd)
 		/* Note this has the ` character to flag the expression end,
 		since the expression can contain spaces */
 		send_str(fd, "`");
-		send_hex(fd, query.ccount);
-		send_str(fd, " ");
-		send_hex(fd, query.hits);
-		send_str(fd, " ");
+		send_hex(fd, query.ccount); send_str(fd, " ");
+		send_hex(fd, query.hits); send_str(fd, " ");
+		send_bool(fd, query.once); send_str(fd, " ");
+		send_bool(fd, query.quiet); send_str(fd, " ");
+		send_bool(fd, query.trace); send_str(fd, " ");
 	}
 	return 0;
 }

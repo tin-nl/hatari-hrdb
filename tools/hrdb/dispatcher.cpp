@@ -280,11 +280,20 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         {
             Breakpoint bp;
             bp.SetExpression(splitResp.Split('`'));
-            std::string ccount = splitResp.Split(' ');
-            std::string hits = splitResp.Split(' ');
-            if (!StringParsers::ParseHexString(ccount.c_str(), bp.m_conditionCount))
+            std::string ccountStr = splitResp.Split(' ');
+            std::string hitsStr = splitResp.Split(' ');
+            std::string onceStr = splitResp.Split(' ');
+            std::string quietStr = splitResp.Split(' ');
+            std::string traceStr = splitResp.Split(' ');
+            if (!StringParsers::ParseHexString(ccountStr.c_str(), bp.m_conditionCount))
                 return;
-            if (!StringParsers::ParseHexString(hits.c_str(), bp.m_hitCount))
+            if (!StringParsers::ParseHexString(hitsStr.c_str(), bp.m_hitCount))
+                return;
+            if (!StringParsers::ParseHexString(onceStr.c_str(), bp.m_once))
+                return;
+            if (!StringParsers::ParseHexString(quietStr.c_str(), bp.m_quiet))
+                return;
+            if (!StringParsers::ParseHexString(traceStr.c_str(), bp.m_trace))
                 return;
             bps.m_breakpoints.push_back(bp);
         }

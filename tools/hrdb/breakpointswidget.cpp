@@ -50,25 +50,19 @@ QVariant BreakpointsTableModel::data(const QModelIndex &index, int role) const
     if (role == Qt::DisplayRole)
     {
         if (index.column() == kColId)
-        {
             return QString::number(row + 1);
-        }
         else if (index.column() == kColExpression)
-        {
             return QString(bp.m_expression.c_str());
-        }
         else if (index.column() == kColConditionCount)
-        {
-            if (row >= bps.m_breakpoints.size())
-                return QVariant();
             return QString::number(bp.m_conditionCount);
-        }
         else if (index.column() == kColHitCount)
-        {
-            if (row >= bps.m_breakpoints.size())
-                return QVariant();
             return QString::number(bp.m_hitCount);
-        }
+        else if (index.column() == kColOnce)
+            return QString::number(bp.m_once);
+        else if (index.column() == kColTrace)
+            return QString::number(bp.m_trace);
+        else if (index.column() == kColQuiet)
+            return QString::number(bp.m_quiet);
     }
     if (role == Qt::TextAlignmentRole)
     {
@@ -92,6 +86,9 @@ QVariant BreakpointsTableModel::headerData(int section, Qt::Orientation orientat
             case kColExpression:     return QString(tr("Expression"));
             case kColConditionCount: return QString(tr("Condition Count"));
             case kColHitCount:       return QString(tr("Hit Count"));
+            case kColOnce:           return QString(tr("Once?"));
+            case kColQuiet:          return QString(tr("Quiet"));
+            case kColTrace:          return QString(tr("Trace"));
             }
         }
         if (role == Qt::TextAlignmentRole)

@@ -11,7 +11,9 @@ struct Breakpoint
     uint32_t        m_pcHack;
     uint32_t        m_conditionCount;       // Condition count
     uint32_t        m_hitCount;      // hit count
-
+    uint32_t        m_once;
+    uint32_t        m_quiet;
+    uint32_t        m_trace;
 };
 
 struct Breakpoints

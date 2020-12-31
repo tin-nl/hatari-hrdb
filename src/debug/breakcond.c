@@ -1694,6 +1694,9 @@ bool BreakCond_GetCpuBreakpointInfo(int index, bc_breakpoint_query_t *result)
 	result->expression = orig->expression;
 	result->ccount = orig->ccount;
 	result->hits = orig->hits;
+	result->once = orig->options.once;
+	result->quiet = orig->options.quiet;
+	result->trace = orig->options.trace;
 	return true;
 }
 
