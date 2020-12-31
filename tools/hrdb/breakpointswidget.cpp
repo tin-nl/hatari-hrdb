@@ -10,11 +10,15 @@
 #include <QStringListModel>
 #include <QFontDatabase>
 #include <QCompleter>
+#include <QPushButton>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
 #include "stringparsers.h"
 #include "symboltablemodel.h"
+
+#include "addbreakpointdialog.h"
+#include "quicklayout.h"
 
 BreakpointsTableModel::BreakpointsTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher) :
     QAbstractTableModel(parent),
@@ -110,7 +114,6 @@ void BreakpointsTableModel::breakpointsChangedSlot()
     emit endResetModel();
 }
 
-
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 BreakpointsTableView::BreakpointsTableView(QWidget* parent, BreakpointsTableModel* pModel, TargetModel* pTargetModel) :
@@ -202,15 +205,22 @@ BreakpointsWidget::BreakpointsWidget(QWidget *parent, TargetModel* pTargetModel,
 
     // Layouts
     QVBoxLayout* pMainLayout = new QVBoxLayout;
-    QHBoxLayout* pTopLayout = new QHBoxLayout;
     auto pMainRegion = new QWidget(this);   // whole panel
-    auto pTopRegion = new QWidget(this);      // top buttons/edits
 
-    pMainLayout->addWidget(pTopRegion);
+    QPushButton* pAddButton = new QPushButton(tr("Add..."), this);
+    QWidget* topWidgets[] = {pAddButton, nullptr};
+
+    pMainLayout->addWidget(CreateHorizLayout(this, topWidgets) );
     pMainLayout->addWidget(m_pTableView);
 
-    pTopRegion->setLayout(pTopLayout);
     pMainRegion->setLayout(pMainLayout);
     setWidget(pMainRegion);
+
+    connect(pAddButton, &QAbstractButton::clicked, this, &BreakpointsWidget::addBreakpointClicked);
 }
 
+void BreakpointsWidget::addBreakpointClicked()
+{
+    AddBreakpointDialog dialog(this, m_pTargetModel, m_pDispatcher);
+    dialog.exec();
+}

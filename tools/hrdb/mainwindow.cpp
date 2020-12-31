@@ -14,6 +14,7 @@
 #include "memoryviewwidget.h"
 #include "graphicsinspector.h"
 #include "breakpointswidget.h"
+#include "addbreakpointdialog.h"
 #include "exceptiondialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -54,7 +55,6 @@ MainWindow::MainWindow(QWidget *parent)
     m_pMemoryViewWidget1 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 1);
     m_pGraphicsInspector = new GraphicsInspectorWidget(this, m_pTargetModel, m_pDispatcher);
     m_pBreakpointsWidget = new BreakpointsWidget(this, m_pTargetModel, m_pDispatcher);
-
     m_pExceptionDialog = new ExceptionDialog(this, m_pTargetModel, m_pDispatcher);
 
     // Set up menus
@@ -122,10 +122,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(windowMenu, &QMenu::aboutToShow, this, &MainWindow::updateWindowMenu);
 
 	// Keyboard shortcuts
-    new QShortcut(QKeySequence(tr("F5", "Start/Stop")), 		this, 			SLOT(startStopClicked()));
+    new QShortcut(QKeySequence(tr("F5", "Start/Stop")), 		 this, 			 SLOT(startStopClicked()));
 
-    new QShortcut(QKeySequence(tr("F10", "Next")),				this,           SLOT(nextClicked()));
-    new QShortcut(QKeySequence(tr("F11", "Step")),              this,           SLOT(singleStepClicked()));
+    new QShortcut(QKeySequence(tr("F10", "Next")),				 this,           SLOT(nextClicked()));
+    new QShortcut(QKeySequence(tr("F11", "Step")),               this,           SLOT(singleStepClicked()));
+    new QShortcut(QKeySequence(tr("Alt+B", "Add Breakpoint...")),this,           SLOT(addBreakpointPressed()));
 
     // Try initial connect
     Connect();
@@ -274,17 +275,23 @@ void MainWindow::runToClicked()
         return;
 
     if (m_pRunToCombo->currentIndex() == 0)
-        m_pDispatcher->SetBreakpoint("(pc).w = $4e75 : once");      // RTS
+        m_pDispatcher->SetBreakpoint("(pc).w = $4e75", true);      // RTS
     else if (m_pRunToCombo->currentIndex() == 1)
-        m_pDispatcher->SetBreakpoint("(pc).w = $4e73 : once");      // RTE
+        m_pDispatcher->SetBreakpoint("(pc).w = $4e73", true);      // RTE
     else if (m_pRunToCombo->currentIndex() == 2)
-        m_pDispatcher->SetBreakpoint("VBL ! VBL : once");        // VBL
-        //m_pDispatcher->SetBreakpoint("pc = ($70).l : once");        // VBL interrupt code
+        m_pDispatcher->SetBreakpoint("VBL ! VBL", true);        // VBL
+        //m_pDispatcher->SetBreakpoint("pc = ($70).l", true);        // VBL interrupt code
     else if (m_pRunToCombo->currentIndex() == 3)
-        m_pDispatcher->SetBreakpoint("HBL ! HBL : once");        // VBL
+        m_pDispatcher->SetBreakpoint("HBL ! HBL", true);        // VBL
     else
         return;
     m_pDispatcher->SendCommandPacket("run");
+}
+
+void MainWindow::addBreakpointPressed()
+{
+    AddBreakpointDialog dialog(this, m_pTargetModel, m_pDispatcher);
+    dialog.exec();
 }
 
 // Network

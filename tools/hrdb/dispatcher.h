@@ -26,7 +26,7 @@ public:
 
     uint64_t RunToPC(uint32_t pc);
 
-    uint64_t SetBreakpoint(std::string expression);
+    uint64_t SetBreakpoint(std::string expression, bool once);
 
 private slots:
 

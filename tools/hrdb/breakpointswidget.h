@@ -74,6 +74,9 @@ public:
 
 public slots:
 
+private slots:
+    void addBreakpointClicked();
+
 private:
     BreakpointsTableView*     m_pTableView;
     BreakpointsTableModel* pModel;

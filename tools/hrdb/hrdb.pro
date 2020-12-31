@@ -27,14 +27,15 @@ SOURCES += \
     disasmwidget.cpp \
     memory.cpp \
     memoryviewwidget.cpp \
-    breakpoint.cpp \
     stringsplitter.cpp \
     symboltable.cpp \
     symboltablemodel.cpp \
     exceptionmask.cpp \
     exceptiondialog.cpp \
     graphicsinspector.cpp \
-    breakpointswidget.cpp
+    breakpointswidget.cpp \
+    breakpoint.cpp \
+    addbreakpointdialog.cpp
 
 HEADERS += \
     disassembler.h \
@@ -57,7 +58,9 @@ HEADERS += \
     exceptionmask.h \
     exceptiondialog.h \
     graphicsinspector.h \
-    breakpointswidget.h
+    breakpointswidget.h \
+    addbreakpointdialog.h \
+    quicklayout.h
     
 RESOURCES     = hrdb.qrc    
 

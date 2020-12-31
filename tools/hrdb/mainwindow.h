@@ -50,6 +50,8 @@ private slots:
     void singleStepClicked();
     void nextClicked();
     void runToClicked();
+    void addBreakpointPressed();
+
     void updateWindowMenu();
 
     // Menu item callbacks

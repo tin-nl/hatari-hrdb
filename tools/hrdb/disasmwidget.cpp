@@ -450,7 +450,7 @@ void DisasmTableModel::ToggleBreakpoint(int row)
     if (!removed)
     {
         QString cmd = QString::asprintf("pc = $%x", addr);
-        m_pDispatcher->SetBreakpoint(cmd.toStdString().c_str());
+        m_pDispatcher->SetBreakpoint(cmd.toStdString().c_str(), false);
     }
 }
 

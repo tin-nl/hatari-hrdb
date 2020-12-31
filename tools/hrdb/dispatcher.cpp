@@ -56,9 +56,11 @@ uint64_t Dispatcher::RunToPC(uint32_t next_pc)
     return SendCommandPacket("run");
 }
 
-uint64_t Dispatcher::SetBreakpoint(std::string expression)
+uint64_t Dispatcher::SetBreakpoint(std::string expression, bool once)
 {
     std::string command = std::string("bp " + expression);
+    if (once)
+        command += ": once";
     SendCommandShared(MemorySlot::kNone, command);
     return SendCommandShared(MemorySlot::kNone, "bplist"); // update state
 }
