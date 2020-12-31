@@ -93,6 +93,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pBreakpointsWidget);
     m_pMemoryViewWidget1->hide();
     m_pDisasmWidget1->hide();
+    m_pBreakpointsWidget->hide();
 
     readSettings();
 
@@ -425,7 +426,7 @@ void MainWindow::updateWindowMenu()
     memoryWindowAct0->setChecked(m_pMemoryViewWidget0->isVisible());
     memoryWindowAct1->setChecked(m_pMemoryViewWidget1->isVisible());
     graphicsInspectorAct->setChecked(m_pGraphicsInspector->isVisible());
-
+    breakpointsWindowAct->setChecked(m_pBreakpointsWidget->isVisible());
 }
 
 void MainWindow::updateButtonEnable()
@@ -456,31 +457,6 @@ void MainWindow::menuConnect()
 void MainWindow::menuDisconnect()
 {
     Disconnect();
-}
-
-void MainWindow::menuDisasmWindow0()
-{
-    toggleVis(m_pDisasmWidget0);
-}
-
-void MainWindow::menuDisasmWindow1()
-{
-    toggleVis(m_pDisasmWidget1);
-}
-
-void MainWindow::menuMemoryWindow0()
-{
-    toggleVis(m_pMemoryViewWidget0);
-}
-
-void MainWindow::menuMemoryWindow1()
-{
-    toggleVis(m_pMemoryViewWidget1);
-}
-
-void MainWindow::menuGraphicsInspector()
-{
-    toggleVis(m_pGraphicsInspector);
 }
 
 void MainWindow::about()
@@ -519,27 +495,33 @@ void MainWindow::createActions()
     disasmWindowAct0 = new QAction(tr("&Disassembly 1"), this);
     disasmWindowAct0->setStatusTip(tr("Show the memory window"));
     disasmWindowAct0->setCheckable(true);
-    connect(disasmWindowAct0, &QAction::triggered, this, &MainWindow::menuDisasmWindow0);
 
     disasmWindowAct1 = new QAction(tr("&Disassembly 2"), this);
     disasmWindowAct1->setStatusTip(tr("Show the memory window"));
     disasmWindowAct1->setCheckable(true);
-    connect(disasmWindowAct1, &QAction::triggered, this, &MainWindow::menuDisasmWindow1);
 
     memoryWindowAct0 = new QAction(tr("&Memory 1"), this);
     memoryWindowAct0->setStatusTip(tr("Show the memory window"));
     memoryWindowAct0->setCheckable(true);
-    connect(memoryWindowAct0, &QAction::triggered, this, &MainWindow::menuMemoryWindow0);
 
     memoryWindowAct1 = new QAction(tr("Memory 2"), this);
     memoryWindowAct1->setStatusTip(tr("Show the memory window"));
     memoryWindowAct1->setCheckable(true);
-    connect(memoryWindowAct1, &QAction::triggered, this, &MainWindow::menuMemoryWindow1);
 
     graphicsInspectorAct = new QAction(tr("&Graphics Inspector"), this);
     graphicsInspectorAct->setStatusTip(tr("Show the Graphics Inspector"));
     graphicsInspectorAct->setCheckable(true);
-    connect(graphicsInspectorAct, &QAction::triggered, this, &MainWindow::menuGraphicsInspector);
+
+    breakpointsWindowAct = new QAction(tr("&Breakpoints"), this);
+    breakpointsWindowAct->setStatusTip(tr("Show the Breakpoints window"));
+    breakpointsWindowAct->setCheckable(true);
+
+    connect(disasmWindowAct0, &QAction::triggered, this,     [=] () { this->toggleVis(m_pDisasmWidget0); } );
+    connect(disasmWindowAct1, &QAction::triggered, this,     [=] () { this->toggleVis(m_pDisasmWidget1); } );
+    connect(memoryWindowAct0, &QAction::triggered, this,     [=] () { this->toggleVis(m_pMemoryViewWidget0); } );
+    connect(memoryWindowAct1, &QAction::triggered, this,     [=] () { this->toggleVis(m_pMemoryViewWidget1); } );
+    connect(graphicsInspectorAct, &QAction::triggered, this, [=] () { this->toggleVis(m_pGraphicsInspector); } );
+    connect(breakpointsWindowAct, &QAction::triggered, this, [=] () { this->toggleVis(m_pBreakpointsWidget); } );
 
     // "About"
     aboutAct = new QAction(tr("&About"), this);
@@ -574,6 +556,7 @@ void MainWindow::createMenus()
     windowMenu->addAction(memoryWindowAct0);
     windowMenu->addAction(memoryWindowAct1);
     windowMenu->addAction(graphicsInspectorAct);
+    windowMenu->addAction(breakpointsWindowAct);
 
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAct);

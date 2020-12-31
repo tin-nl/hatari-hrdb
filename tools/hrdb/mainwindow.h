@@ -55,11 +55,6 @@ private slots:
     // Menu item callbacks
     void menuConnect();
     void menuDisconnect();
-    void menuDisasmWindow0();
-    void menuDisasmWindow1();
-    void menuMemoryWindow0();
-    void menuMemoryWindow1();
-    void menuGraphicsInspector();
 
     void about();
     void aboutQt();
@@ -125,6 +120,7 @@ private:
     QAction *memoryWindowAct0;
     QAction *memoryWindowAct1;
     QAction *graphicsInspectorAct;
+    QAction *breakpointsWindowAct;
 
     QAction *aboutAct;
     QAction *aboutQtAct;
