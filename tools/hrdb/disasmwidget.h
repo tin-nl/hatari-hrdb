@@ -95,7 +95,10 @@ private:
 
     int         m_windowIndex;
     MemorySlot  m_memSlot;
-    QPixmap m_breakpoint10Pixmap;
+    QPixmap     m_breakpointPixmap;
+    QPixmap     m_breakpointPcPixmap;
+    QPixmap     m_pcPixmap;
+
     static const uint32_t kInvalid = 0xffffffff;
 };
 

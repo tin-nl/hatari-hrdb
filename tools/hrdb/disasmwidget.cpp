@@ -32,7 +32,9 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
 {
     m_memSlot = (MemorySlot)(windowIndex + MemorySlot::kDisasm0);
 
-    m_breakpoint10Pixmap = QPixmap(":/images/breakpoint10.png");
+    m_breakpointPixmap   = QPixmap(":/images/breakpoint10.png");
+    m_breakpointPcPixmap = QPixmap(":/images/pcbreakpoint10.png");
+    m_pcPixmap           = QPixmap(":/images/pc10.png");
 
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmTableModel::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &DisasmTableModel::memoryChangedSlot);
@@ -99,9 +101,9 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
         }
         else if (index.column() == kColBreakpoint)
         {
-            uint32_t pc = m_pTargetModel->GetPC();
-            if (pc == line.address)
-                return QString(">");
+            //uint32_t pc = m_pTargetModel->GetPC();
+            //if (pc == line.address)
+            //    return QString(">");
         }
         else if (index.column() == kColDisasm)
         {
@@ -137,14 +139,16 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
 
         if (index.column() == kColBreakpoint)
         {
-            uint32_t addr = line.address;
+            bool isPc = line.address == m_pTargetModel->GetPC();
             for (size_t i = 0; i < m_breakpoints.m_breakpoints.size(); ++i)
             {
-                if (m_breakpoints.m_breakpoints[i].m_pcHack == addr)
+                if (m_breakpoints.m_breakpoints[i].m_pcHack == line.address)
                 {
-                    return m_breakpoint10Pixmap;
+                    return isPc? m_breakpointPcPixmap : m_breakpointPixmap;
                 }
             }
+            if (isPc)
+                return m_pcPixmap;
         }
     }
     return QVariant(); // invalid item
