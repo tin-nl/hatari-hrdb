@@ -147,15 +147,6 @@ QVariant DisasmTableModel::data(const QModelIndex &index, int role) const
             }
         }
     }
-    else if (role == Qt::BackgroundColorRole)
-    {
-        // Highlight the PC line
-        if (!m_pTargetModel->IsRunning())
-        {
-            if (line.address == m_pTargetModel->GetPC())
-                return QVariant(QColor(Qt::yellow));
-        }
-    }
     return QVariant(); // invalid item
 }
 
@@ -708,7 +699,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
     // We don't allow selection. The active key always happens on row 0
     m_pTableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
-    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
+    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::NoSelection);
     m_pTableView->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
 
     // Layouts
