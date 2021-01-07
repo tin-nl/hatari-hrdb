@@ -42,6 +42,9 @@
 #define REMOTE_DEBUG_PORT          (56001)
 #define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
 
+// How many bytes we collect to send chunks for the "mem" command
+#define RDB_MEM_BLOCK_SIZE         (2048)
+
 /* Remote debugging break command was sent from debugger */
 static bool bRemoteBreakRequest = false;
 
@@ -60,14 +63,6 @@ static void send_hex(int fd, uint32_t val)
 {
 	char str[9];
 	sprintf(str, "%X", val);
-	send(fd, str, strlen(str), 0);
-}
-
-// -----------------------------------------------------------------------------
-static void send_hexchar(int fd, uint32_t val)
-{
-	char str[3];
-	sprintf(str, "%02X", val);
 	send(fd, str, strlen(str), 0);
 }
 
@@ -212,10 +207,11 @@ static int RemoteDebug_Regs(int nArgc, char *psArgs[], int fd)
  *
  * Output: "mem <address-expr> <size-expr> <memory as base16 string>\n"
  */
+
 static int RemoteDebug_Mem(int nArgc, char *psArgs[], int fd)
 {
 	int arg;
-	Uint32 value, memdump_upper = 0;
+	Uint8 value;
 	Uint32 memdump_addr = 0;
 	Uint32 memdump_count = 0;
 	int offset = 0;
@@ -247,13 +243,30 @@ static int RemoteDebug_Mem(int nArgc, char *psArgs[], int fd)
 	send_hex(fd, memdump_count);
 	send_str(fd, " ");
 
-	memdump_upper = memdump_addr + memdump_count;
-	while (memdump_addr != memdump_upper)
+	// Send data in blocks of "buffer_size" memory bytes
+	// (We don't need a terminator when sending)
+	const uint32_t buffer_size = RDB_MEM_BLOCK_SIZE*2;
+	char* buffer = malloc(buffer_size);
+	const char* hex = "0123456789ABCDEF";
+	uint32_t pos = 0;
+	while (pos < memdump_count)
 	{
-		value = STMemory_ReadByte(memdump_addr);
-		send_hexchar(fd, value);
-		++memdump_addr;
+		uint32_t block_size = memdump_count - pos;
+		if (block_size > RDB_MEM_BLOCK_SIZE)
+			block_size = RDB_MEM_BLOCK_SIZE;
+
+		for (uint32_t i = 0; i < block_size; ++i)
+		{
+			value = STMemory_ReadByte(memdump_addr);
+			buffer[i * 2]     = hex[(value >> 4) & 15];
+			buffer[i * 2 + 1] = hex[ value & 15];
+			++pos;
+			++memdump_addr;
+		}
+		send(fd, buffer, block_size * 2, 0);
 	}
+
+	free(buffer);
 	return 0;
 }
 
