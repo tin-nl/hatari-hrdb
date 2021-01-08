@@ -523,7 +523,7 @@ void Main_EventHandler(void)
 
 		/* check remote process control */
 		remotepause = Control_CheckUpdates();
-		(void) RemoteDebug_Update();
+		remotepause |= RemoteDebug_Update();
 
 		if ( bEmulationActive || remotepause )
 		{

@@ -1,5 +1,5 @@
 /*
- * Hatari - remote.c
+ * Hatari - remotedebug.c
  * 
  * This file is distributed under the GNU General Public License, version 2
  * or at your option any later version. Read the file gpl.txt for details.
@@ -29,7 +29,7 @@
 #endif
 
 #include "m68000.h"
-#include "main.h"		/* For ARRAY_SIZE */
+#include "main.h"		/* For ARRAY_SIZE, event handler */
 #include "debugui.h"	/* For DebugUI_RegisterRemoteDebug */
 #include "debugcpu.h"	/* For stepping */
 #include "evaluate.h"
@@ -44,6 +44,8 @@
 
 // How many bytes we collect to send chunks for the "mem" command
 #define RDB_MEM_BLOCK_SIZE         (2048)
+
+#define SOCKET_READ_TIMEOUT_USEC   (100000)
 
 /* Remote debugging break command was sent from debugger */
 static bool bRemoteBreakRequest = false;
@@ -603,6 +605,28 @@ static bool RemoteDebug_BreakLoop(void)
 			break;
 		}
 
+		// Check socket with timeout
+		fd_set set;
+		struct timeval timeout;
+		FD_ZERO(&set); /* clear the set */
+		FD_SET(state->AcceptedFD, &set); /* add our file descriptor to the set */
+		timeout.tv_sec = 0;
+		timeout.tv_usec = SOCKET_READ_TIMEOUT_USEC;
+
+		int rv = select(state->AcceptedFD + 1, &set, NULL, NULL, &timeout);
+		if (rv < 0)
+		{
+			// select error
+			break;
+		}
+		else if (rv == 0)
+		{
+			// timeout, socket does not have anything to read.
+			// Update main event handler so that the UI window can update/redraw.
+			Main_EventHandler();
+			continue;
+		}
+
 		// Read input and accumulate a command (blocking)
 		remaining = REMOTE_DEBUG_CMD_MAX_SIZE - state->cmd_pos;
 		int bytes = recv(state->AcceptedFD, 
@@ -796,9 +820,16 @@ void RemoteDebug_UnInit()
 	}
 }
 
-void RemoteDebug_Update(void)
+bool RemoteDebug_Update(void)
 {
-	RemoteDebugState_Update(&g_rdbState);
+	// This function is called from the main event handler, which
+	// is also called while break is active. So protect against
+	// re-entrancy.
+	if (!bRemoteBreakIsActive)
+	{
+		RemoteDebugState_Update(&g_rdbState);
+	}
+	return bRemoteBreakIsActive;
 }
 
 /**
