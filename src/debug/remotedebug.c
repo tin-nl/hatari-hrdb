@@ -45,7 +45,9 @@
 // How many bytes we collect to send chunks for the "mem" command
 #define RDB_MEM_BLOCK_SIZE         (2048)
 
-#define SOCKET_READ_TIMEOUT_USEC   (100000)
+// Network timeout when in break loop, to allow event handler update.
+// Currently 0.2sec
+#define RDB_SELECT_TIMEOUT_USEC   (200000)
 
 /* Remote debugging break command was sent from debugger */
 static bool bRemoteBreakRequest = false;
@@ -583,11 +585,11 @@ static bool RemoteDebug_BreakLoop(void)
 {
 	int remaining;
 	RemoteDebugState* state;
+	fd_set set;
+	struct timeval timeout;
 
 	// TODO set socket as blocking
 	state = &g_rdbState;
-
-	// NO CHECK cope with no connection!
 
 	bRemoteBreakIsActive = true;
 	// Notify after state change happens
@@ -597,6 +599,8 @@ static bool RemoteDebug_BreakLoop(void)
 	// sleep until data is available.
 	SetNonBlocking(state->AcceptedFD, 0);
 
+	timeout.tv_sec = 0;
+	timeout.tv_usec = RDB_SELECT_TIMEOUT_USEC;
 	while (bRemoteBreakIsActive)
 	{
 		if (state->AcceptedFD == -1 || 
@@ -606,12 +610,8 @@ static bool RemoteDebug_BreakLoop(void)
 		}
 
 		// Check socket with timeout
-		fd_set set;
-		struct timeval timeout;
-		FD_ZERO(&set); /* clear the set */
-		FD_SET(state->AcceptedFD, &set); /* add our file descriptor to the set */
-		timeout.tv_sec = 0;
-		timeout.tv_usec = SOCKET_READ_TIMEOUT_USEC;
+		FD_ZERO(&set);
+		FD_SET(state->AcceptedFD, &set);
 
 		int rv = select(state->AcceptedFD + 1, &set, NULL, NULL, &timeout);
 		if (rv < 0)
