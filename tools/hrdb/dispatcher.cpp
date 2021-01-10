@@ -65,6 +65,13 @@ uint64_t Dispatcher::SetBreakpoint(std::string expression, bool once)
     return SendCommandShared(MemorySlot::kNone, "bplist"); // update state
 }
 
+uint64_t Dispatcher::DeleteBreakpoint(uint32_t breakpointId)
+{
+    QString cmd = QString::asprintf("bpdel %d", breakpointId);
+    SendCommandPacket(cmd.toStdString().c_str());
+    return SendCommandPacket("bplist");
+}
+
 uint64_t Dispatcher::SendCommandPacket(const char *command)
 {
     return SendCommandShared(MemorySlot::kNone, command);
@@ -281,6 +288,7 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         for (uint32_t i = 0; i < count; ++i)
         {
             Breakpoint bp;
+            bp.m_id = i + 1;        // IDs in Hatari start at 1 :(
             bp.SetExpression(splitResp.Split('`'));
             std::string ccountStr = splitResp.Split(' ');
             std::string hitsStr = splitResp.Split(' ');

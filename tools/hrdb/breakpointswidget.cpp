@@ -105,6 +105,16 @@ QVariant BreakpointsTableModel::headerData(int section, Qt::Orientation orientat
     return QVariant();
 }
 
+bool BreakpointsTableModel::GetBreakpoint(uint32_t row, Breakpoint &breakpoint)
+{
+    const Breakpoints& bps = m_pTargetModel->GetBreakpoints();
+    if (row >= bps.m_breakpoints.size())
+        return false;
+
+    breakpoint = bps.m_breakpoints[row];
+    return true;
+}
+
 void BreakpointsTableModel::breakpointsChangedSlot()
 {
     // TODO: I still don't understand how to update it here
@@ -208,7 +218,8 @@ BreakpointsWidget::BreakpointsWidget(QWidget *parent, TargetModel* pTargetModel,
     auto pMainRegion = new QWidget(this);   // whole panel
 
     QPushButton* pAddButton = new QPushButton(tr("Add..."), this);
-    QWidget* topWidgets[] = {pAddButton, nullptr};
+    m_pDeleteButton = new QPushButton(tr("Delete"), this);
+    QWidget* topWidgets[] = {pAddButton, m_pDeleteButton, nullptr};
 
     pMainLayout->addWidget(CreateHorizLayout(this, topWidgets) );
     pMainLayout->addWidget(m_pTableView);
@@ -216,11 +227,21 @@ BreakpointsWidget::BreakpointsWidget(QWidget *parent, TargetModel* pTargetModel,
     pMainRegion->setLayout(pMainLayout);
     setWidget(pMainRegion);
 
-    connect(pAddButton, &QAbstractButton::clicked, this, &BreakpointsWidget::addBreakpointClicked);
+    connect(pAddButton,      &QAbstractButton::clicked, this, &BreakpointsWidget::addBreakpointClicked);
+    connect(m_pDeleteButton, &QAbstractButton::clicked, this, &BreakpointsWidget::deleteBreakpointClicked);
 }
 
 void BreakpointsWidget::addBreakpointClicked()
 {
     AddBreakpointDialog dialog(this, m_pTargetModel, m_pDispatcher);
     dialog.exec();
+}
+
+void BreakpointsWidget::deleteBreakpointClicked()
+{
+    Breakpoint bp;
+    if (pModel->GetBreakpoint(m_pTableView->currentIndex().row(), bp))
+    {
+        m_pDispatcher->DeleteBreakpoint(bp.m_id);
+    }
 }

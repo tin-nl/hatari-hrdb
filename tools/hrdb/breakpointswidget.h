@@ -8,6 +8,9 @@ class TargetModel;
 class Dispatcher;
 class QComboBox;
 class QCheckBox;
+class QPushButton;
+
+class Breakpoint;
 
 class BreakpointsTableModel : public QAbstractTableModel
 {
@@ -33,8 +36,7 @@ public:
     virtual QVariant data(const QModelIndex &index, int role) const;
     virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const;
 
-    // "The model emits signals to indicate changes. For example, dataChanged() is emitted whenever items of data made available by the model are changed"
-    // So I expect we can emit that if we see the target has changed
+    bool GetBreakpoint(uint32_t row, Breakpoint& breakpoint);
 
 public slots:
     void breakpointsChangedSlot();
@@ -76,9 +78,12 @@ public slots:
 
 private slots:
     void addBreakpointClicked();
+    void deleteBreakpointClicked();
 
 private:
     BreakpointsTableView*     m_pTableView;
+    QPushButton*              m_pDeleteButton;
+
     BreakpointsTableModel* pModel;
     TargetModel*        m_pTargetModel;
     Dispatcher*         m_pDispatcher;

@@ -28,6 +28,8 @@ public:
 
     uint64_t SetBreakpoint(std::string expression, bool once);
 
+    uint64_t DeleteBreakpoint(uint32_t breakpointId);
+
 private slots:
 
    void connected();

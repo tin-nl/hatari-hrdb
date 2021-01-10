@@ -436,10 +436,8 @@ void DisasmTableModel::ToggleBreakpoint(int row)
     {
         if (bp.m_breakpoints[i].m_pcHack == addr)
         {
-            QString cmd = QString::asprintf("bpdel %d", i + 1);
-            m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
+            m_pDispatcher->DeleteBreakpoint(bp.m_breakpoints[i].m_id);
             removed = true;
-            m_pDispatcher->SendCommandPacket("bplist");
         }
     }
     if (!removed)
