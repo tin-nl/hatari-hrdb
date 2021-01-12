@@ -10,15 +10,17 @@
 #include <QStringListModel>
 #include <QFontDatabase>
 #include <QCompleter>
+#include <QPainter>
+#include <QKeyEvent>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
 #include "stringparsers.h"
 #include "symboltablemodel.h"
 
-MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher,
+MemoryWidget::MemoryWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher,
                                            int windowIndex) :
-    QAbstractTableModel(parent),
+    QWidget(parent),
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher),
     m_isLocked(false),
@@ -30,12 +32,16 @@ MemoryViewTableModel::MemoryViewTableModel(QObject *parent, TargetModel *pTarget
     m_windowIndex(windowIndex)
 {
     m_memSlot = (MemorySlot)(MemorySlot::kMemoryView0 + m_windowIndex);
-    connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryViewTableModel::memoryChangedSlot);
-    connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryViewTableModel::startStopChangedSlot);
-    connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &MemoryViewTableModel::connectChangedSlot);
+
+    RecalcSizes();
+    setFocus();
+    setFocusPolicy(Qt::StrongFocus);
+    connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryWidget::memoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryWidget::startStopChangedSlot);
+    connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &MemoryWidget::connectChangedSlot);
 }
 
-bool MemoryViewTableModel::SetAddress(std::string expression)
+bool MemoryWidget::SetAddress(std::string expression)
 {
     uint32_t addr;
     if (!StringParsers::ParseExpression(expression.c_str(), addr,
@@ -49,24 +55,23 @@ bool MemoryViewTableModel::SetAddress(std::string expression)
     return true;
 }
 
-void MemoryViewTableModel::SetAddress(uint32_t address)
+void MemoryWidget::SetAddress(uint32_t address)
 {
     m_address = address;
     RequestMemory();
 }
 
-void MemoryViewTableModel::SetRowCount(uint32_t rowCount)
+void MemoryWidget::SetRowCount(uint32_t rowCount)
 {
     if (rowCount != m_rowCount)
     {
-        emit beginResetModel();
         m_rowCount = rowCount;
         RequestMemory();
-        emit endResetModel();
+        update();
     }
 }
 
-void MemoryViewTableModel::SetLock(bool locked)
+void MemoryWidget::SetLock(bool locked)
 {
     if (!locked != m_isLocked)
     {
@@ -79,13 +84,13 @@ void MemoryViewTableModel::SetLock(bool locked)
     m_isLocked = locked;
 }
 
-void MemoryViewTableModel::SetMode(MemoryViewTableModel::Mode mode)
+void MemoryWidget::SetMode(MemoryWidget::Mode mode)
 {
     m_mode = mode;
     RecalcText();
 }
 
-void MemoryViewTableModel::MoveUp()
+void MemoryWidget::MoveUp()
 {
     if (m_requestId != 0)
         return; // not up to date
@@ -96,7 +101,7 @@ void MemoryViewTableModel::MoveUp()
         SetAddress(0);
 }
 
-void MemoryViewTableModel::MoveDown()
+void MemoryWidget::MoveDown()
 {
     if (m_requestId != 0)
         return; // not up to date
@@ -104,7 +109,7 @@ void MemoryViewTableModel::MoveDown()
     SetAddress(m_address + m_bytesPerRow);
 }
 
-void MemoryViewTableModel::PageUp()
+void MemoryWidget::PageUp()
 {
     if (m_requestId != 0)
         return; // not up to date
@@ -115,7 +120,7 @@ void MemoryViewTableModel::PageUp()
         SetAddress(0);
 }
 
-void MemoryViewTableModel::PageDown()
+void MemoryWidget::PageDown()
 {
     if (m_requestId != 0)
         return; // not up to date
@@ -123,14 +128,14 @@ void MemoryViewTableModel::PageDown()
     SetAddress(m_address + m_bytesPerRow * m_rowCount);
 }
 
-int MemoryViewTableModel::rowCount(const QModelIndex &parent) const
+int MemoryWidget::rowCount(const QModelIndex &parent) const
 {
     if (parent.isValid())
         return 0;
     return m_rowCount;
 }
 
-int MemoryViewTableModel::columnCount(const QModelIndex &parent) const
+int MemoryWidget::columnCount(const QModelIndex &parent) const
 {
     if (parent.isValid())
         return 0;
@@ -138,7 +143,7 @@ int MemoryViewTableModel::columnCount(const QModelIndex &parent) const
     return 3;
 }
 
-QVariant MemoryViewTableModel::data(const QModelIndex &index, int role) const
+QVariant MemoryWidget::data(const QModelIndex &index, int role) const
 {
     uint32_t row = index.row();
     if (role == Qt::DisplayRole)
@@ -153,7 +158,7 @@ QVariant MemoryViewTableModel::data(const QModelIndex &index, int role) const
         }
         else if (index.column() == kColData)
         {
-            return m_rows[row].m_hexText;
+            //return m_rows[row].m_hexText;
         }
         else if (index.column() == kColAscii)
         {
@@ -163,7 +168,7 @@ QVariant MemoryViewTableModel::data(const QModelIndex &index, int role) const
     return QVariant(); // invalid item
 }
 
-QVariant MemoryViewTableModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant MemoryWidget::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation == Qt::Orientation::Horizontal)
     {
@@ -184,7 +189,7 @@ QVariant MemoryViewTableModel::headerData(int section, Qt::Orientation orientati
     return QVariant();
 }
 
-void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
+void MemoryWidget::memoryChangedSlot(int memorySlot, uint64_t commandId)
 {
     if (memorySlot != m_memSlot)
         return;
@@ -196,7 +201,7 @@ void MemoryViewTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     RecalcText();
 }
 
-void MemoryViewTableModel::RecalcText()
+void MemoryWidget::RecalcText()
 {
     m_rows.clear();
     const Memory* pMem = m_pTargetModel->GetMemory(m_memSlot);
@@ -238,28 +243,28 @@ void MemoryViewTableModel::RecalcText()
         if (m_mode == kModeByte)
         {
             for (uint32_t i = 0; i < m_bytesPerRow; ++i)
-                row.m_hexText += QString::asprintf("%02x ", rowData[i]);
+                row.m_hexText.push_back(QString::asprintf("%02x", rowData[i]));
         }
         else if (m_mode == kModeWord)
         {
             for (uint32_t i = 0; i <= m_bytesPerRow - 2; i += 2)
-                row.m_hexText += QString::asprintf("%04x ", (rowData[i] << 8) | rowData[i+1]);
+                row.m_hexText.push_back(QString::asprintf("%04x", (rowData[i] << 8) | rowData[i+1]));
         }
         else if (m_mode == kModeLong)
         {
             for (uint32_t i = 0; i <= m_bytesPerRow - 4; i += 4)
-                row.m_hexText += QString::asprintf("%08x ",
-                        (rowData[i] << 24) | (rowData[i+1] << 16) | (rowData[i+2] << 8) | rowData[i+3]);
+                row.m_hexText.push_back(QString::asprintf("%08x",
+                        (rowData[i] << 24) | (rowData[i+1] << 16) | (rowData[i+2] << 8) | rowData[i+3]));
         }
 
         m_rows.push_back(row);
     }
 
     m_requestId = 0;    // flag request is complete
-    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rows.size(), 1));
+    update();
 }
 
-void MemoryViewTableModel::startStopChangedSlot()
+void MemoryWidget::startStopChangedSlot()
 {
     // Request new memory for the view
     if (!m_pTargetModel->IsRunning())
@@ -280,24 +285,105 @@ void MemoryViewTableModel::startStopChangedSlot()
     }
 }
 
-void MemoryViewTableModel::connectChangedSlot()
+void MemoryWidget::connectChangedSlot()
 {
     m_rows.clear();
     m_address = 0;
-    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, 1));
-    m_rowCount = 0;
+    m_rowCount = 10;
+    update();
 }
 
-void MemoryViewTableModel::RequestMemory()
+void MemoryWidget::paintEvent(QPaintEvent* ev)
+{
+    QWidget::paintEvent(ev);
+
+    // CAREFUL! This could lead to an infinite loop of redraws if we are not.
+    RecalcRowCount();
+
+    if (m_rows.size() == 0)
+        return;
+
+    QPainter painter(this);
+    painter.setFont(monoFont);
+    QFontMetrics info(painter.fontMetrics());
+
+    int x_addr = 10;
+
+    const QPalette& pal = this->palette();
+    for (size_t row = 0; row < m_rows.size(); ++row)
+    {
+        int x_hex = x_addr + info.maxWidth() * 10;
+        //bool isHighlight = (row == 5);
+
+        //painter.setPen(isHighlight ?
+        //                   pal.highlightedText().color() :
+        //                   pal.text().color());
+
+        int y = row * m_lineHeight;
+        QString addr = QString::asprintf("%08x", m_address + m_bytesPerRow * row);
+        painter.drawText(x_addr, y, addr);
+
+        const Row& r = m_rows[row];
+        for (size_t i = 0; i < r.m_hexText.size(); ++i)
+        {
+            QString st = m_rows[row].m_hexText[i];
+            painter.drawText(x_hex, y, st);
+            x_hex += info.maxWidth() * (st.size() + 1);
+        }
+
+        x_hex += info.maxWidth() * 2;
+        painter.drawText(x_hex, y, m_rows[row].m_asciiText);
+    }
+}
+
+void MemoryWidget::keyPressEvent(QKeyEvent* event)
+{
+    switch (event->key())
+    {
+    case Qt::Key_Up:         MoveUp();            return;
+    case Qt::Key_Down:       MoveDown();          return;
+    case Qt::Key_PageUp:     PageUp();            return;
+    case Qt::Key_PageDown:   PageDown();          return;
+    default: break;
+    }
+    QWidget::keyPressEvent(event);
+}
+
+void MemoryWidget::RequestMemory()
 {
     uint32_t size = ((m_rowCount * 16));
     if (m_pTargetModel->IsConnected())
         m_requestId = m_pDispatcher->RequestMemory(m_memSlot, m_address, size);
 }
 
+void MemoryWidget::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    RecalcRowCount();
+}
+
+void MemoryWidget::RecalcRowCount()
+{
+    // It seems that viewport is updated without this even being called,
+    // which means that on startup, "h" == 0.
+    int h = this->size().height();
+    int rowh = m_lineHeight;
+    if (rowh != 0)
+        this->SetRowCount(h / rowh);
+}
+
+void MemoryWidget::RecalcSizes()
+{
+    monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    QFontMetrics info(monoFont);
+    m_lineHeight = info.lineSpacing();
+    update();
+}
+
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-MemoryTableView::MemoryTableView(QWidget* parent, MemoryViewTableModel* pModel, TargetModel* pTargetModel) :
+#if 0
+MemoryTableView::MemoryTableView(QWidget* parent, MemoryWidget* pModel, TargetModel* pTargetModel) :
     QTableView(parent),
     m_pTableModel(pModel),
     //m_rightClickMenu(this),
@@ -389,21 +475,7 @@ QModelIndex MemoryTableView::moveCursor(QAbstractItemView::CursorAction cursorAc
     return QTableView::moveCursor(cursorAction, modifiers);
 }
 
-void MemoryTableView::resizeEvent(QResizeEvent* event)
-{
-    QTableView::resizeEvent(event);
-    RecalcRowCount();
-}
-
-void MemoryTableView::RecalcRowCount()
-{
-    // It seems that viewport is updated without this even being called,
-    // which means that on startup, "h" == 0.
-    int h = this->viewport()->size().height();
-    int rowh = this->rowHeight(0);
-    if (rowh != 0)
-        m_pTableModel->SetRowCount(h / rowh);
-}
+#endif
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -416,18 +488,16 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     this->setWindowTitle(QString::asprintf("Memory %d", windowIndex + 1));
 
     // Make the data first
-    pModel = new MemoryViewTableModel(this, pTargetModel, pDispatcher, windowIndex);
+    pModel = new MemoryWidget(this, pTargetModel, pDispatcher, windowIndex);
+    pModel->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
 
     m_pComboBox = new QComboBox(this);
-    m_pComboBox->insertItem(MemoryViewTableModel::kModeByte, "Byte");
-    m_pComboBox->insertItem(MemoryViewTableModel::kModeWord, "Word");
-    m_pComboBox->insertItem(MemoryViewTableModel::kModeLong, "Long");
+    m_pComboBox->insertItem(MemoryWidget::kModeByte, "Byte");
+    m_pComboBox->insertItem(MemoryWidget::kModeWord, "Word");
+    m_pComboBox->insertItem(MemoryWidget::kModeLong, "Long");
     m_pComboBox->setCurrentIndex(pModel->GetMode());
 
     m_pLockCheckBox = new QCheckBox(tr("Lock"), this);
-
-    m_pTableView = new MemoryTableView(this, pModel, m_pTargetModel);
-    m_pTableView->setModel(pModel);
 
     m_pLineEdit = new QLineEdit(this);
     m_pSymbolTableModel = new SymbolTableModel(this, m_pTargetModel->GetSymbolTable());
@@ -435,23 +505,6 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     pCompl->setCaseSensitivity(Qt::CaseSensitivity::CaseInsensitive);
 
     m_pLineEdit->setCompleter(pCompl);
-
-    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    m_pTableView->setFont(monoFont);
-    QFontMetrics fm(monoFont);
-
-    // Factor in max width and the edge margins
-    int l;
-    int r;
-    int charWidth = fm.maxWidth();
-    m_pTableView->getContentsMargins(&l, nullptr, &r, nullptr);
-    m_pTableView->setColumnWidth(MemoryViewTableModel::kColAddress, l + r + charWidth * 12);    // Mac needs most
-    m_pTableView->setColumnWidth(MemoryViewTableModel::kColData,    l + r + charWidth * 16 * 3);
-    m_pTableView->setColumnWidth(MemoryViewTableModel::kColAscii,   l + r + charWidth * (16 + 2));
-
-    // Down the side
-    m_pTableView->verticalHeader()->hide();
-    m_pTableView->verticalHeader()->setDefaultSectionSize(fm.height());
 
     // Layouts
     QVBoxLayout* pMainLayout = new QVBoxLayout;
@@ -464,7 +517,7 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     pTopLayout->addWidget(m_pComboBox);
 
     pMainLayout->addWidget(pTopRegion);
-    pMainLayout->addWidget(m_pTableView);
+    pMainLayout->addWidget(pModel);
 
     pTopRegion->setLayout(pTopLayout);
     pMainRegion->setLayout(pMainLayout);
@@ -502,6 +555,6 @@ void MemoryViewWidget::lockChangedSlot()
 
 void MemoryViewWidget::modeComboBoxChanged(int index)
 {
-    pModel->SetMode((MemoryViewTableModel::Mode)index);
-    m_pTableView->resizeColumnToContents(MemoryViewTableModel::kColData);
+    pModel->SetMode((MemoryWidget::Mode)index);
+    //m_pTableView->resizeColumnToContents(MemoryWidget::kColData);
 }

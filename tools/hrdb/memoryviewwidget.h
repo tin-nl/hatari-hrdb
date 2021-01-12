@@ -10,7 +10,7 @@ class Dispatcher;
 class QComboBox;
 class QCheckBox;
 
-class MemoryViewTableModel : public QAbstractTableModel
+class MemoryWidget : public QWidget
 {
     Q_OBJECT
 public:
@@ -29,7 +29,7 @@ public:
         kModeLong
     };
 
-    MemoryViewTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* pDispatcher, int windowIndex);
+    MemoryWidget(QWidget* parent, TargetModel* pTargetModel, Dispatcher* pDispatcher, int windowIndex);
 
     uint32_t GetRowCount() const { return m_rowCount; }
     Mode GetMode() const { return m_mode; }
@@ -59,10 +59,17 @@ public slots:
     void startStopChangedSlot();
     void connectChangedSlot();
 
+protected:
+    virtual void paintEvent(QPaintEvent*);
+    virtual void keyPressEvent(QKeyEvent*);
 private:
     void SetAddress(uint32_t address);
     void RequestMemory();
     void RecalcText();
+    void resizeEvent(QResizeEvent *event);
+    void RecalcRowCount();
+
+    void RecalcSizes();
 
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
@@ -70,7 +77,7 @@ private:
     // These are taken at the same time. Is there a race condition...?
     struct Row
     {
-        QString m_hexText;
+        std::vector<QString> m_hexText;
         QString m_asciiText;
     };
 
@@ -87,8 +94,13 @@ private:
     uint64_t m_requestId;
     int      m_windowIndex;        // e.g. "memory 0", "memory 1"
     MemorySlot  m_memSlot;
+
+    // rendering info
+    int     m_lineHeight;           // font height in pixels
+    QFont   monoFont;
 };
 
+#if 0
 class MemoryTableView : public QTableView
 {
     Q_OBJECT
@@ -111,6 +123,7 @@ private:
     // Remembers which row we right-clicked on
     int                   m_rightClickRow;
 };
+#endif
 
 class MemoryViewWidget : public QDockWidget
 {
@@ -129,9 +142,8 @@ private:
     QLineEdit*           m_pLineEdit;
     QComboBox*           m_pComboBox;
     QCheckBox*           m_pLockCheckBox;
-    MemoryTableView*     m_pTableView;
+    MemoryWidget*        pModel;
 
-    MemoryViewTableModel* pModel;
     TargetModel*        m_pTargetModel;
     Dispatcher*         m_pDispatcher;
     QAbstractItemModel* m_pSymbolTableModel;
