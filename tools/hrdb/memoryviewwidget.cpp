@@ -36,6 +36,7 @@ MemoryWidget::MemoryWidget(QWidget *parent, TargetModel *pTargetModel, Dispatche
     m_memSlot = (MemorySlot)(MemorySlot::kMemoryView0 + m_windowIndex);
 
     RecalcSizes();
+    SetMode(Mode::kModeByte);
     setFocus();
     setFocusPolicy(Qt::StrongFocus);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryWidget::memoryChangedSlot);
@@ -94,6 +95,33 @@ void MemoryWidget::SetLock(bool locked)
 void MemoryWidget::SetMode(MemoryWidget::Mode mode)
 {
     m_mode = mode;
+
+    // Calc the screen postions.
+    // I need a screen position for each *character* on the grid (i.e. nybble)
+
+    uint32_t groupSize = 0;
+    if (m_mode == kModeByte)
+        groupSize = 1;
+    else if (m_mode == kModeWord)
+        groupSize = 2;
+    else if (m_mode == kModeLong)
+        groupSize = 4;
+
+    m_xpos.clear();
+    for (uint32_t i = 0; i < m_bytesPerRow; ++i)
+    {
+        uint32_t group = i / groupSize;     // group of N bytes (N * chars)
+        uint32_t byteInGroup = i % groupSize;
+
+        // Calc the left-hand X position of this byte
+        uint32_t base_x = group * (groupSize * 2 + 1) + 2 * byteInGroup;
+
+        // top nybble
+        m_xpos.push_back(base_x);
+        // bottom nybble
+        m_xpos.push_back(base_x + 1);
+    }
+
     RecalcText();
 }
 
@@ -130,6 +158,24 @@ void MemoryWidget::MoveDown()
     SetAddress(m_address + m_bytesPerRow);
 }
 
+void MemoryWidget::MoveLeft()
+{
+    if (m_cursorCol == 0)
+        return;
+
+    m_cursorCol--;
+    repaint();
+}
+
+void MemoryWidget::MoveRight()
+{
+    if (m_cursorCol + 2 >= m_bytesPerRow * 2)
+        return;
+
+    m_cursorCol++;
+    repaint();
+}
+
 void MemoryWidget::PageUp()
 {
     if (m_cursorRow > 0)
@@ -161,67 +207,6 @@ void MemoryWidget::PageDown()
         return; // not up to date
 
     SetAddress(m_address + m_bytesPerRow * m_rowCount);
-}
-
-int MemoryWidget::rowCount(const QModelIndex &parent) const
-{
-    if (parent.isValid())
-        return 0;
-    return m_rowCount;
-}
-
-int MemoryWidget::columnCount(const QModelIndex &parent) const
-{
-    if (parent.isValid())
-        return 0;
-
-    return 3;
-}
-
-QVariant MemoryWidget::data(const QModelIndex &index, int role) const
-{
-    uint32_t row = index.row();
-    if (role == Qt::DisplayRole)
-    {
-        if (row >= m_rows.size())
-            return QVariant();
-
-        if (index.column() == kColAddress)
-        {
-            QString addr = QString::asprintf("%08x", m_address + m_bytesPerRow * row);
-            return addr;
-        }
-        else if (index.column() == kColData)
-        {
-            //return m_rows[row].m_hexText;
-        }
-        else if (index.column() == kColAscii)
-        {
-            return m_rows[row].m_asciiText;
-        }
-    }
-    return QVariant(); // invalid item
-}
-
-QVariant MemoryWidget::headerData(int section, Qt::Orientation orientation, int role) const
-{
-    if (orientation == Qt::Orientation::Horizontal)
-    {
-        if (role == Qt::DisplayRole)
-        {
-            switch (section)
-            {
-            case kColAddress: return QString("Address");
-            case kColData:    return QString("Data");
-            case kColAscii:   return QString("ASCII");
-            }
-        }
-        if (role == Qt::TextAlignmentRole)
-        {
-            return Qt::AlignLeft;
-        }
-    }
-    return QVariant();
 }
 
 void MemoryWidget::memoryChangedSlot(int memorySlot, uint64_t commandId)
@@ -268,7 +253,7 @@ void MemoryWidget::RecalcText()
             uint8_t c = pMem->Get(offset);
             rowData[i] = c;
 
-            row.m_hexText.push_back(QString::asprintf("%02x", rowData[i]));
+            row.m_hexText += QString::asprintf("%02x", rowData[i]);
 
             if (c >= 32 && c < 128)
                 row.m_asciiText += QString::asprintf("%c", c);
@@ -277,27 +262,6 @@ void MemoryWidget::RecalcText()
             ++offset;
         }
         m_rows.push_back(row);
-    }
-
-    // Calc the screen postions
-    m_xpos.clear();
-    if (m_mode == kModeByte)
-    {
-        // One byte (2 chars), 1 char space
-        for (uint32_t i = 0; i <= m_bytesPerRow; ++i)
-            m_xpos.push_back(i * 3);
-    }
-    else if (m_mode == kModeWord)
-    {
-        // Two bytes (4 chars), 1 char space
-        for (uint32_t i = 0; i <= m_bytesPerRow; ++i)
-            m_xpos.push_back((i / 2) * 5 + (i % 2) * 2);
-    }
-    else if (m_mode == kModeLong)
-    {
-        // 4 bytes (8 chars), 1 char space
-        for (uint32_t i = 0; i <= m_bytesPerRow; ++i)
-            m_xpos.push_back((i / 4) * 9 + (i % 4) * 2);
     }
 
     m_requestId = 0;    // flag request is complete
@@ -357,33 +321,42 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     int x_addr = 10;
     int y_base = info.ascent();
     int char_width = info.horizontalAdvance("0");
-
-    painter.setBrush(pal.highlight());
     int x_hex = x_addr + char_width * 10;
-    int x_curs = x_hex + char_width * m_xpos[m_cursorCol];
 
-    painter.drawRect(x_curs, (m_cursorRow) * m_lineHeight, char_width * 2, m_lineHeight);
+    // Draw highlight/cursor area
+    painter.setBrush(pal.highlight());
+    int x_curs = x_hex + char_width * m_xpos[m_cursorCol];
+    painter.drawRect(x_curs, (m_cursorRow) * m_lineHeight, char_width, m_lineHeight);
 
     for (size_t row = 0; row < m_rows.size(); ++row)
     {
+        // Draw address string
+        painter.setPen(pal.text().color());
         int y = y_base + row * m_lineHeight;       // compensate for descenders TODO use ascent()
         QString addr = QString::asprintf("%08x", m_address + m_bytesPerRow * row);
         painter.drawText(x_addr, y, addr);
 
-        // We write out the values per-byte
+        // Now hex
+        // We write out the values per-nybble
         const Row& r = m_rows[row];
-        for (size_t i = 0; i < r.m_hexText.size(); ++i)
+        for (size_t i = 0; i < m_xpos.size(); ++i)
         {
+            //size_t byteOffset = i / 2;
+            //uint32_t shiftDown = (i % 2) * 4;
+
             painter.setPen(row == m_cursorRow && i == m_cursorCol ?
                            pal.highlightedText().color() :
                            pal.text().color());
 
-            QString st = m_rows[row].m_hexText[i];
-            painter.drawText(x_hex + m_xpos[i] * char_width, y, st);
+            int x = x_hex + m_xpos[i] * char_width;
+            QChar st = r.m_hexText.at(i);
+            painter.drawText(x, y, st);
         }
 
-//        x_hex += info.maxWidth() * 2;
-//        painter.drawText(x_hex, y, m_rows[row].m_asciiText);
+        // Ascii is shown after the last item
+        uint32_t lastHexX = m_xpos.back();
+        int x_ascii = x_hex + lastHexX * char_width;
+        painter.drawText(x_ascii, y, m_rows[row].m_asciiText);
     }
 }
 
@@ -391,8 +364,8 @@ void MemoryWidget::keyPressEvent(QKeyEvent* event)
 {
     switch (event->key())
     {
-    case Qt::Key_Right:      m_cursorCol = (m_cursorCol + 1) % 16; repaint(); return;   // TODO
-
+    case Qt::Key_Left:       MoveLeft();          return;
+    case Qt::Key_Right:      MoveRight();         return;
     case Qt::Key_Up:         MoveUp();            return;
     case Qt::Key_Down:       MoveDown();          return;
     case Qt::Key_PageUp:     PageUp();            return;
@@ -430,7 +403,6 @@ void MemoryWidget::RecalcSizes()
     monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     QFontMetrics info(monoFont);
     m_lineHeight = info.lineSpacing();
-    repaint();
 }
 
 //-----------------------------------------------------------------------------

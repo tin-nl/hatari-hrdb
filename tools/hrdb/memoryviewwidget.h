@@ -40,20 +40,6 @@ public:
     void SetLock(bool locked);
     void SetMode(Mode mode);
 
-    void MoveUp();
-    void MoveDown();
-    void PageUp();
-    void PageDown();
-
-    // "When subclassing QAbstractTableModel, you must implement rowCount(), columnCount(), and data()."
-    virtual int rowCount(const QModelIndex &parent) const;
-    virtual int columnCount(const QModelIndex &parent) const;
-    virtual QVariant data(const QModelIndex &index, int role) const;
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const;
-
-    // "The model emits signals to indicate changes. For example, dataChanged() is emitted whenever items of data made available by the model are changed"
-    // So I expect we can emit that if we see the target has changed
-
 public slots:
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void startStopChangedSlot();
@@ -63,6 +49,13 @@ protected:
     virtual void paintEvent(QPaintEvent*);
     virtual void keyPressEvent(QKeyEvent*);
 private:
+    void MoveUp();
+    void MoveDown();
+    void MoveLeft();
+    void MoveRight();
+    void PageUp();
+    void PageDown();
+
     void SetAddress(uint32_t address);
     void RequestMemory();
     void RecalcText();
@@ -70,6 +63,7 @@ private:
     void RecalcRowCount();
 
     void RecalcSizes();
+    int GetCharX(int x, int charWidth);
 
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
@@ -77,7 +71,7 @@ private:
     // These are taken at the same time. Is there a race condition...?
     struct Row
     {
-        std::vector<QString> m_hexText;
+        QString m_hexText;
         QString m_asciiText;
     };
 
