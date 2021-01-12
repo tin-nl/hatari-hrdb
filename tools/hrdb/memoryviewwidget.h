@@ -82,6 +82,7 @@ private:
     };
 
     std::vector<Row> m_rows;
+    std::vector<uint32_t> m_xpos;
 
     std::string m_addressExpression;
     bool    m_isLocked;
@@ -94,6 +95,10 @@ private:
     uint64_t m_requestId;
     int      m_windowIndex;        // e.g. "memory 0", "memory 1"
     MemorySlot  m_memSlot;
+
+    // Cursor
+    int     m_cursorRow;
+    int     m_cursorCol;
 
     // rendering info
     int     m_lineHeight;           // font height in pixels
