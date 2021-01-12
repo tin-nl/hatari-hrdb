@@ -19,9 +19,7 @@ class NonAntiAliasImage : public QWidget{
     Q_OBJECT
     Q_DISABLE_COPY(NonAntiAliasImage)
 public:
-    explicit NonAntiAliasImage(QWidget* parent = Q_NULLPTR)
-        : QWidget(parent)
-    {}
+    explicit NonAntiAliasImage(QWidget* parent = Q_NULLPTR);
     const QPixmap& pixmap() const
     {
         return m_pixmap;
@@ -32,9 +30,11 @@ public:
         update();
     }
 protected:
-    void paintEvent(QPaintEvent*);
+    virtual void paintEvent(QPaintEvent*) override;
+    virtual void mouseMoveEvent(QMouseEvent *event) override;
 private:
     QPixmap m_pixmap;
+    QPointF m_mousePos;
 };
 
 

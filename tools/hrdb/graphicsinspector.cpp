@@ -12,6 +12,7 @@
 
 #include <QPainter>
 #include <QStyle>
+#include <QFontDatabase>
 
 #include "dispatcher.h"
 #include "targetmodel.h"
@@ -19,11 +20,39 @@
 #include "stringparsers.h"
 
 
+NonAntiAliasImage::NonAntiAliasImage(QWidget *parent)
+    : QWidget(parent)
+{
+    setMouseTracking(true);
+}
+
 void NonAntiAliasImage::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, false);
     style()->drawItemPixmap(&painter, rect(), Qt::AlignCenter, m_pixmap.scaled(rect().size()));
+
+    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+
+
+    if (this->underMouse())
+    {
+        painter.setFont(monoFont);
+        painter.drawText(10, 10,
+              QString::asprintf("This is some text %d %d\n",
+                            (int) m_mousePos.x(),
+                            (int) m_mousePos.y()));
+    }
+
+}
+
+void NonAntiAliasImage::mouseMoveEvent(QMouseEvent *event)
+{
+    m_mousePos = event->localPos();
+    if (this->underMouse())
+        update();
+
+    QWidget::mouseMoveEvent(event);
 }
 
 
