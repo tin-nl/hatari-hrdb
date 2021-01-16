@@ -169,7 +169,7 @@ void MemoryWidget::MoveLeft()
 
 void MemoryWidget::MoveRight()
 {
-    if (m_cursorCol + 2 >= m_bytesPerRow * 2)
+    if (m_cursorCol + 2 >= m_bytesPerRow * 2 + 1)
         return;
 
     m_cursorCol++;
@@ -318,23 +318,20 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
 //        pal.window().color());
 
 
-    int x_addr = 10;
     int y_base = info.ascent();
     int char_width = info.horizontalAdvance("0");
-    int x_hex = x_addr + char_width * 10;
 
-    // Draw highlight/cursor area
-    painter.setBrush(pal.highlight());
-    int x_curs = x_hex + char_width * m_xpos[m_cursorCol];
-    painter.drawRect(x_curs, (m_cursorRow) * m_lineHeight, char_width, m_lineHeight);
+    // Set up the rendering info
+    m_charWidth = char_width;
 
+    painter.setPen(pal.text().color());
     for (size_t row = 0; row < m_rows.size(); ++row)
     {
         // Draw address string
         painter.setPen(pal.text().color());
         int y = y_base + row * m_lineHeight;       // compensate for descenders TODO use ascent()
         QString addr = QString::asprintf("%08x", m_address + m_bytesPerRow * row);
-        painter.drawText(x_addr, y, addr);
+        painter.drawText(GetAddrX(), y, addr);
 
         // Now hex
         // We write out the values per-nybble
@@ -344,19 +341,27 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
             //size_t byteOffset = i / 2;
             //uint32_t shiftDown = (i % 2) * 4;
 
-            painter.setPen(row == m_cursorRow && i == m_cursorCol ?
-                           pal.highlightedText().color() :
-                           pal.text().color());
-
-            int x = x_hex + m_xpos[i] * char_width;
+            int x = GetHexCharX(m_xpos[i]);
             QChar st = r.m_hexText.at(i);
             painter.drawText(x, y, st);
         }
 
-        // Ascii is shown after the last item
-        uint32_t lastHexX = m_xpos.back();
-        int x_ascii = x_hex + lastHexX * char_width;
+        int x_ascii = GetAsciiCharX();
         painter.drawText(x_ascii, y, m_rows[row].m_asciiText);
+    }
+
+    // Draw highlight/cursor area in the hex
+    {
+        int y_curs = m_cursorRow * m_lineHeight;       // compensate for descenders TODO use ascent()
+        int x_curs = GetHexCharX(m_xpos[m_cursorCol]);
+
+        painter.setBrush(pal.highlight());
+        painter.drawRect(x_curs, y_curs, char_width, m_lineHeight);
+
+        int x = GetHexCharX(m_xpos[m_cursorCol]);
+        QChar st = m_rows[m_cursorRow].m_hexText.at(m_cursorCol);
+        painter.setPen(pal.highlightedText().color());
+        painter.drawText(x_curs, y_base + y_curs, st);
     }
 }
 
@@ -403,6 +408,23 @@ void MemoryWidget::RecalcSizes()
     monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     QFontMetrics info(monoFont);
     m_lineHeight = info.lineSpacing();
+}
+
+// Position in pixels of address column
+int MemoryWidget::GetAddrX() const
+{
+    return 10;
+}
+
+int MemoryWidget::GetHexCharX(int x) const
+{
+    return GetAddrX() + (10 + x) * m_charWidth;
+}
+
+int MemoryWidget::GetAsciiCharX() const
+{
+    uint32_t lastCharX = m_xpos.back();
+    return GetAddrX() + (10 + lastCharX + 3) * m_charWidth;
 }
 
 //-----------------------------------------------------------------------------

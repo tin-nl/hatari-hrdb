@@ -63,7 +63,9 @@ private:
     void RecalcRowCount();
 
     void RecalcSizes();
-    int GetCharX(int x, int charWidth);
+    int GetAddrX() const;
+    int GetHexCharX(int x) const;
+    int GetAsciiCharX() const;
 
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
@@ -94,7 +96,9 @@ private:
     int     m_cursorRow;
     int     m_cursorCol;
 
+
     // rendering info
+    int     m_charWidth;
     int     m_lineHeight;           // font height in pixels
     QFont   monoFont;
 };
