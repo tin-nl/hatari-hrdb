@@ -32,3 +32,15 @@ Memory& Memory::operator=(const Memory &other)
     memcpy(this->m_pData, other.m_pData, other.m_size);
     return *this;
 }
+
+bool Overlaps(uint32_t addr1, uint32_t size1, uint32_t addr2, uint32_t size2)
+{
+    // Case 1: block one entirely to left of block two
+    if (addr1 + size1 <= addr2)
+        return false;
+    // Case 2: block two entirely to left of block one
+    if (addr2 + size2 <= addr1)
+        return false;
+    // Case 3: they overlap!
+    return true;
+}

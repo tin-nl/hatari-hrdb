@@ -22,6 +22,9 @@ enum MemorySlot
     kMemorySlotCount
 };
 
+// Check if 2 memory ranges overlap
+bool Overlaps(uint32_t addr1, uint32_t size1, uint32_t addr2, uint32_t size);
+
 // A block of memory pulled from the target.
 struct Memory
 {

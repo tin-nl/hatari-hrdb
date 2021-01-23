@@ -44,6 +44,7 @@ public slots:
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void startStopChangedSlot();
     void connectChangedSlot();
+    void otherMemoryChangedSlot(uint32_t address, uint32_t size);
 
 protected:
     virtual void paintEvent(QPaintEvent*);
@@ -55,6 +56,7 @@ private:
     void MoveRight();
     void PageUp();
     void PageDown();
+    void EditKey(uint8_t val);
 
     void SetAddress(uint32_t address);
     void RequestMemory();
@@ -67,12 +69,16 @@ private:
     int GetHexCharX(int x) const;
     int GetAsciiCharX() const;
 
+    void GetCursorInfo(uint32_t& address, bool& bottomNybble);
+
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
 
     // These are taken at the same time. Is there a race condition...?
     struct Row
     {
+        uint32_t m_address;
+        std::vector<uint8_t> m_rawBytes;
         QString m_hexText;
         QString m_asciiText;
     };

@@ -53,6 +53,7 @@ public:
     void ToggleBreakpoint(int row);
     void SetRowCount(int count);
     void SetFollowPC(bool follow);
+public slots:
 signals:
     void addressChanged(uint64_t addr);
 
@@ -62,6 +63,7 @@ private slots:
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void breakpointsChangedSlot(uint64_t commandId);
     void symbolTableChangedSlot(uint64_t commandId);
+    void otherMemoryChangedSlot(uint32_t address, uint32_t size);
 
 private:
     void SetAddress(uint32_t addr);
@@ -89,6 +91,7 @@ private:
 
     // Address of the top line of text that was requested
     uint32_t m_requestedAddress;    // Most recent address requested
+
     uint32_t m_logicalAddr;         // Most recent address that can be shown
     uint64_t m_requestId;           // Most recent memory request
     bool     m_bFollowPC;

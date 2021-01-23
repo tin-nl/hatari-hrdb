@@ -353,7 +353,11 @@ static int RemoteDebug_Memset(int nArgc, char *psArgs[], int fd)
 		STMemory_WriteByte(memdump_addr, (valHi << 4) | valLo);
 		++memdump_addr;
 	}
-	send_str(fd, "OK");
+	send_str(fd, "OK ");
+	// Report changed range so tools can decide to update
+	send_hex(fd, memdump_end - memdump_count);
+	send_str(fd, " ");
+	send_hex(fd, memdump_count);
 	return 0;
 }
 

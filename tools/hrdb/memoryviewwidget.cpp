@@ -42,6 +42,7 @@ MemoryWidget::MemoryWidget(QWidget *parent, TargetModel *pTargetModel, Dispatche
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryWidget::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryWidget::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &MemoryWidget::connectChangedSlot);
+    connect(m_pTargetModel, &TargetModel::otherMemoryChanged,       this, &MemoryWidget::otherMemoryChangedSlot);
 }
 
 bool MemoryWidget::SetAddress(std::string expression)
@@ -209,6 +210,42 @@ void MemoryWidget::PageDown()
     SetAddress(m_address + m_bytesPerRow * m_rowCount);
 }
 
+void MemoryWidget::EditKey(uint8_t val)
+{
+    // Can't edit while we still wait for memory
+    if (m_requestId != 0)
+        return;
+    uint32_t address;
+    bool lowNybble;
+    GetCursorInfo(address, lowNybble);
+
+    uint8_t nybbles[2];
+    uint8_t cursorByte = m_rows[m_cursorRow].m_rawBytes[m_cursorCol / 2];
+    if (lowNybble)
+    {
+        // This is the low nybble
+        nybbles[0] = cursorByte & 0xf0;
+        nybbles[1] = val;
+    }
+    else
+    {
+        nybbles[0] = val << 4;
+        nybbles[1] = cursorByte & 0xf;
+    }
+    uint8_t finalVal = nybbles[0] | nybbles[1];
+    QString cmd = QString::asprintf("memset $%x 1 %02x", address, finalVal);
+
+    std::cout << cmd.toStdString() << std::endl;
+
+    m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
+
+    // Replace the value so that editing still works
+    m_rows[m_cursorRow].m_rawBytes[m_cursorCol / 2] = finalVal;
+    RecalcText();
+
+    MoveRight();
+}
+
 void MemoryWidget::memoryChangedSlot(int memorySlot, uint64_t commandId)
 {
     if (memorySlot != m_memSlot)
@@ -218,11 +255,6 @@ void MemoryWidget::memoryChangedSlot(int memorySlot, uint64_t commandId)
     if (commandId != m_requestId)
         return;
 
-    RecalcText();
-}
-
-void MemoryWidget::RecalcText()
-{
     m_rows.clear();
     const Memory* pMem = m_pTargetModel->GetMemory(m_memSlot);
     if (!pMem)
@@ -232,15 +264,15 @@ void MemoryWidget::RecalcText()
         return;
 
     // We should just save the memory block here and format on demand
-    // Build up the text area
+    // Build up memory in the rows
     uint32_t rowCount = m_rowCount;
     uint32_t offset = 0;
-    std::vector<uint8_t> rowData;
-    rowData.resize(m_bytesPerRow);
-
     for (uint32_t r = 0; r < rowCount; ++r)
     {
         Row row;
+        row.m_address = pMem->GetAddress() + offset;
+        row.m_rawBytes.clear();
+        row.m_rawBytes.resize(m_bytesPerRow);
         for (uint32_t i = 0; i < m_bytesPerRow; ++i)
         {
             if (offset == pMem->GetSize())
@@ -251,20 +283,34 @@ void MemoryWidget::RecalcText()
             }
 
             uint8_t c = pMem->Get(offset);
-            rowData[i] = c;
+            row.m_rawBytes[i] = c;
+            ++offset;
+        }
+        m_rows.push_back(row);
+    }
+    RecalcText();
+    m_requestId = 0;
+}
 
-            row.m_hexText += QString::asprintf("%02x", rowData[i]);
+void MemoryWidget::RecalcText()
+{
+    uint32_t rowCount = m_rows.size();
+    for (uint32_t r = 0; r < rowCount; ++r)
+    {
+        Row& row = m_rows[r];
+        row.m_hexText.clear();
+        row.m_asciiText.clear();
+        for (uint32_t i = 0; i < row.m_rawBytes.size(); ++i)
+        {
+            uint8_t c = row.m_rawBytes[i];
+            row.m_hexText += QString::asprintf("%02x", c);
 
             if (c >= 32 && c < 128)
                 row.m_asciiText += QString::asprintf("%c", c);
             else
                 row.m_asciiText += ".";
-            ++offset;
         }
-        m_rows.push_back(row);
     }
-
-    m_requestId = 0;    // flag request is complete
     repaint();
 }
 
@@ -284,7 +330,6 @@ void MemoryWidget::startStopChangedSlot()
                 SetAddress(addr);
             }
         }
-
         RequestMemory();
     }
 }
@@ -295,6 +340,13 @@ void MemoryWidget::connectChangedSlot()
     m_address = 0;
     m_rowCount = 10;
     repaint();
+}
+
+void MemoryWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
+{
+    // Do a re-request
+    // TODO only re-request if it affected our view...
+    RequestMemory();
 }
 
 void MemoryWidget::paintEvent(QPaintEvent* ev)
@@ -312,12 +364,6 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     QFontMetrics info(painter.fontMetrics());
     const QPalette& pal = this->palette();
 
-
-//    painter.setBackground(row == m_cursorRow ?
-//        pal.highlight().color() :
-//        pal.window().color());
-
-
     int y_base = info.ascent();
     int char_width = info.horizontalAdvance("0");
 
@@ -327,15 +373,16 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     painter.setPen(pal.text().color());
     for (size_t row = 0; row < m_rows.size(); ++row)
     {
+        const Row& r = m_rows[row];
+
         // Draw address string
         painter.setPen(pal.text().color());
         int y = y_base + row * m_lineHeight;       // compensate for descenders TODO use ascent()
-        QString addr = QString::asprintf("%08x", m_address + m_bytesPerRow * row);
+        QString addr = QString::asprintf("%08x", r.m_address);
         painter.drawText(GetAddrX(), y, addr);
 
         // Now hex
         // We write out the values per-nybble
-        const Row& r = m_rows[row];
         for (size_t i = 0; i < m_xpos.size(); ++i)
         {
             //size_t byteOffset = i / 2;
@@ -358,7 +405,6 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
         painter.setBrush(pal.highlight());
         painter.drawRect(x_curs, y_curs, char_width, m_lineHeight);
 
-        int x = GetHexCharX(m_xpos[m_cursorCol]);
         QChar st = m_rows[m_cursorRow].m_hexText.at(m_cursorCol);
         painter.setPen(pal.highlightedText().color());
         painter.drawText(x_curs, y_base + y_curs, st);
@@ -375,6 +421,23 @@ void MemoryWidget::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Down:       MoveDown();          return;
     case Qt::Key_PageUp:     PageUp();            return;
     case Qt::Key_PageDown:   PageDown();          return;
+
+    case Qt::Key_0:          EditKey(0); return;
+    case Qt::Key_1:          EditKey(1); return;
+    case Qt::Key_2:          EditKey(2); return;
+    case Qt::Key_3:          EditKey(3); return;
+    case Qt::Key_4:          EditKey(4); return;
+    case Qt::Key_5:          EditKey(5); return;
+    case Qt::Key_6:          EditKey(6); return;
+    case Qt::Key_7:          EditKey(7); return;
+    case Qt::Key_8:          EditKey(8); return;
+    case Qt::Key_9:          EditKey(9); return;
+    case Qt::Key_A:          EditKey(10); return;
+    case Qt::Key_B:          EditKey(11); return;
+    case Qt::Key_C:          EditKey(12); return;
+    case Qt::Key_D:          EditKey(13); return;
+    case Qt::Key_E:          EditKey(14); return;
+    case Qt::Key_F:          EditKey(15); return;
     default: break;
     }
     QWidget::keyPressEvent(event);
@@ -425,6 +488,13 @@ int MemoryWidget::GetAsciiCharX() const
 {
     uint32_t lastCharX = m_xpos.back();
     return GetAddrX() + (10 + lastCharX + 3) * m_charWidth;
+}
+
+void MemoryWidget::GetCursorInfo(uint32_t &address, bool &bottomNybble)
+{
+    address = m_rows[m_cursorRow].m_address;
+    address += (m_cursorCol / 2);
+    bottomNybble = (m_cursorCol & 1) ? true : false;
 }
 
 //-----------------------------------------------------------------------------

@@ -16,6 +16,7 @@
 #include "targetmodel.h"
 #include "stringparsers.h"
 #include "symboltablemodel.h"
+#include "memory.h"
 
 //-----------------------------------------------------------------------------
 DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher, int windowIndex):
@@ -42,6 +43,7 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &DisasmTableModel::symbolTableChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal, this, &DisasmTableModel::connectChangedSlot);
     connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &DisasmTableModel::CalcEAs);
+    connect(m_pTargetModel, &TargetModel::otherMemoryChanged,       this, &DisasmTableModel::otherMemoryChangedSlot);
 }
 
 int DisasmTableModel::rowCount(const QModelIndex &parent) const
@@ -193,7 +195,9 @@ void DisasmTableModel::RequestMemory()
     uint32_t lowAddr = (addr > 100) ? addr - 100 : 0;
     uint32_t size = ((m_rowCount * 10) + 100);
     if (m_pTargetModel->IsConnected())
+    {
         m_requestId = m_pDispatcher->RequestMemory(m_memSlot, lowAddr, size);
+    }
 }
 
 bool DisasmTableModel::GetEA(uint32_t row, int operandIndex, uint32_t &addr)
@@ -385,6 +389,15 @@ void DisasmTableModel::symbolTableChangedSlot(uint64_t commandId)
 {
     // Don't copy here, just force a re-read
     emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
+}
+
+void DisasmTableModel::otherMemoryChangedSlot(uint32_t address, uint32_t size)
+{
+    // Do a re-request if our memory is touched
+    uint32_t ourAddr = m_logicalAddr;
+    uint32_t ourSize = ((m_rowCount * 10) + 100);
+    if (Overlaps(ourAddr, ourSize, address, size))
+        RequestMemory();
 }
 
 void DisasmTableModel::CalcDisasm()

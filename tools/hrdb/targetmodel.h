@@ -38,6 +38,7 @@ public:
     void SetBreakpoints(const Breakpoints& bps, uint64_t commandId);
     void SetSymbolTable(const SymbolTable& syms, uint64_t commandId);
     void SetExceptionMask(const ExceptionMask& mask);
+    void NotifyMemoryChanged(uint32_t address, uint32_t size);
 
 	// NOTE: all these return copies to avoid data contention
     int IsConnected() const { return m_bConnected; }
@@ -77,6 +78,9 @@ signals:
     // UI BODGE
     // Qt seems to have no central message dispatch
     void addressRequested(int windowId, bool isMemory, uint32_t address);
+
+    // Something edited memory
+    void otherMemoryChanged(uint32_t address, uint32_t size);
 
 private slots:
 

@@ -130,6 +130,11 @@ void TargetModel::SetExceptionMask(const ExceptionMask &mask)
     emit exceptionMaskChanged();
 }
 
+void TargetModel::NotifyMemoryChanged(uint32_t address, uint32_t size)
+{
+    emit otherMemoryChanged(address, size);
+}
+
 void TargetModel::delayedTimer()
 {
     m_pTimer->stop();

@@ -115,6 +115,8 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
 
     connect(m_pTargetModel,  &TargetModel::startStopChangedSignalDelayed, this, &GraphicsInspectorWidget::startStopChangedSlot);
     connect(m_pTargetModel,  &TargetModel::memoryChangedSignal,           this, &GraphicsInspectorWidget::memoryChangedSlot);
+    connect(m_pTargetModel,  &TargetModel::otherMemoryChanged,            this, &GraphicsInspectorWidget::otherMemoryChangedSlot);
+
     connect(m_pLineEdit,     &QLineEdit::returnPressed,                   this, &GraphicsInspectorWidget::textEditChangedSlot);
     connect(m_pFollowVideoCheckBox,
                              &QCheckBox::stateChanged,                    this, &GraphicsInspectorWidget::followVideoChangedSlot);
@@ -287,6 +289,14 @@ void GraphicsInspectorWidget::followVideoChangedSlot()
         // ....
         RequestMemory();
     }
+}
+
+void GraphicsInspectorWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
+{
+    // Do a re-request if our memory is touched
+    uint32_t ourSize = m_height * m_width * 8;
+    if (Overlaps(m_address, ourSize, address, size))
+        RequestMemory();
 }
 
 void GraphicsInspectorWidget::widthChangedSlot(int value)

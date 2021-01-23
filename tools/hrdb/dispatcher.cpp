@@ -344,6 +344,20 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         maskObj.m_mask = (uint16_t)mask;
         m_pTargetModel->SetExceptionMask(maskObj);
     }
+    else if (type == "memset")
+    {
+        // check the affected range
+        std::string addrStr = splitResp.Split(' ');
+        std::string sizeStr = splitResp.Split(' ');
+        uint32_t addr;
+        if (!StringParsers::ParseHexString(addrStr.c_str(), addr))
+            return;
+        uint32_t size;
+        if (!StringParsers::ParseHexString(sizeStr.c_str(), size))
+            return;
+
+        m_pTargetModel->NotifyMemoryChanged(addr, size);
+    }
 }
 
 void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
