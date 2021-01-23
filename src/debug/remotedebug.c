@@ -38,6 +38,7 @@
 #include "symbols.h"
 #include "log.h"
 #include "vars.h"
+#include "memory.h"
 
 #define REMOTE_DEBUG_PORT          (56001)
 #define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
@@ -96,6 +97,28 @@ static void send_term(int fd)
 {
 	char null = 0;
 	send(fd, &null, 1, 0);
+}
+
+//-----------------------------------------------------------------------------
+static bool read_hex_char(char c, uint8_t* result)
+{
+    if (c >= '0' && c <= '9')
+    {
+        *result = (uint8_t)(c - '0');
+        return true;
+    }
+    if (c >= 'a' && c <= 'f')
+    {
+        *result = (uint8_t)(10 + c - 'a');
+        return true;
+    }
+    if (c >= 'A' && c <= 'F')
+    {
+        *result = (uint8_t)(10 + c - 'A');
+        return true;
+    }
+    *result = 0;
+    return false;
 }
 
 // -----------------------------------------------------------------------------
@@ -274,6 +297,66 @@ static int RemoteDebug_Mem(int nArgc, char *psArgs[], int fd)
 	return 0;
 }
 
+/**
+ * Write the requested area of ST memory.
+ *
+ * Input: "memset <start addr> <hex-data>\n"
+ *
+ * Output: "OK"/"NG"
+ */
+
+static int RemoteDebug_Memset(int nArgc, char *psArgs[], int fd)
+{
+	int arg;
+	Uint32 memdump_addr = 0;
+	Uint32 memdump_end = 0;
+	Uint32 memdump_count = 0;
+	uint8_t valHi;
+	uint8_t valLo;
+	int offset = 0;
+	const char* err_str = NULL;
+
+	/* For remote debug, only "address" "count" is supported */
+	arg = 1;
+	if (nArgc >= arg + 3)
+	{
+		// Address
+		err_str = Eval_Expression(psArgs[arg], &memdump_addr, &offset, false);
+		if (err_str)
+			return 1;
+
+		++arg;
+		// Size
+		err_str = Eval_Expression(psArgs[arg], &memdump_count, &offset, false);
+		if (err_str)
+			return 1;
+		++arg;
+	}
+	else
+	{
+		// Not enough args
+		return 1;
+	}
+
+	memdump_end = memdump_addr + memdump_count;
+	uint32_t pos = 0;
+	while (memdump_addr < memdump_end)
+	{
+		if (!read_hex_char(psArgs[arg][pos], &valHi))
+			return 1;
+		++pos;
+		if (!read_hex_char(psArgs[arg][pos], &valLo))
+			return 1;
+		++pos;
+
+		//put_byte(memdump_addr, (valHi << 4) | valLo);
+		STMemory_WriteByte(memdump_addr, (valHi << 4) | valLo);
+		++memdump_addr;
+	}
+	send_str(fd, "OK");
+	return 0;
+}
+
 // -----------------------------------------------------------------------------
 /* Set a breakpoint at an address. */
 static int RemoteDebug_bp(int nArgc, char *psArgs[], int fd)
@@ -411,6 +494,7 @@ static const rdbcommand_t remoteDebugCommandList[] = {
 	{ RemoteDebug_Run, 		"run"		, true		},
 	{ RemoteDebug_Regs,     "regs"		, true		},
 	{ RemoteDebug_Mem,      "mem"		, true		},
+	{ RemoteDebug_Memset,   "memset"	, true		},
 	{ RemoteDebug_bp, 		"bp"		, false		},
 	{ RemoteDebug_bplist,	"bplist"	, true		},
 	{ RemoteDebug_bpdel,	"bpdel"		, true		},
