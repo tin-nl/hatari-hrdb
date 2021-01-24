@@ -28,13 +28,13 @@ NonAntiAliasImage::NonAntiAliasImage(QWidget *parent)
 
 void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
 {
+    QPainter painter(this);
+    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     if (m_pixmap.width() != 0)
     {
-        QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing, false);
         style()->drawItemPixmap(&painter, rect(), Qt::AlignCenter, m_pixmap.scaled(rect().size()));
 
-        const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
         if (this->underMouse())
         {
             painter.setFont(monoFont);
@@ -43,6 +43,10 @@ void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
                                 (int) m_mousePos.x(),
                                 (int) m_mousePos.y()));
         }
+    }
+    else {
+        painter.setFont(monoFont);
+        painter.drawText(10, 10, "Not connected");
     }
     QWidget::paintEvent(ev);
 }
@@ -175,7 +179,7 @@ void GraphicsInspectorWidget::connectChangedSlot()
     if (!m_pTargetModel->IsConnected())
     {
         QPixmap empty;
-        //m_pImageWidget->setPixmap(empty);
+        m_pImageWidget->setPixmap(empty);
     }
 }
 
