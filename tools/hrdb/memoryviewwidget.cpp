@@ -76,7 +76,6 @@ void MemoryWidget::SetRowCount(uint32_t rowCount)
         {
             m_cursorRow = m_rowCount - 1;
         }
-        repaint();
     }
 }
 
@@ -353,6 +352,7 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
 {
     QWidget::paintEvent(ev);
 
+#if 1
     // CAREFUL! This could lead to an infinite loop of redraws if we are not.
     RecalcRowCount();
 
@@ -409,6 +409,7 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
         painter.setPen(pal.highlightedText().color());
         painter.drawText(x_curs, y_base + y_curs, st);
     }
+#endif
 }
 
 void MemoryWidget::keyPressEvent(QKeyEvent* event)
@@ -481,7 +482,7 @@ void MemoryWidget::RequestMemory()
 void MemoryWidget::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
-    RecalcRowCount();
+//    RecalcRowCount(true);
 }
 
 void MemoryWidget::RecalcRowCount()

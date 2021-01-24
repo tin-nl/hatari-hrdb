@@ -36,7 +36,6 @@ public:
 
     // returns false if expression is invalid
     bool SetAddress(std::string expression);
-    void SetRowCount(uint32_t rowCount);
     void SetLock(bool locked);
     void SetMode(Mode mode);
 
@@ -72,6 +71,7 @@ private:
     int GetAsciiCharX() const;
 
     void GetCursorInfo(uint32_t& address, bool& bottomNybble);
+    void SetRowCount(uint32_t rowCount);
 
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
