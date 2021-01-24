@@ -108,7 +108,7 @@ void MemoryWidget::SetMode(MemoryWidget::Mode mode)
     else if (m_mode == kModeLong)
         groupSize = 4;
 
-    m_xpos.clear();
+    m_columnPositions.clear();
     for (uint32_t i = 0; i < m_bytesPerRow; ++i)
     {
         uint32_t group = i / groupSize;     // group of N bytes (N * chars)
@@ -118,9 +118,9 @@ void MemoryWidget::SetMode(MemoryWidget::Mode mode)
         uint32_t base_x = group * (groupSize * 2 + 1) + 2 * byteInGroup;
 
         // top nybble
-        m_xpos.push_back(base_x);
+        m_columnPositions.push_back(base_x);
         // bottom nybble
-        m_xpos.push_back(base_x + 1);
+        m_columnPositions.push_back(base_x + 1);
     }
 
     RecalcText();
@@ -383,13 +383,13 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
 
         // Now hex
         // We write out the values per-nybble
-        for (size_t i = 0; i < m_xpos.size(); ++i)
+        for (size_t col = 0; col < m_columnPositions.size(); ++col)
         {
             //size_t byteOffset = i / 2;
             //uint32_t shiftDown = (i % 2) * 4;
 
-            int x = GetHexCharX(m_xpos[i]);
-            QChar st = r.m_hexText.at(i);
+            int x = GetHexCharX(col);
+            QChar st = r.m_hexText.at(col);
             painter.drawText(x, y, st);
         }
 
@@ -400,7 +400,7 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     // Draw highlight/cursor area in the hex
     {
         int y_curs = m_cursorRow * m_lineHeight;       // compensate for descenders TODO use ascent()
-        int x_curs = GetHexCharX(m_xpos[m_cursorCol]);
+        int x_curs = GetHexCharX(m_cursorCol);
 
         painter.setBrush(pal.highlight());
         painter.drawRect(x_curs, y_curs, char_width, m_lineHeight);
@@ -443,6 +443,34 @@ void MemoryWidget::keyPressEvent(QKeyEvent* event)
     QWidget::keyPressEvent(event);
 }
 
+void MemoryWidget::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::MouseButton::LeftButton)
+    {
+        // Over a hex char
+        int x = (int)event->localPos().x();
+        int y = (int)event->localPos().y();
+
+        int row = y / m_lineHeight;
+        if (row < m_rows.size())
+        {
+            // Find the X char that might fit
+            for (int col = 0; col < m_columnPositions.size(); ++col)
+            {
+                int charPos = GetHexCharX(col);
+                if (x >= charPos && x < charPos + m_charWidth)
+                {
+                    m_cursorCol = col;
+                    m_cursorRow = row;
+                    repaint();
+                    break;
+                }
+            }
+        }
+    }
+    QWidget::mousePressEvent(event);
+}
+
 void MemoryWidget::RequestMemory()
 {
     uint32_t size = ((m_rowCount * 16));
@@ -479,14 +507,15 @@ int MemoryWidget::GetAddrX() const
     return 10;
 }
 
-int MemoryWidget::GetHexCharX(int x) const
+int MemoryWidget::GetHexCharX(int column) const
 {
-    return GetAddrX() + (10 + x) * m_charWidth;
+    assert(column < m_columnPositions.size());
+    return GetAddrX() + (10 + m_columnPositions[column]) * m_charWidth;
 }
 
 int MemoryWidget::GetAsciiCharX() const
 {
-    uint32_t lastCharX = m_xpos.back();
+    uint32_t lastCharX = m_columnPositions.back();
     return GetAddrX() + (10 + lastCharX + 3) * m_charWidth;
 }
 

@@ -49,6 +49,7 @@ public slots:
 protected:
     virtual void paintEvent(QPaintEvent*);
     virtual void keyPressEvent(QKeyEvent*);
+    virtual void mousePressEvent(QMouseEvent *event);
 private:
     void MoveUp();
     void MoveDown();
@@ -66,7 +67,8 @@ private:
 
     void RecalcSizes();
     int GetAddrX() const;
-    int GetHexCharX(int x) const;
+    // Get the x-coord of the hex-character at cursor column
+    int GetHexCharX(int column) const;
     int GetAsciiCharX() const;
 
     void GetCursorInfo(uint32_t& address, bool& bottomNybble);
@@ -84,7 +86,8 @@ private:
     };
 
     std::vector<Row> m_rows;
-    std::vector<uint32_t> m_xpos;
+    // Positions of each column (need to multiply by m_charWidth for pixel position)
+    std::vector<uint32_t> m_columnPositions;
 
     std::string m_addressExpression;
     bool    m_isLocked;
@@ -104,7 +107,7 @@ private:
 
 
     // rendering info
-    int     m_charWidth;
+    int     m_charWidth;            // font width in pixels
     int     m_lineHeight;           // font height in pixels
     QFont   monoFont;
 };
