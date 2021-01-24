@@ -15,7 +15,8 @@ class TargetModel;
 class Dispatcher;
 
 // Taken from https://forum.qt.io/topic/94996/qlabel-and-image-antialiasing/5
-class NonAntiAliasImage : public QWidget{
+class NonAntiAliasImage : public QWidget
+{
     Q_OBJECT
     Q_DISABLE_COPY(NonAntiAliasImage)
 public:
@@ -46,6 +47,7 @@ public:
                             TargetModel* pTargetModel, Dispatcher* pDispatcher);
     ~GraphicsInspectorWidget();
 
+    void connectChangedSlot();
     void startStopChangedSlot();
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void textEditChangedSlot();

@@ -26,24 +26,25 @@ NonAntiAliasImage::NonAntiAliasImage(QWidget *parent)
     setMouseTracking(true);
 }
 
-void NonAntiAliasImage::paintEvent(QPaintEvent *)
+void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
 {
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing, false);
-    style()->drawItemPixmap(&painter, rect(), Qt::AlignCenter, m_pixmap.scaled(rect().size()));
-
-    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-
-
-    if (this->underMouse())
+    if (m_pixmap.width() != 0)
     {
-        painter.setFont(monoFont);
-        painter.drawText(10, 10,
-              QString::asprintf("This is some text %d %d\n",
-                            (int) m_mousePos.x(),
-                            (int) m_mousePos.y()));
-    }
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing, false);
+        style()->drawItemPixmap(&painter, rect(), Qt::AlignCenter, m_pixmap.scaled(rect().size()));
 
+        const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+        if (this->underMouse())
+        {
+            painter.setFont(monoFont);
+            painter.drawText(10, 10,
+                  QString::asprintf("X:%d Y:%d\n",
+                                (int) m_mousePos.x(),
+                                (int) m_mousePos.y()));
+        }
+    }
+    QWidget::paintEvent(ev);
 }
 
 void NonAntiAliasImage::mouseMoveEvent(QMouseEvent *event)
@@ -113,6 +114,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
 
     setWidget(pMainGroupBox);
 
+    connect(m_pTargetModel,  &TargetModel::connectChangedSignal,          this, &GraphicsInspectorWidget::connectChangedSlot);
     connect(m_pTargetModel,  &TargetModel::startStopChangedSignalDelayed, this, &GraphicsInspectorWidget::startStopChangedSlot);
     connect(m_pTargetModel,  &TargetModel::memoryChangedSignal,           this, &GraphicsInspectorWidget::memoryChangedSlot);
     connect(m_pTargetModel,  &TargetModel::otherMemoryChanged,            this, &GraphicsInspectorWidget::otherMemoryChangedSlot);
@@ -166,6 +168,15 @@ void GraphicsInspectorWidget::keyPressEvent(QKeyEvent* ev)
     }
     QDockWidget::keyPressEvent(ev);
 
+}
+
+void GraphicsInspectorWidget::connectChangedSlot()
+{
+    if (!m_pTargetModel->IsConnected())
+    {
+        QPixmap empty;
+        //m_pImageWidget->setPixmap(empty);
+    }
 }
 
 void GraphicsInspectorWidget::startStopChangedSlot()
