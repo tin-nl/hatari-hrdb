@@ -42,6 +42,7 @@ public:
     uint32_t GetAddress() const { return m_logicalAddr; }
     int GetRowCount() const     { return m_rowCount; }
     bool GetFollowPC() const    { return m_bFollowPC; }
+    bool GetInstructionAddr(int row, uint32_t& addr) const;
     bool GetEA(uint32_t row, int operandIndex, uint32_t &addr);
 
     bool SetAddress(std::string addr);
@@ -51,6 +52,7 @@ public:
     void PageDown();
     void RunToRow(int row);
     void ToggleBreakpoint(int row);
+    void NopRow(int row);
     void SetRowCount(int count);
     void SetFollowPC(bool follow);
 public slots:
@@ -122,6 +124,8 @@ private:
 
     void runToCursorRightClick();
     void toggleBreakpointRightClick();
+    void nopRightClick();
+    void memoryViewAddrInst();
     void memoryViewAddr0();
     void memoryViewAddr1();
     void disasmViewAddr0();
@@ -138,14 +142,16 @@ private:
     // Actions
     QAction*              m_pRunUntilAction;
     QAction*              m_pBreakpointAction;
+    QAction*              m_pNopAction;
 
-    QAction*              m_pMemViewAddress[2];
+    QAction*              m_pMemViewAddress[3];
     QAction*              m_pDisassembleAddress[2];
 
     QMenu                 m_rightClickMenu;
 
     // Remembers which row we right-clicked on
     int                   m_rightClickRow;
+    uint32_t              m_rightClickInstructionAddr;
     uint32_t              m_rightClickAddr[2];
 };
 

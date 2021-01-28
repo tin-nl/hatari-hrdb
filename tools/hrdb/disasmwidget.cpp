@@ -212,6 +212,14 @@ bool DisasmTableModel::GetEA(uint32_t row, int operandIndex, uint32_t &addr)
     return m_opAddresses[row].valid[operandIndex];
 }
 
+bool DisasmTableModel::GetInstructionAddr(int row, uint32_t &addr) const
+{
+    if (row >= m_disasm.lines.size())
+        return false;
+    addr = m_disasm.lines[row].address;
+    return true;
+}
+
 bool DisasmTableModel::SetAddress(std::string addrStr)
 {
     uint32_t addr;
@@ -460,6 +468,21 @@ void DisasmTableModel::ToggleBreakpoint(int row)
     }
 }
 
+void DisasmTableModel::NopRow(int row)
+{
+    if (row >= m_disasm.lines.size())
+        return;
+
+    Disassembler::line& line = m_disasm.lines[row];
+    uint32_t addr = line.address;
+
+    QString command = QString::asprintf("memset %u %u ", addr, line.inst.byte_count);
+    for (int i = 0; i <  line.inst.byte_count /2; ++i)
+        command += "4e71";
+
+    m_pDispatcher->SendCommandPacket(command.toStdString().c_str());
+}
+
 void DisasmTableModel::SetRowCount(int count)
 {
     if (count != m_rowCount)
@@ -513,31 +536,44 @@ DisasmTableView::DisasmTableView(QWidget* parent, DisasmTableModel* pModel, Targ
     m_pTableModel(pModel),
     m_pTargetModel(pTargetModel),
     m_rightClickMenu(this),
-    m_rightClickRow(-1)
+    m_rightClickRow(-1),
+    m_rightClickInstructionAddr(0)
 {
     // Actions for right-click menu
     m_pRunUntilAction = new QAction(tr("Run to here"), this);
     m_pBreakpointAction = new QAction(tr("Toggle Breakpoint"), this);
+    m_pNopAction = new QAction(tr("Replace with NOPs"), this);
 
     m_pMemViewAddress[0] = new QAction("", this);
     m_pMemViewAddress[1] = new QAction("", this);
+    m_pMemViewAddress[2] = new QAction(tr("Show instruction memory"), this);
     m_pDisassembleAddress[0] = new QAction("", this);
     m_pDisassembleAddress[1] = new QAction("", this);
 
+    QMenu* pViewMenu = new QMenu("View", this);
+    pViewMenu->addAction(m_pMemViewAddress[2]);
+    pViewMenu->addAction(m_pMemViewAddress[0]);
+    pViewMenu->addAction(m_pMemViewAddress[1]);
+    pViewMenu->addAction(m_pDisassembleAddress[0]);
+    pViewMenu->addAction(m_pDisassembleAddress[1]);
+
+    QMenu* pEditMenu = new QMenu("Edit", this);
+    pEditMenu->addAction(m_pNopAction); //
+
     m_rightClickMenu.addAction(m_pRunUntilAction);
     m_rightClickMenu.addAction(m_pBreakpointAction);
-    m_rightClickMenu.addAction(m_pMemViewAddress[0]);
-    m_rightClickMenu.addAction(m_pMemViewAddress[1]);
-    m_rightClickMenu.addAction(m_pDisassembleAddress[0]);
-    m_rightClickMenu.addAction(m_pDisassembleAddress[1]);
+    m_rightClickMenu.addMenu(pEditMenu);
+    m_rightClickMenu.addMenu(pViewMenu);
 
     new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
     new QShortcut(QKeySequence(tr("F9", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
 
     connect(m_pRunUntilAction,       &QAction::triggered,                  this, &DisasmTableView::runToCursorRightClick);
     connect(m_pBreakpointAction,     &QAction::triggered,                  this, &DisasmTableView::toggleBreakpointRightClick);
+    connect(m_pNopAction,            &QAction::triggered,                  this, &DisasmTableView::nopRightClick);
     connect(m_pMemViewAddress[0],    &QAction::triggered,                  this, &DisasmTableView::memoryViewAddr0);
     connect(m_pMemViewAddress[1],    &QAction::triggered,                  this, &DisasmTableView::memoryViewAddr1);
+    connect(m_pMemViewAddress[2],    &QAction::triggered,                  this, &DisasmTableView::memoryViewAddrInst);
     connect(m_pDisassembleAddress[0],&QAction::triggered,                  this, &DisasmTableView::disasmViewAddr0);
     connect(m_pDisassembleAddress[1],&QAction::triggered,                  this, &DisasmTableView::disasmViewAddr1);
 
@@ -554,6 +590,11 @@ void DisasmTableView::contextMenuEvent(QContextMenuEvent *event)
         return;
 
     m_rightClickRow = index.row();
+
+    m_rightClickInstructionAddr = 0;
+    bool vis = m_pTableModel->GetInstructionAddr(m_rightClickRow, m_rightClickInstructionAddr);
+    m_pMemViewAddress[2]->setVisible(vis);
+    m_pMemViewAddress[2]->setText(QString::asprintf("Show Instruction Memory ($%x)", m_rightClickInstructionAddr));
 
     // Set up relevant menu items
     for (uint32_t op = 0; op < 2; ++op)
@@ -586,6 +627,17 @@ void DisasmTableView::toggleBreakpointRightClick()
 {
     m_pTableModel->ToggleBreakpoint(m_rightClickRow);
     m_rightClickRow = -1;
+}
+
+void DisasmTableView::nopRightClick()
+{
+    m_pTableModel->NopRow(m_rightClickRow);
+    m_rightClickRow = -1;
+}
+
+void DisasmTableView::memoryViewAddrInst()
+{
+    emit m_pTargetModel->addressRequested(1, true, m_rightClickInstructionAddr);
 }
 
 void DisasmTableView::memoryViewAddr0()
