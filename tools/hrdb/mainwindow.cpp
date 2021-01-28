@@ -16,6 +16,7 @@
 #include "breakpointswidget.h"
 #include "addbreakpointdialog.h"
 #include "exceptiondialog.h"
+#include "rundialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -56,6 +57,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_pGraphicsInspector = new GraphicsInspectorWidget(this, m_pTargetModel, m_pDispatcher);
     m_pBreakpointsWidget = new BreakpointsWidget(this, m_pTargetModel, m_pDispatcher);
     m_pExceptionDialog = new ExceptionDialog(this, m_pTargetModel, m_pDispatcher);
+    m_pRunDialog = new RunDialog(this, m_pTargetModel, m_pDispatcher);
 
     // Set up menus
     createActions();
@@ -294,7 +296,13 @@ void MainWindow::addBreakpointPressed()
     dialog.exec();
 }
 
-// Network
+// Actions
+void MainWindow::Run()
+{
+    m_pRunDialog->setModal(true);
+    m_pRunDialog->show();
+}
+
 void MainWindow::Connect()
 {
     // Create the TCP socket and start listening
@@ -480,6 +488,10 @@ void MainWindow::aboutQt()
 void MainWindow::createActions()
 {
     // "File"
+    runAct = new QAction(tr("&Run..."), this);
+    runAct->setStatusTip(tr("Run Hatari"));
+    connect(runAct, &QAction::triggered, this, &MainWindow::Run);
+
     connectAct = new QAction(tr("&Connect"), this);
     connectAct->setStatusTip(tr("Connect to Hatari"));
     connect(connectAct, &QAction::triggered, this, &MainWindow::Connect);
@@ -547,6 +559,7 @@ void MainWindow::createMenus()
 {
     // "File"
     fileMenu = menuBar()->addMenu(tr("&File"));
+    fileMenu->addAction(runAct);
     fileMenu->addAction(connectAct);
     fileMenu->addAction(disconnectAct);
     fileMenu->addSeparator();

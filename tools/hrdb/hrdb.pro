@@ -35,7 +35,8 @@ SOURCES += \
     graphicsinspector.cpp \
     breakpointswidget.cpp \
     breakpoint.cpp \
-    addbreakpointdialog.cpp
+    addbreakpointdialog.cpp \
+    rundialog.cpp
 
 HEADERS += \
     disassembler.h \
@@ -60,7 +61,8 @@ HEADERS += \
     graphicsinspector.h \
     breakpointswidget.h \
     addbreakpointdialog.h \
-    quicklayout.h
+    quicklayout.h \
+    rundialog.h
     
 RESOURCES     = hrdb.qrc    
 

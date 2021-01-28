@@ -26,6 +26,7 @@ class MemoryViewWidget;
 class GraphicsInspectorWidget;
 class BreakpointsWidget;
 class ExceptionDialog;
+class RunDialog;
 
 class MainWindow : public QMainWindow
 {
@@ -61,10 +62,12 @@ private slots:
     void about();
     void aboutQt();
 private:
-    // Network
+    // File Menu
+    void Run();
     void Connect();
     void Disconnect();
 
+    // Exception Menu
     void ExceptionsDialog();
 
 	// Populaters
@@ -84,6 +87,7 @@ private:
 
     // Dialogs
     ExceptionDialog*    m_pExceptionDialog;
+    RunDialog*          m_pRunDialog;
 
     // Docking windows
     DisasmWidget*               m_pDisasmWidget0;
@@ -111,6 +115,7 @@ private:
     QMenu *windowMenu;
     QMenu *helpMenu;
 
+    QAction *runAct;
     QAction *connectAct;
     QAction *disconnectAct;
     QAction *exitAct;
