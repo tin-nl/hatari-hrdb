@@ -1374,3 +1374,8 @@ void DebugUI_Exceptions(int nr, long pc)
 	fprintf(stderr,"%s exception at 0x%lx!\n", ex[nr].name, pc);
 	DebugUI(REASON_CPU_EXCEPTION);
 }
+
+void DebugUI_Trigger()
+{
+	DebugUI(REASON_USER);
+}
