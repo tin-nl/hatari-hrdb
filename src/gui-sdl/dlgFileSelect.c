@@ -103,10 +103,10 @@ static int entries;				/* How many files are in the actual directory? */
 static int oldMouseY = 0;			/* Keep the latest Y mouse position for scrollbar move computing */
 static int mouseClicked = 0;			/* used to know if mouse if down for the first time or not */
 static int mouseIsOut = 0;			/* used to keep info that mouse if above or under the scrollbar when mousebutton is down */
-static float scrollbar_Ypos = 0.0;		/* scrollbar heigth */
+static float scrollbar_Ypos = 0.0;		/* scrollbar height */
 
 static char *dirpath;				/* for get_dtype() */
-#ifndef HAVE_DIRENT_D_TYPE
+#if !defined(HAVE_DIRENT_D_TYPE) && !defined(DT_UNKNOWN)
 enum {
 	DT_UNKNOWN,
 	DT_LNK,
@@ -358,21 +358,12 @@ static void DlgFileSelect_HandleSdlEvents(SDL_Event *pEvent)
 	int oldypos = ypos;
 	switch (pEvent->type)
 	{
-#if WITH_SDL2
 	 case SDL_MOUSEWHEEL:
 		if (pEvent->wheel.y>0)
 			DlgFileSelect_ScrollUp();
 		else if (pEvent->wheel.y<0)
 			DlgFileSelect_ScrollDown();
 		break;
-#else
-	 case SDL_MOUSEBUTTONDOWN:
-		if (pEvent->button.button == SDL_BUTTON_WHEELUP)
-			DlgFileSelect_ScrollUp();
-		else if (pEvent->button.button == SDL_BUTTON_WHEELDOWN)
-			DlgFileSelect_ScrollDown();
-		break;
-#endif
 	 case SDL_KEYDOWN:
 		switch (pEvent->key.keysym.sym)
 		{

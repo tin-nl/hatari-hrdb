@@ -34,8 +34,6 @@ everything that should work, does still work:
   - Building different Hatari build configurations works:
     - all optional dependencies being present, and none
     - all optional features enabled, and disabled
-    - WinUAE & oldUAE CPU cores
-    - SDL1 & SDL2
     - Mac GUI
   - All above Hatari builds pass "make test"
     - Check that everything built fine on Travis and Cirrus-CI:
@@ -47,7 +45,8 @@ everything that should work, does still work:
   also in release-notes.txt
 
 * Check that (Python/Gtk) hatariui still works with latest changes,
-  including saving changed config, and running under X11 & Wayland
+  including starting with no existing Hatari config, saving changed
+  config, and running under X11 & Wayland
 
 
 Release candidate
@@ -81,12 +80,24 @@ Final release
 If no release-critical issues were reported, do actual release:
 
 * Update release version & date in:
-  - version.h
-  - manual.html
-  - debugger.html
-  - compatibility.html
-  - readme.txt
-  - release-notes.txt
+  + Sources:
+    - src/includes/version.h
+    - src/memorySnapShot.c (if needed)
+    - Mac GUI plist files :
+        src/gui-osx/Info-Hatari.plist
+        src/gui-osx/Info-Hatari Winuae.plist
+        src/gui-osx/en.lproj/InfoPlist.strings
+        src/gui-osx/fr.lproj/InfoPlist.strings
+  + Documentation:
+    - readme.txt
+    - doc/compatibility.html
+    - doc/doxygen/Doxyfile
+    - doc/debugger.html
+    - doc/emutos.txt (based on latest EmuTOS release)
+    - doc/manual.html
+    - doc/release-notes.txt
+  + Packaging:
+    - hatari.spec
 
 * Build final binary packages
 

@@ -15,9 +15,7 @@
 #include "configuration.h"
 #include "newcpu.h"
 #include "stMemory.h"
-#ifdef WINUAE_FOR_HATARI
 #include "debug.h"
-#endif
 #include "paths.h"
 #include "profile.h"
 #include "tos.h"
@@ -1982,6 +1980,7 @@ more:
 					case 2:	size = 12; sizeChar = 'X'; break;
 					case 7: if((opcode[1] & 0xE000) != 0x6000)	// MOVE.P <ea>,FPn{Dn-Factor}
 								goto more;	// illegal size mask
+						/* fallthrough */
 					case 3:	size = 12; sizeChar = 'P'; break;
 					case 4:	size = 2; sizeChar = 'W'; break;
 					case 5:	size = 8; sizeChar = 'D'; break;
@@ -2579,11 +2578,7 @@ Uint32 Disasm_GetNextPC(Uint32 pc)
 void Disasm (FILE *f, uaecptr addr, uaecptr *nextpc, int cnt)
 {
 	if (ConfigureParams.Debugger.bDisasmUAE)
-#ifdef WINUAE_FOR_HATARI
 		m68k_disasm_file (f, addr, nextpc, addr, cnt);
-#else
-		m68k_disasm (f, addr, nextpc, cnt);
-#endif
 	else
 		Disass68k_loop (f, addr, nextpc, cnt);
 }

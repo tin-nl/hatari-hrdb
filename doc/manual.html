@@ -24,7 +24,7 @@
 <h1 class="pageheader">Hatari User's Manual</h1>
 
 <p class="pageheader">
-Version 2.3, November 2020
+Version 2.3.1, December 2020
 </p>
 <p class="pageheader">
 Manual written by: <strong>Thomas Huth</strong>, <strong>Matthias Arndt</strong>
@@ -172,6 +172,13 @@ common to all (FDC, IKBD, MFP, MIDI, PSG, RS-232...).</p>
       <td class="hwnote">[x] = Needs 68030+ CPU, requires 512k EmuTOS or TOS 2.06</td>
     </tr>
     <tr>
+      <td class="hwfeat">FPU</td>
+      <td>[1]</td><td>[1]</td><td>[1]</td><td>[1]</td><td>X</td><td>[2]</td>
+      <td class="hwnote">
+        [1] = Memory mapped FPU add-ons, not supported by Hatari<br>
+        [2] = 68881/68882 FPU through CPU coprocessor interface</td>
+    </tr>
+    <tr>
       <td class="hwfeat">NVRAM</td>
       <td></td><td></td><td></td><td></td><td>X</td><td>X</td>
       <td class="hwnote"></td>
@@ -219,10 +226,7 @@ supports all Atari HW except for Falcon DSP & 16-bit Videl TrueColor mode.)</p>
 
 <h4>Emulator features</h4>
 <ul>
-  <li>with SDL1: 2x scaling for ST-low resolutions,
-      aspect correction and integer factor scaling
-      for small Falcon resolutions</li>
-  <li>with SDL2: scaling any resolution to any size</li>
+  <li>scaling any resolution to any size (using the SDL2 scaling)</li>
   <li>interleaved lines rendering with TV "monitor type"
       for ST-medium and (scaled) ST-low resolutions</li>
   <li>joystick and joypad emulation via cursor keys and
@@ -248,13 +252,12 @@ supports all Atari HW except for Falcon DSP & 16-bit Videl TrueColor mode.)</p>
 
 <h4>CPU / FPU emulation</h4>
 <ul>
-  <li>with the (default) WinUAE CPU core: 68000 - 68060 and MMU emulation</li>
-  <li>with the (deprecated) UAE CPU core: 68000 - 68040 emulation (less accurate, but faster)</li>
-  <li>cycle-accurate 68000 emulation (only) with the WinUAE CPU core, and
-      several options for disabling CPU accuracy for performance</li>
-  <li>68881, 68882 and CPU internal FPU emulation, either using
-      host FPU (default, faster), or emulating them completely
-      in SW (more accurate in some corner-cases)</li>
+  <li>68000 - 68060 and MMU emulation</li>
+  <li>cycle-accurate 68000 emulation, and several options for
+      disabling CPU accuracy for performance</li>
+  <li>68881, 68882 and 68040/060 internal FPU emulation, either using
+      host FPU (default, faster), or emulating them more accurately
+      in SW</li>
 </ul>
 
 <h4>ST hardware emulation</h4>
@@ -373,7 +376,7 @@ well tested.
 <ul>
 <li>A C compiler that supports the "gnu99" C extensions. Thus any recent
  versions of GCC or clang should be fine.</li>
-<li>A working CMake installation (version 2.8.8 or newer). See
+<li>A working CMake installation (version 3.3 or newer). See
 <a href="http://www.cmake.org/">http://www.cmake.org/</a> for details.
 </li>
 <li>The SDL library v1.2.10 or newer. You can get it from
@@ -393,7 +396,7 @@ decrease AVI video recording file sizes. You can get it from
 command line editing.</li>
 <li>The Xlib library to support Hatari Python UI window embedding
 on systems with the X window system (Linux and other unixes).</li>
-<li>The PortMidi library required for MIDI support on macOS and Windows
+<li>The PortMidi library required for MIDI device support on macOS and Windows
 <a href="http://portmedia.sourceforge.net/">http://portmedia.sourceforge.net/</a>.</li>
 <li>The portaudio library for Falcon microphone recording support.</li>
 <li>The udev library for NatFeats SCSI driver media change detection (Linux).</li>
@@ -490,8 +493,7 @@ to toggle windowed and fullscreen mode. </p>
 <p>Hatari settings can come from several sources, with later ones
 overriding the earlier given ones:
 <ul>
-<li>Builtin Hatari default options (which are different for old UAE and WinUAE
-    CPU core builds, former defaults to ST, latter to Falcon)</li>
+<li>Builtin Hatari default options</li>
 <li>Global <span class="commandline">/etc/hatari.cfg</span>
     (or <span class="commandline">/usr/local/etc/hatari.cfg</span>)
     configuration file</li>
@@ -642,14 +644,9 @@ resolution.
 </p>
 <p class="parameter">-z, --zoom &lt;x&gt;</p>
 <p class="paramdesc">
-With the Hatari SDL1 build, this is just a shortcut for overriding
-maximum screen size settings with values that result in ST/STe low
-resolution being doubled or not (1=no, 2=yes).
-</p><p class="paramdesc">
-With the Hatari SDL2 build, this option overrides max width/height
-options so that e.g. ST-low resolution gets always doubled, and all
-resolutions (except TT-high) have approximately the same size, like on
-a real CRT monitor.
+This option overrides max width/height options so that e.g. ST-low
+resolution gets always doubled, and all resolutions (except TT-high)
+have approximately the same size, like on a real CRT monitor.
 </p><p class="paramdesc">
 Zoom factor is then used to scale that up (or down) to the Hatari
 output window.  This way scaling results always in approximately
@@ -660,7 +657,7 @@ the output, with integer zoom factors, scaling is done using nearest
 neighboring pixels for sharper output.  This applies also to window
 resizes.
 </p><p class="paramdesc">
-To get SDL1 "-z 1" behavior with SDL2, use "--zoom 1 --max-width 416
+To avoid zooming for low ST resolutions, use "--zoom 1 --max-width 416
 --max-height 276" (if you don't need borders, 320x200 size is enough).
 Disabling low resolution doubling like this is not recommended for
 Falcon emulation because TOS v4 bootup and some demos switch
@@ -675,23 +672,6 @@ resolutions frequently.
 <p class="paramdesc">Run emulation without displaying video (audio only)</p>
 
 <h3>ST/STE specific display options</h3>
-<p class="parameter">--desktop-st
-&lt;bool&gt;</p>
-<p class="paramdesc">
-NOTE: this has effect only for SDL1 Hatari build.  In SDL2 build,
-<i>--desktop</i> option controls also ST/STe mode.</p>
-<p class="paramdesc">Whether to use desktop resolution on fullscreen
-to avoid issues related to resolution switching (messing multi-screen
-setups, several seconds delay needed for resolution switching by some
-LCD monitors and the resulting sound break). Otherwise fullscreen will
-use a resolution that is closest to the Hatari window size.</p>
-<p class="paramdesc">As Hatari ST/STe display code doesn't support
-zooming (except low-rez doubling), it doesn't get scaled (by Hatari or
-monitor) when this is enabled, and you may get large black borders
-around ST/STe screen. Therefore this is mainly useful only if you
-suffer from the described effects, but still want to grab mouse and
-remove other distractions from the screen just by toggling fullscreen
-mode. (disabled by default)</p>
 <p class="parameter">--spec512
 &lt;x&gt;</p>
 <p class="paramdesc">Hatari uses this threshold to decide
@@ -811,15 +791,16 @@ given port</p>
 <p class="paramdesc">Enable printer support and write data
 to &lt;file&gt;</p>
 <p class="parameter">--midi &lt;bool&gt;</p>
-<p class="paramdesc">Enable MIDI support (PortMidi only)</p>
+<p class="paramdesc">Enable MIDI support
+(when Hatari is built with PortMidi support)</p>
 <p class="parameter">--midi-in
 &lt;filename&gt;</p>
-<p class="paramdesc">Enable MIDI support and write MIDI data
-to &lt;file&gt; (Linux only)</p>
+<p class="paramdesc">Enable MIDI support and write MIDI data to &lt;file&gt;
+(when not built with PortMidi support)</p>
 <p class="parameter">--midi-out
 &lt;filename&gt;</p>
-<p class="paramdesc">Enable MIDI support and read MIDI data
-from &lt;file&gt; (Linux only)</p>
+<p class="paramdesc">Enable MIDI support and read MIDI data from &lt;file&gt;
+(when not built with PortMidi support)</p>
 <p class="parameter">--rs232-in
 &lt;filename&gt;</p>
 <p class="paramdesc">Enable MFP serial port support and use
@@ -956,7 +937,7 @@ you are doing!</p>
 (only works if GEMDOS HD emulation and extended VDI resolution are
 disabled)</p>
 
-<h3>Common CPU options</h3>
+<h3>CPU/FPU/bus options</h3>
 <p class="parameter">
 --cpulevel &lt;x&gt;</p>
 <p class="paramdesc">Specify CPU (680x0) to use (use x &gt;=
@@ -968,8 +949,6 @@ disabled)</p>
 &lt;bool&gt;</p>
 <p class="paramdesc">Use a more compatible, but slower 68000
 CPU mode with better prefetch accuracy and cycle counting</p>
-
-<h3>WinUAE CPU core options</h3>
 <p class="parameter">--cpu-exact &lt;bool&gt;</p>
 <p class="paramdesc">Use cycle exact CPU emulation (cache emulation)</p>
 <p class="parameter">--addr24 &lt;bool&gt;</p>
@@ -989,15 +968,27 @@ megaste, tt or falcon)</p>
 <p class="parameter">--blitter
 &lt;bool&gt;</p>
 <p class="paramdesc">Enable blitter emulation (ST only)</p>
+<p class="parameter">--vme &lt;x&gt;</p>
+<p class="paramdesc">
+Hatari doesn't have proper MegaSTE/TT VME emulation yet, but this
+controls access to related SCU registers (MegaSTE/TT only).
+</br></br>
+With "dummy", (no-op) access is allowed (=VME HW), otherwise TOS v2
+and v3 crash on bootup on MegaSTE and TT.  Supports VME tracing.
+</br></br>
+With "none", register access causes errors (=no VME HW), which is
+needed for Linux to boot with TT emulation until there's full SCU
+interrupt support.  No VME tracing support.
+</p>
 <p class="parameter">--dsp &lt;x&gt;</p>
 <p class="paramdesc">Falcon DSP emulation (x = none, dummy
 or emu, Falcon only)</p>
 <p class="parameter">--timer-d
 &lt;bool&gt;</p>
-<p class="paramdesc">Patch redundantly high Timer-D
-frequency set by TOS. This about doubles Hatari speed (for ST/e
-emulation) as the original Timer-D frequency causes most of the
-interrupts.</p>
+<p class="paramdesc">Patch redundantly high Timer-D frequency set by TOS.
+This can increase Hatari speed significantly (especially for ST/e emulation)
+as the original Timer-D frequency causes large amount of extra interrupts
+to emulate.</p>
 <p class="parameter">--fast-boot
 &lt;bool&gt;</p>
 <p class="paramdesc">Patch TOS and initialize the so-called
@@ -1093,11 +1084,6 @@ E.g. EmuTOS uses it for debug output.</p>
 <p class="paramdesc">Save Hatari configuration and exit.
 Hatari UI needs Hatari configuration file to start, this can be
 used to create it automatically.</p>
-<p class="parameter">--no-parachute</p>
-<p class="paramdesc">Disable SDL parachute to get Hatari
-core dumps. SDL parachute is enabled by default to restore video
-mode in case Hatari terminates abnormally while using non-standard
-screen resolution.</p>
 <p class="parameter">--control-socket &lt;path&gt;</p>
 <p class="paramdesc">
 Hatari connects to given local socket file and reads commands from it.
@@ -1348,12 +1334,14 @@ changes that you have made.
        alt="Hatari's GUI - the CPU dialog" />
 </div>
 
+<h5>CPU type</h5>
+
 <p>
  The CPU type option can be used to select the level of the central processing
  unit. If you are not sure what to use, simply select 68000 for ST and STE
- machines and 68030 for TT and Falcon emulation, since this were the original
+ machines and 68030 for TT and Falcon emulation, since these were the original
  configurations used in the Atari computers. In case you want to vary
- the CPU type, you have got to be aware of some constraints:
+ the CPU type, you should be aware of some constraints:
 </p>
 <ul>
  <li>
@@ -1375,14 +1363,15 @@ changes that you have made.
  </li>
  <li>
   68010 and 68040, 68060 have never been used in official Atari computers,
-  so don't use these CPU types unless you have got some good reasons.
+  so don't use these CPU types without a good reason.
  </li>
  <li>
-  The 68060 option is only available in the &quot;WinUAE&quot; builds of
-  Hatari, and is currently also considered as experimental, so do not use
+  The 68060 option is currently considered as experimental, so do not use
   this option unless you know what you are doing.
  </li>
 </ul>
+
+<h5>CPU options</h5>
 
 <p>
  The CPU clock option can be used to select the frequency that is used
@@ -1400,22 +1389,28 @@ changes that you have made.
 </p>
 <p>
  The &quot;Cycle exact&quot;, the &quot;MMU emulation&quot; and
- &quot;24-bit addressing&quot; option are only available in the
- &quot;WinUAE&quot; builds
- of Hatari. They are considered as experimental and should only be changed
- if you know what you are doing.
+ &quot;24-bit addressing&quot; options are considered as experimental and
+ should only be changed iif you know what you are doing.
+</p>
+
+<h5>FPU type</h5>
+
+<p>
+ The FPU settings can be used to select the type of floating point unit
+ of &gt;= 68020 CPUs. (68882) FPU is enabled by default only for TT
+ machines, as they were only ones that originally shipped with one.
 </p>
 <p>
- The FPU settings are also only available with the &quot;WinUAE&quot; builds
- of Hatari. They can be used to select the type of floating point unit of CPUs
- &gt;= 68020. In the non-WinUAE builds of Hatari, the FPU is always enabled for
- 68030 and 68040 CPUs.<br/>
- When emulating the FPU, you can use your own PC's CPU/FPU to do the math.
- This is the default and fastest method, but recent CPU might have some slight
- differences in rounding when compared to a real Motorala FPU.<br/>
- For higher precision, you can select the "Softfloat" emulation mode : this will
- emulate all the FPU operations using only the CPU and with the same rules as the
- Motorala's FPU. In that case, FPU emulation will be a little slower.
+ When emulating the Motorola FPU, PC host FPU can be used to do the math.
+ This is the default and fastest method, but its results have some slight
+ differences compared to a real Motorala FPU.
+</p>
+<p>
+ For higher precision, you can select the "Softfloat" emulation mode :
+ this will emulate all the FPU operations using only the CPU and with
+ the same rules as the Motorala's FPU. This emulation is bit-exact
+ (except for the last few bits in trig/log functions), and a little
+ slower than using host FPU.
 </p>
 
 
@@ -1833,8 +1828,6 @@ the screenshots and recorded videos.
  layout. However, you might experience some problems with special keys like
  brackets etc.</p>
 <p>"Scancode" uses the scancode values of your PC keys for keyboard mapping.
- This only works on certain architectures like Linux where the scancodes are
- similar to the ST scancodes (e.g. it does not work on macOS with SDL1.2).
  If it works on your system, this often gives better results than the symbolic
  mapping. Note that you also need a TOS version with the right language
  (e.g. use a French TOS if you are using a French keyboard).</p>
@@ -1911,14 +1904,14 @@ for accurate sound's emulation.
        alt="Hatari's GUI - the device dialog" />
 </div>
 
-<p>Check the first checkmark to enable printer support.
+<p>Check the first checkbox to enable printer support.
 See the <a href="#Emulated_printer">Emulated printer</a> section for
 details.</p>
 
 <p>As Hatari currently only supports printing to file, click on <span
  class="button">Browse</span> to select the file to print to. You can
 enter a new filename as well.</p>
-<p>Check the second checkmark to enable RS232 support.
+<p>Check the second checkbox to enable RS232 support.
 The RS232 device is configured according to the settings of
 the emulated MFP RS232 of the Atari ST/STE/TT. This means Hatari will
 automatically use baudrate and handshaking as configured for the
@@ -1927,14 +1920,42 @@ emulated machine.</p>
 device files for serial input and output.  On Linux a good choice is
 /dev/ttyS0 or /dev/ttyS1.
 </p>
-<p>Check the third checkmark to enable MIDI support.
+<p>
+Check the third checkbox to enable MIDI support.
+</p>
+<h5>MIDI support</h5>
+<p>
+Hatari MIDI support can be provided either with a PortMidi library
+(required on Mac / Windows), or using "raw" MIDI device files. Latter
+supports also MIDI networking in games, and can be used for debug
+output, while PortMidi handles only MIDI events and doesn't currently
+work with all MIDI SW.
+</p>
+<h6>"raw" MIDI device file selection</h6>
+<p>
 Click on <span class="button">Browse</span> to select a suitable
-MIDI device files for MIDI input and output.</p>
-<p><span class="file">midi-linux.txt</span> file explains how to
+MIDI device files for MIDI input and output.
+</p>
+<p>
+<span class="file">midi-linux.txt</span> file explains how to
 select the correct MIDI device file, how to set up software sound
-synthesizing on Linux (using Alsa) if your sound card/driver doesn't
-support MIDI, and how to set up MIDI networking e.g. between multiple
-Hatari instances.
+synthesizing on Linux (using ALSA) if your sound card/driver doesn't
+support MIDI, and how to set up MIDI networking between multiple
+Hatari instances, even over internet.
+</p>
+<div class="floatimage">
+  <img src="images/devices-portmidi.png" width="520" height="114"
+       alt="Hatari's GUI - PortMidi MIDI device selection" />
+</div>
+<h6>PortMidi MIDI device selection</h6>
+<p>
+Click on arrow buttons to select a suitable MIDI devices for MIDI
+input and output.
+</p>
+<p>
+PortMidi will list only currently active MIDI devices.  On Linux
+these are subset of ones listed e.g. by ALSA
+<span class="commandline">aconnect -l</span> command.
 </p>
 
 
@@ -2730,21 +2751,6 @@ the (Linux/Unix) "top" command.
 <h3>Build options impact on performance</h3>
 
 <p>
-<em>Linux</em>: Some HW platforms don't have properly HW accelerated
-3D driver and SDL implementation. On these platforms it's better to
-build Hatari with SDL v1.x than SDL 2.x, as latter can cause CPU
-based 3D driver to be used for scaling Hatari graphics.
-</p>
-
-<p>
-<em>MacOS</em>: With SDL v1.x, frame skipping, zooming and drive LED
-options (listed below) seem to have a large effect on performance in
-the windowed mode. This is apparently due to issues in the SDL macOS
-backend and how macOS itself composites non-fullscreen window
-contents. These shouldn't be an issue with the SDL2 build of Hatari.
-</p>
-
-<p>
 <em>Compiler</em>: Unless you have disabled compiler optimizations
 (like GCC's -O2 or -O3 options) in the Hatari build, the extra
 optimization flags (like GCC's "-mtune=i686") don't seem to have very
@@ -2754,26 +2760,9 @@ demos) that use very heavily interrupts.
 </p>
 
 <p>
-<em>CPU emulation</em>: Hatari can be built with two different CPU
-core implementations. The newer WinUAE CPU core has more accurate CPU
-emulation and supports all of the higher end 680x0 CPU features. This
-accuracy causes it to be clearly slower, than the OldAUE CPU core
-implementation. If run-time options (acceptable to you) don't give
-enough performance, give the OldUAE CPU core also a try.
-</p>
-
-<p>
 <em>Older versions</em>: If nothing else helps, try (building) much
 earlier Hatari version.  More accurate emulation in newer Hatari
 versions means that they can be slower despite optimizations.
-</p>
-
-<h3>Run-time options not affecting emulation accuracy</h3>
-
-<p>
-Hatari currently runs best in 16 or 32 bits per pixel color depth
-mode, so try to avoid 24 bits per pixel display modes if possible.
-16-bit mode is faster with SDL1.  MacOS uses always 32-bit mode.
 </p>
 
 
@@ -2801,7 +2790,7 @@ fine without the real DSP emulation.
 <h4>CPU: cycle exact (030/TT/Falcon)</h4>
 
 <p>
-WinUAE CPU core supports 030 cache emulation for cycle accuracy. This
+CPU core supports 030 cache emulation for cycle accuracy. This
 is very heavy.  Unless program needs cycle accuracy to work correctly,
 you can disable it.  Many Falcon demos need it, applications and games
 normally don't.
@@ -2811,10 +2800,10 @@ normally don't.
 <p>
 With ST/STe, the single largest factor contributing to general Hatari
 emulation performance is the handling of interrupts.  Enabling Timer-D
-patching option (about) doubles Hatari ST/STE emulation performance
-with OldUAE CPU core as it significantly reduces the number of
-interrupts generated by the emulated Atari machine. Using this has
-adverse effect only for very rare programs.
+patching option greatly improves Hatari ST/STE emulation performance
+as it significantly reduces the number of interrupts generated by the
+emulated Atari machine. Using this has adverse effect only for very
+rare programs.
 </p>
 
 <h4>FDC</h4>

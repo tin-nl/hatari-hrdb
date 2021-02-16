@@ -82,6 +82,7 @@ const char M68000_fileid[] = "Hatari m68000.c";
 #include "m68000.h"
 #include "memorySnapShot.h"
 #include "mfp.h"
+#include "mmu_common.h"
 #include "options.h"
 #include "savestate.h"
 #include "stMemory.h"
@@ -91,10 +92,6 @@ const char M68000_fileid[] = "Hatari m68000.c";
 
 #if ENABLE_DSP_EMU
 #include "dsp.h"
-#endif
-
-#if ENABLE_WINUAE_CPU
-#include "mmu_common.h"
 #endif
 
 /* information about current CPU instruction */
@@ -238,25 +235,15 @@ void M68000_Init(void)
  */
 void M68000_Reset(bool bCold)
 {
-//fprintf ( stderr,"M68000_Reset in cold=%d" , bCold );
-#if ENABLE_WINUAE_CPU
+	//fprintf( stderr,"M68000_Reset in cold=%d" , bCold );
+
 	UAE_Set_Quit_Reset ( bCold );
 	set_special(SPCFLAG_MODE_CHANGE);		/* exit m68k_run_xxx() loop and check for cpu changes / reset / quit */
 
-#else /* UAE CPU core */
-	if (bCold)
-	{
-		/* Clear registers */
-		memset(&regs, 0, sizeof(regs));
-	}
-	/* Now reset the UAE CPU core */
-	m68k_reset();
-	M68000_PatchCpuTables();
-#endif
-
 	BusMode = BUS_MODE_CPU;
 	CPU_IACK = false;
-//fprintf ( stderr,"M68000_Reset out cold=%d\n" , bCold );
+
+	//fprintf( stderr,"M68000_Reset out cold=%d\n" , bCold );
 }
 
 
@@ -308,12 +295,8 @@ void M68000_Start(void)
 		MemorySnapShot_Restore(ConfigureParams.Memory.szAutoSaveFileName, false);
 	}
 
-#if ENABLE_WINUAE_CPU
 	UAE_Set_Quit_Reset ( false );
 	m68k_go(true);
-#else
-	m68k_go(true);
-#endif
 }
 
 
@@ -322,7 +305,6 @@ void M68000_Start(void)
  * Check whether CPU settings have been changed.
  * Possible values for WinUAE :
  *	cpu_model : 68000 , 68010, 68020, 68030, 68040, 68060
- *	cpu_level : not used anymore
  *	cpu_compatible : 0/false (no prefetch for 68000/20/30)  1/true (prefetch opcode for 68000/20/30)
  *	cpu_cycle_exact : 0/false   1/true (most accurate, implies cpu_compatible)
  *	cpu_memory_cycle_exact : 0/false   1/true (less accurate than cpu_cycle_exact)
@@ -347,26 +329,24 @@ void M68000_Start(void)
 void M68000_CheckCpuSettings(void)
 {
 //fprintf ( stderr,"M68000_CheckCpuSettings in\n" );
-	changed_prefs.cpu_level = ConfigureParams.System.nCpuLevel;
-
-#if ENABLE_WINUAE_CPU
 	/* WinUAE core uses cpu_model instead of cpu_level, so we've got to
 	 * convert these values here: */
-	switch (changed_prefs.cpu_level) {
+	switch (ConfigureParams.System.nCpuLevel) {
 		case 0 : changed_prefs.cpu_model = 68000; break;
 		case 1 : changed_prefs.cpu_model = 68010; break;
 		case 2 : changed_prefs.cpu_model = 68020; break;
 		case 3 : changed_prefs.cpu_model = 68030; break;
 		case 4 : changed_prefs.cpu_model = 68040; break;
 		case 5 : changed_prefs.cpu_model = 68060; break;
-		default: fprintf (stderr, "M68000_CheckCpuSettings() : Error, cpu_level unknown\n");
+		default: fprintf (stderr, "M68000_CheckCpuSettings() : Error, cpu_level %d unknown\n" , ConfigureParams.System.nCpuLevel);
 	}
-	currprefs.cpu_level = changed_prefs.cpu_level;			/* TODO remove, not used anymore */
 
 	/* Only 68040/60 can have 'internal' FPU */
 	if ( ( ConfigureParams.System.n_FPUType == FPU_CPU ) && ( changed_prefs.cpu_model < 68040 ) )
+	{
+		Log_Printf(LOG_WARN, "Internal FPU is supported only for 040/060, disabling FPU\n");
 		ConfigureParams.System.n_FPUType = FPU_NONE;
-
+	}
 	/* 68000/10 can't have an FPU */
 	if ( ( ConfigureParams.System.n_FPUType != FPU_NONE ) && ( changed_prefs.cpu_model < 68020 ) )
 	{
@@ -409,16 +389,6 @@ void M68000_CheckCpuSettings(void)
 	/* Update SPCFLAG_MODE_CHANGE flag if needed */
 	check_prefs_changed_cpu();
 
-#else
-	if (ConfigureParams.System.nCpuLevel > 4)
-		ConfigureParams.System.nCpuLevel = 4;
-
-	changed_prefs.cpu_compatible = ConfigureParams.System.bCompatibleCpu;
-	changed_prefs.cpu_cycle_exact = 0;				/* With old UAE CPU, cycle_exact is always false */
-
-	if (table68k)
-		check_prefs_changed_cpu();
-#endif
 //fprintf ( stderr, "M68000_CheckCpuSettings out\n" );
 }
 
@@ -467,7 +437,6 @@ void M68000_PatchCpuTables(void)
  */
 void M68000_MemorySnapShot_Capture(bool bSave)
 {
-#if ENABLE_WINUAE_CPU
 	int len;
 	uae_u8 chunk[ 1000 ];
 
@@ -499,82 +468,6 @@ void M68000_MemorySnapShot_Capture(bool bSave)
 		//printf ( "restore mmu done\n"  );
 		//m68k_dumpstate_file(stderr, NULL);
 	}
-
-#else /* UAE CPU core */
-	Uint32 savepc;
-
-	/* For the UAE CPU core: */
-	MemorySnapShot_Store(&pendingInterrupts, sizeof(pendingInterrupts));	/* for intlev() */
-
-	MemorySnapShot_Store(&currprefs.address_space_24,
-	                     sizeof(currprefs.address_space_24));
-	MemorySnapShot_Store(&regs.regs[0], sizeof(regs.regs));       /* D0-D7 A0-A6 */
-
-	if (bSave)
-	{
-		savepc = M68000_GetPC();
-		MemorySnapShot_Store(&savepc, sizeof(savepc));            /* PC */
-	}
-	else
-	{
-		MemorySnapShot_Store(&savepc, sizeof(savepc));            /* PC */
-		regs.pc = savepc;
-		regs.prefetch_pc = regs.pc + 128;
-	}
-
-	MemorySnapShot_Store(&regs.prefetch, sizeof(regs.prefetch));  /* prefetch */
-
-	if (bSave)
-	{
-		MakeSR();
-		if (regs.s)
-		{
-			MemorySnapShot_Store(&regs.usp, sizeof(regs.usp));    /* USP */
-			MemorySnapShot_Store(&regs.regs[15], sizeof(regs.regs[15]));  /* ISP */
-		}
-		else
-		{
-			MemorySnapShot_Store(&regs.regs[15], sizeof(regs.regs[15]));  /* USP */
-			MemorySnapShot_Store(&regs.isp, sizeof(regs.isp));    /* ISP */
-		}
-		MemorySnapShot_Store(&regs.sr, sizeof(regs.sr));          /* SR/CCR */
-	}
-	else
-	{
-		MemorySnapShot_Store(&regs.usp, sizeof(regs.usp));
-		MemorySnapShot_Store(&regs.isp, sizeof(regs.isp));
-		MemorySnapShot_Store(&regs.sr, sizeof(regs.sr));
-	}
-	MemorySnapShot_Store(&regs.opcode, sizeof(regs.opcode));
-	MemorySnapShot_Store(&regs.instruction_pc, sizeof(regs.instruction_pc));
-	MemorySnapShot_Store(&regs.stopped, sizeof(regs.stopped));
-	MemorySnapShot_Store(&regs.dfc, sizeof(regs.dfc));            /* DFC */
-	MemorySnapShot_Store(&regs.sfc, sizeof(regs.sfc));            /* SFC */
-	MemorySnapShot_Store(&regs.vbr, sizeof(regs.vbr));            /* VBR */
-	MemorySnapShot_Store(&regs.caar, sizeof(regs.caar));          /* CAAR */
-	MemorySnapShot_Store(&regs.cacr, sizeof(regs.cacr));          /* CACR */
-	MemorySnapShot_Store(&regs.msp, sizeof(regs.msp));            /* MSP */
-
-	if (!bSave)
-	{
-		M68000_PatchCpuTables();
-
-		M68000_SetPC(regs.pc);
-		/* MakeFromSR() must not swap stack pointer */
-		regs.s = (regs.sr >> 13) & 1;
-		MakeFromSR();
-		/* set stack pointer */
-		if (regs.s)
-			m68k_areg(regs, 7) = regs.isp;
-		else
-			m68k_areg(regs, 7) = regs.usp;
-	}
-
-	if (bSave)
-		save_fpu();
-	else
-		restore_fpu();
-#endif
 }
 
 
@@ -647,14 +540,6 @@ void M68000_BusError ( Uint32 addr , int ReadWrite , int Size , int AccessType ,
 	LOG_TRACE(TRACE_CPU_EXCEPTION, "Bus error %s at address $%x PC=$%x.\n",
 	          ReadWrite ? "reading" : "writing", addr, M68000_InstrPC);
 
-#ifndef ENABLE_WINUAE_CPU
-	if ((regs.spcflags & SPCFLAG_BUSERROR) == 0)		/* [NP] Check that the opcode has not already generated a read bus error */
-	{
-		BusErrorAddress = addr;				/* Store for exception frame */
-		bBusErrorReadWrite = ReadWrite;
-		M68000_SetSpecial(SPCFLAG_BUSERROR);		/* The exception will be done in newcpu.c */
-	}
-#else
 #define WINUAE_HANDLE_BUS_ERROR
 #ifdef WINUAE_HANDLE_BUS_ERROR
 
@@ -672,7 +557,6 @@ void M68000_BusError ( Uint32 addr , int ReadWrite , int Size , int AccessType ,
 	/* so we don't need to check if the opcode already generated a bus error or not */
 	exception2 ( addr , ReadWrite , Size , AccessType );
 #endif
-#endif
 }
 
 
@@ -682,44 +566,6 @@ void M68000_BusError ( Uint32 addr , int ReadWrite , int Size , int AccessType ,
  */
 void M68000_Exception(Uint32 ExceptionNr , int ExceptionSource)
 {
-#ifndef WINUAE_FOR_HATARI
-	if ((ExceptionSource == M68000_EXC_SRC_AUTOVEC)
-		&& (ExceptionNr>24 && ExceptionNr<32))		/* 68k autovector interrupt? */
-	{
-		/* Handle autovector interrupts the UAE's way
-		 * (see intlev() and do_specialties() in UAE CPU core) */
-		/* In our case, this part is only called for HBL and VBL interrupts */
-		int intnr = ExceptionNr - 24;
-		pendingInterrupts |= (1 << intnr);
-		M68000_SetSpecial(SPCFLAG_INT);
-	}
-
-	else							/* MFP or direct CPU exceptions */
-	{
-		Uint16 SR;
-
-		/* Was the CPU stopped, i.e. by a STOP instruction? */
-		if (regs.spcflags & SPCFLAG_STOP)
-		{
-			regs.stopped = 0;
-			M68000_UnsetSpecial(SPCFLAG_STOP);    /* All is go,go,go! */
-		}
-
-		/* 68k exceptions are handled by Exception() of the UAE CPU core */
-		Exception(ExceptionNr, m68k_getpc(), ExceptionSource);
-
-		/* Set Status Register so interrupt can ONLY be stopped by another interrupt
-		 * of higher priority */
-		if ( (ExceptionSource == M68000_EXC_SRC_INT_MFP)
-		  || (ExceptionSource == M68000_EXC_SRC_INT_DSP) )
-		{
-			SR = M68000_GetSR();
-			SR = (SR&SR_CLEAR_IPL)|0x0600;		/* MFP or DSP, level 6 */
-			M68000_SetSR(SR);
-		}
-	}
-
-#else
 	if ( ExceptionNr > 24 && ExceptionNr < 32 )		/* Level 1-7 interrupts */
 	{
 		/* In our case, this part is called for HBL, VBL and MFP/DSP interrupts */
@@ -734,7 +580,6 @@ void M68000_Exception(Uint32 ExceptionNr , int ExceptionSource)
 	{
 		Exception(ExceptionNr);
 	}
-#endif
 }
 
 
@@ -757,7 +602,6 @@ void M68000_Exception(Uint32 ExceptionNr , int ExceptionSource)
  */
 void	M68000_Update_intlev ( void )
 {	
-#ifdef WINUAE_FOR_HATARI
 	Uint8	Level6_IRQ;
 
 #if ENABLE_DSP_EMU
@@ -779,7 +623,6 @@ void	M68000_Update_intlev ( void )
 	/* doint() will update regs.ipl_pin, so copy it into regs.ipl */
 	if ( ConfigureParams.System.bCycleExactCpu )
 		regs.ipl = regs.ipl_pin;			/* See ipl_fetch() in cpu/cpu_prefetch.h */
-#endif
 }
 
 
@@ -801,17 +644,12 @@ void	M68000_Update_intlev ( void )
  */
 void M68000_WaitState(int WaitCycles)
 {
-#ifndef WINUAE_FOR_HATARI
-	WaitStateCycles += WaitCycles;				/* Cumulate all the wait states for this instruction */
-
-#else
 	if ( ConfigureParams.System.bCycleExactCpu )
 		currcycle += ( WaitCycles * CYCLE_UNIT / 2 );	/* Add wait states immediately to the CE cycles counter */
 	else
 	{
 		WaitStateCycles += WaitCycles;			/* Cumulate all the wait states for this instruction */
 	}
-#endif
 }
 
 
@@ -890,30 +728,24 @@ void	M68000_SyncCpuBus_OnWriteAccess ( void )
 void	M68000_Flush_All_Caches ( uaecptr addr , int size )
 {
 //fprintf ( stderr , "M68000_Flush_All_Caches\n" );
-#ifdef WINUAE_FOR_HATARI
 	flush_cpu_caches(true);
 	invalidate_cpu_data_caches();
-#endif
 }
 
 
 void	M68000_Flush_Instr_Cache ( uaecptr addr , int size )
 {
 //fprintf ( stderr , "M68000_Flush_Instr_Cache\n" );
-#ifdef WINUAE_FOR_HATARI
 	/* Instruction cache for cpu >= 68020 */
 	flush_cpu_caches(true);
-#endif
 }
 
 
 void	M68000_Flush_Data_Cache ( uaecptr addr , int size )
 {
 //fprintf ( stderr , "M68000_Flush_Data_Cache\n" );
-#ifdef WINUAE_FOR_HATARI
 	/* Data cache for cpu >= 68030 */
 	invalidate_cpu_data_caches();
-#endif
 }
 
 
@@ -930,7 +762,6 @@ void	M68000_Flush_Data_Cache ( uaecptr addr , int size )
  */
 void	M68000_SetBlitter_CE ( bool state )
 {
-#ifdef WINUAE_FOR_HATARI
 //fprintf ( stderr , "M68000_SetBlitter_CE state=%s\n" , state ? "on" : "off" );
 	if ( state )
 	{
@@ -940,7 +771,6 @@ void	M68000_SetBlitter_CE ( bool state )
 	{
 		set_x_funcs_hatari_blitter ( 0 );		/* off */
 	}
-#endif
 }
 
 
@@ -1018,11 +848,7 @@ void	M68000_SetSR ( Uint16 v )
 void	M68000_SetPC ( uaecptr v )
 {
 	m68k_setpc ( v );
-#ifdef WINUAE_FOR_HATARI
 	fill_prefetch();
-#else
-	refill_prefetch (m68k_getpc(), 0);
-#endif
 }
 
 

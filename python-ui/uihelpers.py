@@ -1,7 +1,7 @@
 #
 # Misc common helper classes and functions for the Hatari UI
 #
-# Copyright (C) 2008-2019 by Eero Tamminen
+# Copyright (C) 2008-2020 by Eero Tamminen
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ import gi
 # use correct version of gtk
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-from gi.repository import GObject
+from gi.repository import GLib
 
 
 # leak debugging
@@ -38,7 +38,7 @@ class UInfo:
     logo = "hatari-logo.png"
     # TODO: use share/icons/hicolor/*/apps/hatari.png instead
     icon = "hatari-icon.png"
-    copyright = "UI copyright (C) 2008-2019 by Eero Tamminen"
+    copyright = "Python/Gtk UI copyright (C) 2008-2020 by Eero Tamminen"
 
     # path to the directory where the called script resides
     path = os.path.dirname(sys.argv[0])
@@ -169,7 +169,7 @@ class HatariTextInsert:
         self.pressed = False
         self.hatari = hatari
         print("OUTPUT '%s'" % text)
-        GObject.timeout_add(100, _text_insert_cb, self)
+        GLib.timeout_add(100, _text_insert_cb, self)
 
 # callback to insert text object to Hatari character at the time
 # (first key down, on next call up), at given interval
@@ -345,7 +345,7 @@ class FselAndEjectFactory:
 
     def get(self, label, path, filename, action):
         "returns file selection button and box having that + eject button"
-        fsel = Gtk.FileChooserButton(label)
+        fsel = Gtk.FileChooserButton(title=label)
         # Hatari cannot access URIs
         fsel.set_local_only(True)
         fsel.set_width_chars(12)
@@ -372,7 +372,8 @@ class FselAndEjectFactory:
 #   but file chooser button doesn't support that
 # i.e. I had to do my own (less nice) container widget...
 class FselEntry:
-    def __init__(self, parent, validate = None, data = None):
+    def __init__(self, parent, title = "Select a file", validate = None, data = None):
+        self._title = title
         self._parent = parent
         self._validate = validate
         self._validate_data = data
@@ -389,7 +390,7 @@ class FselEntry:
     def _select_file_cb(self, widget):
         fname = self._entry.get_text()
         while True:
-            fname = get_save_filename("Select file", self._parent, fname)
+            fname = get_save_filename(self._title, self._parent, fname)
             if not fname:
                 # assume cancel
                 return

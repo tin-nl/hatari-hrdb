@@ -10,14 +10,14 @@ fedora_task:
   script:
     - mkdir build
     - cd build
-    - ../configure --enable-old-uae-cpu --enable-small-mem --disable-dsp
+    - ../configure --enable-small-mem --disable-dsp
                   --enable-werror --enable-debug || { cat config.log; exit 1; }
     - make -j4
     - ctest -j4 || { cat Testing/Temporary/LastTest.log; exit 1; }
 
 freebsd_task:
   freebsd_instance:
-    image_family: freebsd-12-1
+    image_family: freebsd-13-0
     cpu: 4
     memory: 4G
   install_script:

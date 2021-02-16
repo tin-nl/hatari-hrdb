@@ -5,7 +5,7 @@
 # devices and changing Hatari command line options (even for things you
 # cannot change from the UI) from the console while Hatari is running.
 #
-# Copyright (C) 2008-2014 by Eero Tamminen
+# Copyright (C) 2008-2020 by Eero Tamminen
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,15 +23,6 @@ import time
 import signal
 import socket
 import readline
-
-# Python v2:
-# - lacks Python v3 encoding arg for bytes()
-# - input() evaluates given string and fails on empty one
-if str is bytes:
-    def bytes(s, encoding):
-        return s
-    def input(prompt):
-        return raw_input(prompt)
 
 class Scancode:
     "Atari scancodes for keys without alphanumeric characters"
@@ -324,7 +315,6 @@ class Tokens:
     "--bpp",
     "--disable-video",
     "--borders",
-    "--desktop-st",
     "--spec512",
     "--video-timing",
     "--desktop",
@@ -408,7 +398,6 @@ class Tokens:
     "--trace-file",
     "--parse",
     "--saveconfig",
-    "--no-parachute",
     "--cmd-fifo",
     "--log-file",
     "--log-level",

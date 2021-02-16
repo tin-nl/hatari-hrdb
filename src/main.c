@@ -207,7 +207,7 @@ bool Main_PauseEmulation(bool visualize)
 
 		if (bGrabMouse && !bInFullScreen)
 			/* Un-grab mouse pointer in windowed mode */
-			SDL_WM_GrabInput(SDL_GRAB_OFF);
+			SDL_SetRelativeMouseMode(false);
 	}
 	return true;
 }
@@ -232,7 +232,7 @@ bool Main_UnPauseEmulation(void)
 
 	if (bGrabMouse)
 		/* Grab mouse pointer again */
-		SDL_WM_GrabInput(SDL_GRAB_ON);
+		SDL_SetRelativeMouseMode(true);
 	return true;
 }
 
@@ -452,11 +452,8 @@ void Main_WarpMouse(int x, int y, bool restore)
 		return;
 	if (!bAllowMouseWarp)
 		return;
-#if WITH_SDL2
+
 	SDL_WarpMouseInWindow(sdlWindow, x, y);
-#else
-	SDL_WarpMouse(x, y);
-#endif
 	bIgnoreNextMouseMotion = true;
 }
 
@@ -551,12 +548,10 @@ void Main_EventHandler(void)
 			break;
 
 		 case SDL_KEYDOWN:
-#if WITH_SDL2
 			if (event.key.repeat) {
 				bContinueProcessing = true;
 				break;
 			}
-#endif
 			Keymap_KeyDown(&event.key.keysym);
 			break;
 
@@ -584,18 +579,6 @@ void Main_EventHandler(void)
 				/* Start double-click sequence in emulation time */
 				Keyboard.LButtonDblClk = 1;
 			}
-#if !WITH_SDL2
-			else if (event.button.button == SDL_BUTTON_WHEELDOWN)
-			{
-				/* Simulate pressing the "cursor down" key */
-				IKBD_PressSTKey(0x50, true);
-			}
-			else if (event.button.button == SDL_BUTTON_WHEELUP)
-			{
-				/* Simulate pressing the "cursor up" key */
-				IKBD_PressSTKey(0x48, true);
-			}
-#endif
 			break;
 
 		 case SDL_MOUSEBUTTONUP:
@@ -607,21 +590,8 @@ void Main_EventHandler(void)
 			{
 				Keyboard.bRButtonDown &= ~BUTTON_MOUSE;
 			}
-#if !WITH_SDL2
-			else if (event.button.button == SDL_BUTTON_WHEELDOWN)
-			{
-				/* Simulate releasing the "cursor down" key */
-				IKBD_PressSTKey(0x50, false);
-			}
-			else if (event.button.button == SDL_BUTTON_WHEELUP)
-			{
-				/* Simulate releasing the "cursor up" key */
-				IKBD_PressSTKey(0x48, false);
-			}
-#endif
 			break;
 
-#if WITH_SDL2
 		 case SDL_MOUSEWHEEL:
 			/* Simulate cursor keys on mouse wheel events */
 			if (event.wheel.x > 0)
@@ -682,15 +652,6 @@ void Main_EventHandler(void)
 				bAllowMouseWarp = false;
 				break;
 			}
-#else /* !WITH_SDL2 */
-		case SDL_ACTIVEEVENT:
-			Log_Printf(LOG_DEBUG, "SDL1 active event 0x%x = %d\n",
-				   event.active.state, event.active.gain);
-			if (event.active.gain)
-				bAllowMouseWarp = true;
-			else
-				bAllowMouseWarp = false;
-#endif /* !WITH_SDL2 */
 			bContinueProcessing = true;
 			break;
 
@@ -709,17 +670,10 @@ void Main_EventHandler(void)
  */
 void Main_SetTitle(const char *title)
 {
-#if WITH_SDL2
 	if (title)
 		SDL_SetWindowTitle(sdlWindow, title);
 	else
 		SDL_SetWindowTitle(sdlWindow, PROG_NAME);
-#else
-	if (title)
-		SDL_WM_SetCaption(title, "Hatari");
-	else
-		SDL_WM_SetCaption(PROG_NAME, "Hatari");
-#endif
 }
 
 /*-----------------------------------------------------------------------*/
@@ -753,7 +707,7 @@ static void Main_Init(void)
 
 	/* Init SDL's video subsystem. Note: Audio subsystem
 	   will be initialized later (failure not fatal). */
-	if (SDL_Init(SDL_INIT_VIDEO | Opt_GetNoParachuteFlag()) < 0)
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
 		fprintf(stderr, "ERROR: could not initialize the SDL library:\n %s\n", SDL_GetError() );
 		exit(-1);

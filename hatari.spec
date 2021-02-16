@@ -10,7 +10,7 @@ URL:          http://hatari.tuxfamily.org/
 License:      GPLv2+
 Group:        System/Emulators/Other
 Autoreqprov:  on
-Version:      2.3.0
+Version:      2.3.1
 Release:      1
 Summary:      An Atari ST/STE/TT/Falcon emulator
 Source:       %{name}-%{version}.tar.bz2
@@ -21,7 +21,7 @@ Prefix:       /usr
 BuildRequires: cmake coreutils cpio cpp diffutils file filesystem findutils tar
 BuildRequires: grep gzip libgcc make man mktemp patch readline sed util-linux
 BuildRequires: glibc-devel zlib-devel SDL2-devel libpng-devel readline-devel
-BuildRequires: portaudio-devel portmidi-devel binutils gcc rpm
+BuildRequires: portaudio-devel binutils gcc rpm
 
 # Required by zip2st and atari-hd-image
 Requires: unzip
@@ -74,6 +74,9 @@ rm -rf $RPM_BUILD_ROOT
 %_docdir/%{name}/images/*
 
 %changelog -n hatari
+
+* Sun Dec 27 2020 - Nicolas Pomarede
+- Hatari version 2.3.1
 
 * Sat Nov 11 2020 - Nicolas Pomarede
 - Hatari version 2.3.0

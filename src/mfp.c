@@ -343,9 +343,7 @@ MFP_STRUCT		*pMFP_Main;
 MFP_STRUCT		*pMFP_TT;
 
 
-static bool bAppliedTimerDPatch;    /* true if the Timer-D patch has been applied */
-
-#define	PATCH_TIMERD_TDDR_FAKE		0x64		/* TDDR value to slow down timer D */
+#define	PATCH_TIMER_TDDR_FAKE		0x64		/* TDDR value to slow down timer D */
 
 
 static int PendingCyclesOver = 0;   /* >= 0 value, used to "loop" a timer when data counter reaches 0 */
@@ -457,9 +455,6 @@ static void	MFP_Init_Pointers ( MFP_STRUCT *pAllMFP )
 void	MFP_Reset_All ( void )
 {
 	int	i;
-
-	/* Reset MFP internal variables */
-	bAppliedTimerDPatch = false;
 
 	for ( i=0 ; i<MFP_MAX_NB ; i++ )
 	{
@@ -653,11 +648,7 @@ static void	MFP_Exception ( MFP_STRUCT *pMFP , Sint16 Interrupt )
 			pMFP->NameSuffix, Interrupt, VecNr * 4, STMemory_ReadLong ( VecNr * 4 ), FrameCycles, LineCycles, HblCounterVideo );
 	}
 
-#ifndef WINUAE_FOR_HATARI
-	M68000_Exception(VecNr, M68000_EXC_SRC_INT_MFP);
-#else
 	M68000_Exception(EXCEPTION_NR_MFP_DSP, M68000_EXC_SRC_INT_MFP);
-#endif
 }
 
 
@@ -914,16 +905,7 @@ static void	MFP_UpdateIRQ ( MFP_STRUCT *pMFP , Uint64 Event_Time )
 	}
 
 //fprintf ( stderr , "updirq1 %d %lud - ipr %x %x imr %x %x isr %x %x\n" , pMFP->IRQ , pMFP->IRQ_Time , pMFP->IPRA , pMFP->IPRB , pMFP->IMRA , pMFP->IMRB , pMFP->ISRA , pMFP->ISRB );
-#ifndef WINUAE_FOR_HATARI
-	if ( pMFP->IRQ == 1 )
-	{
-		M68000_SetSpecial ( SPCFLAG_MFP );
-	}
-	else
-		M68000_UnsetSpecial ( SPCFLAG_MFP );
-#else
 	M68000_SetSpecial ( SPCFLAG_MFP );			/* CPU part should call MFP_Delay_IRQ() */
-#endif
 
 	/* Update IRQ is done, reset Time_Min and UpdateNeeded */
 	pMFP->Pending_Time_Min = UINT64_MAX;
@@ -1836,6 +1818,10 @@ void	MFP_GPIP_ReadByte_Main ( MFP_STRUCT *pMFP )
 			gpip_new |= 0x80;
 		else
 			gpip_new &= ~0x80;
+
+		/* Sparrow / TOS 2.07 still use monitor detection via GPIP7 */
+		if (TosVersion == 0x207 && !bUseHighRes)
+			gpip_new ^= 0x80;
 	}
 	else
 	{
@@ -3202,7 +3188,7 @@ void	MFP_TimerDData_WriteByte ( void )
 	if ( ConfigureParams.System.bPatchTimerD && pc >= TosAddress && pc <= TosAddress + TosSize )
 	{
 		pMFP->PatchTimerD_TDDR_old = IoMem[IoAccessCurrentAddress];
-		IoMem[IoAccessCurrentAddress] = PATCH_TIMERD_TDDR_FAKE;	/* Slow down the useless Timer D setup from the bios */
+		IoMem[IoAccessCurrentAddress] = PATCH_TIMER_TDDR_FAKE;	/* Slow down the useless Timer D setup from the bios */
 	}
 
 	if ( IoAccessCurrentAddress == 0xfffa25 )

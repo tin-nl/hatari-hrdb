@@ -2,9 +2,9 @@
 #
 # A Python Gtk UI for Hatari that can embed the Hatari emulator window.
 #
-# Requires Gtk 3.x and Python GObject Introspection libraries.
+# Requires Gtk 3.x and Python GLib Introspection libraries.
 #
-# Copyright (C) 2008-2019 by Eero Tamminen
+# Copyright (C) 2008-2020 by Eero Tamminen
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 from gi.repository import Gdk
-from gi.repository import GObject
+from gi.repository import GLib
 
 from debugui import HatariDebugUI, TargetState
 from hatari import Hatari, HatariConfigMapping
@@ -55,16 +55,24 @@ class UICallbacks:
         error = self.hatari.is_compatible()
         if error:
             ErrorDialog(None).run(error)
-            sys.exit(-1)
+            sys.exit(1)
 
         self.config = HatariConfigMapping(self.hatari)
         try:
             self.config.validate()
         except (KeyError, AttributeError):
-            NoteDialog(None).run("Loading Hatari configuration failed!\nRetrying after saving Hatari configuration.")
-            self.hatari.save_config()
+            NoteDialog(None).run("Hatari configuration validation failed!\nRetrying after saving Hatari configuration.")
+            error = self.hatari.save_config()
+            if error:
+                ErrorDialog(None).run("Hatari configuration saving failed (code: %d), quitting!" % error)
+                sys.exit(error)
             self.config = HatariConfigMapping(self.hatari)
-            self.config.validate()
+            try:
+                self.config.validate()
+            except (KeyError, AttributeError):
+                ErrorDialog(None).run("Invalid Hatari configuration, quitting!")
+                sys.exit(1)
+        self.config.init_compat()
 
         # windows are created when needed
         self.mainwin = None
@@ -123,14 +131,14 @@ class UICallbacks:
         # add vertical elements
         vbox = Gtk.VBox()
         if menu:
-            vbox.add(menu)
+            vbox.pack_start(menu, False, True, 0)
         if toolbars["top"]:
             vbox.pack_start(toolbars["top"], False, True, 0)
         vbox.add(hbox)
         if toolbars["bottom"]:
             vbox.pack_start(toolbars["bottom"], False, True, 0)
         # put them to main window
-        mainwin = Gtk.Window(Gtk.WindowType.TOPLEVEL)
+        mainwin = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
         mainwin.set_title("%s %s" % (UInfo.name, UInfo.version))
         mainwin.set_icon_from_file(UInfo.icon)
         if accelgroup:
@@ -149,20 +157,22 @@ class UICallbacks:
         socket = Gtk.Socket(can_focus=True)
         # without this, closing Hatari would remove the socket widget
         socket.connect("plug-removed", lambda obj: True)
-        socket.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse("black"))
         socket.set_events(Gdk.EventMask.ALL_EVENTS_MASK)
         # set max Hatari window size = desktop size
-        self.config.set_desktop_size(Gdk.Screen.width(), Gdk.Screen.height())
+        monitor  = Gdk.Display.get_default().get_primary_monitor()
+        geometry = monitor.get_geometry()
+        scale    = monitor.get_scale_factor()
+        self.config.set_desktop_size(scale * geometry.width, scale * geometry.height)
         # set initial embedded hatari size
         width, height = self.config.get_window_size()
         socket.set_size_request(width, height)
-        # no resizing for the Hatari window
-        box.pack_start(socket, False, False, 0)
+        # allow Hatari window resizing
+        box.pack_start(socket, True, True, 0)
         self.hatariwin = socket
 
     # ------- run callback -----------
     def _socket_cb(self, fd, event):
-        if event != GObject.IO_IN:
+        if event != GLib.IO_IN:
             # hatari process died, make sure Hatari instance notices
             self.hatari.kill()
             return False
@@ -179,7 +189,7 @@ class UICallbacks:
         if not self.killdialog.run(self.hatari):
             return
         if self.io_id:
-            GObject.source_remove(self.io_id)
+            GLib.source_remove(self.io_id)
         args = ["--configfile"]
         # whether to use Hatari config or unsaved Hatari UI config?
         if self.config.is_changed():
@@ -196,8 +206,8 @@ class UICallbacks:
             # get notifications of Hatari window size changes
             self.hatari.enable_embed_info()
             socket = self.hatari.get_control_socket().fileno()
-            events = GObject.IO_IN | GObject.IO_HUP | GObject.IO_ERR
-            self.io_id = GObject.io_add_watch(socket, events, self._socket_cb)
+            events = GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR
+            self.io_id = GLib.io_add_watch(socket, events, self._socket_cb)
             # all keyboard events should go to Hatari window
             self.hatariwin.grab_focus()
         else:
@@ -209,15 +219,15 @@ class UICallbacks:
     # ------- quit callback -----------
     def quit(self, widget, arg = None):
         # due to Gtk API, needs to return True when *not* quitting
-        if not self.killdialog.run(self.hatari):
-            return True
-        if self.io_id:
-            GObject.source_remove(self.io_id)
         if self.config.is_changed():
             if not self.quitdialog:
                 self.quitdialog = QuitSaveDialog(self.mainwin)
             if not self.quitdialog.run(self.config):
                 return True
+        if not self.killdialog.run(self.hatari):
+            return True
+        if self.io_id:
+            GLib.source_remove(self.io_id)
         Gtk.main_quit()
         if os.path.exists(self.tmpconfpath):
             os.unlink(self.tmpconfpath)
@@ -379,7 +389,7 @@ class UICallbacks:
     def panel(self, action, box):
         title = action.get_name()
         if title not in self.panels:
-            window = Gtk.Window(Gtk.WindowType.TOPLEVEL)
+            window = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
             window.set_transient_for(self.mainwin)
             window.set_icon_from_file(UInfo.icon)
             window.set_title(title)
@@ -402,7 +412,7 @@ class UIActions:
 
         self.help = UIHelp()
 
-        self.actions = Gtk.ActionGroup("All")
+        self.actions = Gtk.ActionGroup(name="All")
 
         # name, icon ID, label, accel, tooltip, callback
         self.actions.add_toggle_actions((
@@ -613,7 +623,7 @@ class UIActions:
             else:
                 item = Gtk.SeparatorMenuItem()
             submenu.add(item)
-        baritem = Gtk.MenuItem(title, False)
+        baritem = Gtk.MenuItem(label=title)
         baritem.set_submenu(submenu)
         bar.add(baritem)
 
@@ -641,11 +651,9 @@ class UIActions:
         accelgroup = None
         # create menu?
         if havemenu:
-            # this would steal keys from embedded Hatari
-            if not embed:
-                accelgroup = Gtk.AccelGroup()
-                for action in self.actions.list_actions():
-                    action.set_accel_group(accelgroup)
+            accelgroup = Gtk.AccelGroup()
+            for action in self.actions.list_actions():
+                action.set_accel_group(accelgroup)
             menu = self._get_menu()
         else:
             menu = None
@@ -665,7 +673,7 @@ class UIActions:
 
         # ugly, Hatari socket window ID can be gotten only
         # after Socket window is realized by gtk_main()
-        GObject.idle_add(self.callbacks.run)
+        GLib.idle_add(self.callbacks.run)
         Gtk.main()
 
 

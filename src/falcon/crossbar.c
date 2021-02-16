@@ -224,6 +224,7 @@ struct dma_s {
 	Uint32 isConnectedToDspInHandShakeMode;
 	Uint32 isConnectedToDma;
 	Uint32 handshakeMode_Frame;	/* state of the frame in handshake mode */
+	Uint32 handshakeMode_masterClk;	/* 0 = crossbar master clock ; 1 = DSP master clock */
 };
 
 struct crossbar_s {
@@ -315,11 +316,13 @@ void Crossbar_Reset(bool bCold)
 	dmaPlay.currentFrame = 0;
 	dmaPlay.isConnectedToDspInHandShakeMode = 0;
 	dmaPlay.handshakeMode_Frame = 0;
+	dmaPlay.handshakeMode_masterClk = 0;
 	dmaRecord.isRunning = 0;
 	dmaRecord.loopMode = 0;
 	dmaRecord.currentFrame = 0;
 	dmaRecord.isConnectedToDspInHandShakeMode = 0;
 	dmaRecord.handshakeMode_Frame = 0;
+	dmaRecord.handshakeMode_masterClk = 0;
 
 	/* DMA stopped, force SNDINT to 0/LOW */
 	crossbar.SNDINT_Signal = MFP_GPIP_STATE_LOW;
@@ -1055,6 +1058,7 @@ void Crossbar_DstControler_WriteWord(void)
 
 	dmaPlay.isConnectedToDspInHandShakeMode = (((destCtrl >> 4) & 7) == 0 ? 1 : 0);
 	dmaPlay.handshakeMode_Frame = dmaPlay.isConnectedToDspInHandShakeMode;
+	dmaPlay.handshakeMode_masterClk = 0;
 
 	dmaRecord.isConnectedToDspInHandShakeMode = ((destCtrl & 0xf) == 2 ? 1 : 0);
 }
@@ -1513,32 +1517,33 @@ static void Crossbar_Process_DMAPlay_Transfer(void)
 	if (dmaPlay.isRunning == 0)
 		return;
 
-	nFramePos = (dmaPlay.frameStartAddr + dmaPlay.frameCounter) % STRamEnd;
+	nFramePos = (dmaPlay.frameStartAddr + dmaPlay.frameCounter) & (DMA_MaskAddressHigh() << 16 | 0xffff);
 	increment_frame = 0;
 
 	/* 16 bits stereo mode ? */
 	if (crossbar.is16Bits) {
 		eightBits = 1;
-		value = (Sint16)do_get_mem_word(&STRam[nFramePos]);
+		value = (Sint16)STMemory_DMA_ReadWord(nFramePos);
 		increment_frame = 2;
 	}
 	/* 8 bits stereo ? */
 	else if (crossbar.isStereo) {
 		eightBits = 64;
-		value = (Sint8)STRam[nFramePos];
+		value = (Sint8)STMemory_DMA_ReadByte(nFramePos);
 		increment_frame = 1;
 	}
 	/* 8 bits mono */
 	else {
 		eightBits = 64;
-		value = (Sint8)STRam[nFramePos];
+		value = (Sint8)STMemory_DMA_ReadByte(nFramePos);
 		if ((dmaPlay.currentFrame & 1) == 0) {
 			increment_frame = 1;
 		}
 	}
 
 //fprintf ( stderr , "cbar %x %x %x\n" , dmaPlay.frameCounter , value , increment_frame );
-	if (dmaPlay.isConnectedToDspInHandShakeMode) {
+//	if (dmaPlay.isConnectedToDspInHandShakeMode && dmaPlay.handshakeMode_Frame != 0) {
+	if (dmaPlay.isConnectedToDspInHandShakeMode == 1 && dmaPlay.handshakeMode_masterClk == 1) {
 		/* Handshake mode */
 		if (dmaPlay.handshakeMode_Frame == 0)
 			return;
@@ -1619,6 +1624,7 @@ static void Crossbar_Process_DMAPlay_Transfer(void)
  * Function called when DmaPlay is in handshake mode */
 void Crossbar_DmaPlayInHandShakeMode(void)
 {
+	dmaPlay.handshakeMode_masterClk = 1;
 	dmaPlay.handshakeMode_Frame = 1;
 }
 
@@ -1659,23 +1665,23 @@ void Crossbar_SendDataToDmaRecord(Sint16 value)
 		return;
 	}
 
-	nFramePos = (dmaRecord.frameStartAddr + dmaRecord.frameCounter) % STRamEnd;
+	nFramePos = (dmaRecord.frameStartAddr + dmaRecord.frameCounter) & (DMA_MaskAddressHigh() << 16 | 0xffff);
 
 	/* 16 bits stereo mode ? */
 	if (crossbar.is16Bits) {
-		do_put_mem_word(&STRam[nFramePos], value);
+		STMemory_DMA_WriteWord(nFramePos, value);
 		dmaRecord.frameCounter += 2;
 	}
 	/* 8 bits stereo ? */
 	else if (crossbar.isStereo) {
-		do_put_mem_word(&STRam[nFramePos], value);
+		STMemory_DMA_WriteWord(nFramePos, value);
 		dmaRecord.frameCounter += 2;
 //		pFrameStart[dmaRecord.frameCounter] = (Uint8)value;
 //		dmaRecord.frameCounter ++;
 	}
 	/* 8 bits mono */
 	else {
-		STRam[nFramePos] = (Uint8)value;
+		STMemory_DMA_WriteByte(nFramePos, value);
 		dmaRecord.frameCounter ++;
 	}
 

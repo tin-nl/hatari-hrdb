@@ -59,7 +59,7 @@ const char MemorySnapShot_fileid[] = "Hatari memorySnapShot.c";
 #include "hatari-glue.h"
 
 
-#define VERSION_STRING      "2.3.0"   /* Version number of compatible memory snapshots - Always 6 bytes (inc' NULL) */
+#define VERSION_STRING      "2.4.a"   /* Version number of compatible memory snapshots - Always 6 bytes (inc' NULL) */
 #define SNAPSHOT_MAGIC      0xDeadBeef
 
 #if HAVE_LIBZ
@@ -166,11 +166,8 @@ static int MemorySnapShot_fseek(MSS_File fhndl, int pos)
 static bool MemorySnapShot_OpenFile(const char *pszFileName, bool bSave, bool bConfirm)
 {
 	char VersionString[] = VERSION_STRING;
-#if ENABLE_WINUAE_CPU
-# define CORE_VERSION 1
-#else
-# define CORE_VERSION 0
-#endif
+
+#define CORE_VERSION 1
 	Uint8 CpuCore;
 
 	/* Set error */
@@ -309,13 +306,8 @@ void MemorySnapShot_Capture(const char *pszFileName, bool bConfirm)
 	strlcpy ( Temp_FileName , pszFileName , FILENAME_MAX );
 	Temp_Confirm = bConfirm;
 
-#ifndef WINUAE_FOR_HATARI
-	/* With old cpu core, capture is immediate */
-	MemorySnapShot_Capture_Do ();
-#else
 	/* With WinUAE cpu core, capture is done from m68k_run_xxx() after the end of the current instruction */
 	UAE_Set_State_Save ();
-#endif
 //fprintf ( stderr , "MemorySnapShot_Capture out\n" );
 }
 
@@ -406,15 +398,10 @@ void MemorySnapShot_Restore(const char *pszFileName, bool bConfirm)
 	strlcpy ( Temp_FileName , pszFileName , FILENAME_MAX );
 	Temp_Confirm = bConfirm;
 
-#ifndef WINUAE_FOR_HATARI
-	/* With old cpu core, restore is immediate */
-	MemorySnapShot_Restore_Do ();
-#else
 	/* With WinUAE cpu core, restore is done from m68k_go() after the end of the current instruction */
 	UAE_Set_State_Restore ();
 	UAE_Set_Quit_Reset ( false );					/* Ask for "quit" to start restoring state */
 	set_special(SPCFLAG_MODE_CHANGE);				/* exit m68k_run_xxx() loop and check "quit" */
-#endif
 //fprintf ( stderr , "MemorySnapShot_Restore out\n" );
 }
 

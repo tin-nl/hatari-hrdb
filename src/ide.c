@@ -26,24 +26,76 @@
 #include "str.h"
 #include "sysdeps.h"
 
-#if HAVE_MALLOC_H
-# include <malloc.h>
-#endif
-
 int nIDEPartitions = 0;
+
 struct IDEState;
+typedef void EndTransferFunc(struct IDEState *);
+typedef struct BlockDriverState BlockDriverState;
 
+/* NOTE: IDEState represents in fact one drive */
+typedef struct IDEState
+{
+	/* ide config */
+	int is_cdrom;
+	int cylinders, heads, sectors;
+	int64_t nb_sectors;
+	int mult_sectors;
+	int identify_set;
+	uint16_t identify_data[256];
+	int drive_serial;
+	/* ide regs */
+	uint8_t feature;
+	uint8_t error;
+	uint32_t nsector;
+	uint8_t sector;
+	uint8_t lcyl;
+	uint8_t hcyl;
+	/* other part of tf for lba48 support */
+	uint8_t hob_feature;
+	uint8_t hob_nsector;
+	uint8_t hob_sector;
+	uint8_t hob_lcyl;
+	uint8_t hob_hcyl;
 
-static struct IDEState *opaque_ide_if;
+	uint8_t select;
+	uint8_t status;
 
-static void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val);
-static uint32_t ide_ioport_read(void *opaque, uint32_t addr1);
-static uint32_t ide_status_read(void *opaque, uint32_t addr);
-static void ide_cmd_write(void *opaque, uint32_t addr, uint32_t val);
-static void ide_data_writew(void *opaque, uint32_t addr, uint32_t val);
-static uint32_t ide_data_readw(void *opaque, uint32_t addr);
-static void ide_data_writel(void *opaque, uint32_t addr, uint32_t val);
-static uint32_t ide_data_readl(void *opaque, uint32_t addr);
+	/* 0x3f6 command, only meaningful for drive 0 */
+	uint8_t cmd;
+	/* set for lba48 access */
+	uint8_t lba48;
+	/* depends on bit 4 in select, only meaningful for drive 0 */
+	struct IDEState *cur_drive;
+	BlockDriverState *bs;
+	/* ATAPI specific */
+	uint8_t sense_key;
+	uint8_t asc;
+	int packet_transfer_size;
+	int elementary_transfer_size;
+	int io_buffer_index;
+	int lba;
+	int cd_sector_size;
+	/* ATA DMA state */
+	int io_buffer_size;
+	/* PIO transfer handling */
+	int req_nb_sectors; /* number of sectors per interrupt */
+	EndTransferFunc *end_transfer_func;
+	uint8_t *data_ptr;
+	uint8_t *data_end;
+	uint8_t *io_buffer;
+	int media_changed;
+} IDEState;
+
+static IDEState ide_state[2];
+
+static void ide_ioport_write(IDEState *ide_if, uint32_t addr, uint32_t val);
+static uint32_t ide_ioport_read(IDEState *ide_if, uint32_t addr1);
+static uint32_t ide_status_read(IDEState *ide_if, uint32_t addr);
+static void ide_cmd_write(IDEState *ide_if, uint32_t addr, uint32_t val);
+static void ide_data_writew(IDEState *ide_if, uint32_t addr, uint32_t val);
+static uint32_t ide_data_readw(IDEState *ide_if, uint32_t addr);
+static void ide_data_writel(IDEState *ide_if, uint32_t addr, uint32_t val);
+static uint32_t ide_data_readl(IDEState *ide_if, uint32_t addr);
 
 /**
  * Check whether IDE is available: The Falcon always has an IDE controller,
@@ -116,11 +168,11 @@ uae_u32 REGPARAM3 Ide_Mem_bget(uaecptr addr)
 
 	if (ideport >= 1 && ideport <= 7)
 	{
-		retval = ide_ioport_read(opaque_ide_if, ideport);
+		retval = ide_ioport_read(ide_state, ideport);
 	}
 	else if (ideport == 8 || ideport == 22)
 	{
-		retval = ide_status_read(opaque_ide_if, 0);
+		retval = ide_status_read(ide_state, 0);
 	}
 	else
 	{
@@ -151,7 +203,7 @@ uae_u32 REGPARAM3 Ide_Mem_wget(uaecptr addr)
 
 	if (addr == 0xf00000 || addr == 0xf00002)
 	{
-		retval = ide_data_readw(opaque_ide_if, 0);
+		retval = ide_data_readw(ide_state, 0);
 	}
 	else
 	{
@@ -182,7 +234,7 @@ uae_u32 REGPARAM3 Ide_Mem_lget(uaecptr addr)
 
 	if (addr == 0xf00000)
 	{
-		retval = ide_data_readl(opaque_ide_if, 0);
+		retval = ide_data_readl(ide_state, 0);
 	}
 	else
 	{
@@ -223,11 +275,11 @@ void REGPARAM3 Ide_Mem_bput(uaecptr addr, uae_u32 val)
 
 	if (ideport >= 1 && ideport <= 7)
 	{
-		ide_ioport_write(opaque_ide_if, ideport, val);
+		ide_ioport_write(ide_state, ideport, val);
 	}
 	else if (ideport == 8 || ideport == 22)
 	{
-		ide_cmd_write(opaque_ide_if, 0, val);
+		ide_cmd_write(ide_state, 0, val);
 	}
 }
 
@@ -253,7 +305,7 @@ void REGPARAM3 Ide_Mem_wput(uaecptr addr, uae_u32 val)
 
 	if (addr == 0xf00000 || addr == 0xf00002)
 	{
-		ide_data_writew(opaque_ide_if, 0, val);
+		ide_data_writew(ide_state, 0, val);
 	}
 }
 
@@ -281,7 +333,7 @@ void REGPARAM3 Ide_Mem_lput(uaecptr addr, uae_u32 val)
 
 	if (addr == 0xf00000)
 	{
-		ide_data_writel(opaque_ide_if, 0, val);
+		ide_data_writel(ide_state, 0, val);
 	}
 }
 
@@ -331,8 +383,6 @@ void REGPARAM3 Ide_Mem_lput(uaecptr addr, uae_u32 val)
 #endif
 
 
-typedef struct BlockDriverState BlockDriverState;
-
 struct BlockDriverState {
     int64_t total_sectors; /* if we are reading a disk image, give its
                               size in sectors */
@@ -345,7 +395,6 @@ struct BlockDriverState {
     void *change_opaque;
 
     FILE *fhndl;
-    void *opaque;
     off_t file_size;
     int media_changed;
     int byteswap;
@@ -560,7 +609,7 @@ static int bdrv_open(BlockDriverState *bs, const char *filename, unsigned long b
 	Log_Printf(LOG_INFO, "Mounting IDE hard drive image %s\n", filename);
 
 	bs->read_only = 0;
-	bs->file_size = HDC_CheckAndGetSize(filename, blockSize);
+	bs->file_size = HDC_CheckAndGetSize("IDE", filename, blockSize);
 	if (bs->file_size <= 0)
 		return -1;
 	if (bs->file_size < 2 * 16 * 63 * bs->sector_size)
@@ -576,14 +625,21 @@ static int bdrv_open(BlockDriverState *bs, const char *filename, unsigned long b
 		/* Maybe the file is read-only? */
 		bs->fhndl = fopen(filename, "rb");
 		if (!bs->fhndl)
+		{
 			perror("bdrv_open");
+			Log_AlertDlg(LOG_ERROR, "Cannot open IDE HD for reading\n'%s'.\n", filename);
+			return -1;
+		}
+		Log_AlertDlg(LOG_WARN, "IDE HD file is read-only, no writes will go through\n'%s'.\n",
+			     filename);
 		bs->read_only = 1;
 	}
 	else if (!File_Lock(bs->fhndl))
 	{
-		Log_Printf(LOG_ERROR, "Cannot lock HD file for writing!\n");
+		Log_AlertDlg(LOG_ERROR, "Locking IDE HD file for writing failed\n'%s'!\n", filename);
 		fclose(bs->fhndl);
 		bs->fhndl = NULL;
+		return -1;
 	}
 
 	/* call the change callback */
@@ -883,62 +939,6 @@ static void bdrv_eject(BlockDriverState *bs, int eject_flag)
 #define SENSE_NOT_READY       2
 #define SENSE_ILLEGAL_REQUEST 5
 #define SENSE_UNIT_ATTENTION  6
-
-typedef void EndTransferFunc(struct IDEState *);
-
-/* NOTE: IDEState represents in fact one drive */
-typedef struct IDEState
-{
-	/* ide config */
-	int is_cdrom;
-	int cylinders, heads, sectors;
-	int64_t nb_sectors;
-	int mult_sectors;
-	int identify_set;
-	uint16_t identify_data[256];
-	int drive_serial;
-	/* ide regs */
-	uint8_t feature;
-	uint8_t error;
-	uint32_t nsector;
-	uint8_t sector;
-	uint8_t lcyl;
-	uint8_t hcyl;
-	/* other part of tf for lba48 support */
-	uint8_t hob_feature;
-	uint8_t hob_nsector;
-	uint8_t hob_sector;
-	uint8_t hob_lcyl;
-	uint8_t hob_hcyl;
-
-	uint8_t select;
-	uint8_t status;
-
-	/* 0x3f6 command, only meaningful for drive 0 */
-	uint8_t cmd;
-	/* set for lba48 access */
-	uint8_t lba48;
-	/* depends on bit 4 in select, only meaningful for drive 0 */
-	struct IDEState *cur_drive;
-	BlockDriverState *bs;
-	/* ATAPI specific */
-	uint8_t sense_key;
-	uint8_t asc;
-	int packet_transfer_size;
-	int elementary_transfer_size;
-	int io_buffer_index;
-	int lba;
-	int cd_sector_size;
-	/* ATA DMA state */
-	int io_buffer_size;
-	/* PIO transfer handling */
-	int req_nb_sectors; /* number of sectors per interrupt */
-	EndTransferFunc *end_transfer_func;
-	uint8_t *data_ptr;
-	uint8_t *data_end;
-	uint8_t *io_buffer;
-	int media_changed;
-} IDEState;
 
 
 static void padstr(char *str, const char *src, int len)
@@ -1967,9 +1967,8 @@ static void ide_clear_hob(IDEState *ide_if)
 	ide_if[1].select &= ~(1 << 7);
 }
 
-static void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
+static void ide_ioport_write(IDEState *ide_if, uint32_t addr, uint32_t val)
 {
-	IDEState *ide_if = opaque;
 	IDEState *s;
 	int unit, n;
 	int lba48 = 0;
@@ -2311,9 +2310,8 @@ static void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
 	}
 }
 
-static uint32_t ide_ioport_read(void *opaque, uint32_t addr1)
+static uint32_t ide_ioport_read(IDEState *ide_if, uint32_t addr1)
 {
-	IDEState *ide_if = opaque;
 	IDEState *s = ide_if->cur_drive;
 	uint32_t addr;
 	int ret;
@@ -2390,9 +2388,8 @@ static uint32_t ide_ioport_read(void *opaque, uint32_t addr1)
 	return ret;
 }
 
-static uint32_t ide_status_read(void *opaque, uint32_t addr)
+static uint32_t ide_status_read(IDEState *ide_if, uint32_t addr)
 {
-	IDEState *ide_if = opaque;
 	IDEState *s = ide_if->cur_drive;
 	int ret;
 
@@ -2406,9 +2403,8 @@ static uint32_t ide_status_read(void *opaque, uint32_t addr)
 	return ret;
 }
 
-static void ide_cmd_write(void *opaque, uint32_t addr, uint32_t val)
+static void ide_cmd_write(IDEState *ide_if, uint32_t addr, uint32_t val)
 {
-	IDEState *ide_if = opaque;
 	IDEState *s;
 	int i;
 
@@ -2445,9 +2441,9 @@ static void ide_cmd_write(void *opaque, uint32_t addr, uint32_t val)
 	ide_if[1].cmd = val;
 }
 
-static void ide_data_writew(void *opaque, uint32_t addr, uint32_t val)
+static void ide_data_writew(IDEState *ide_if, uint32_t addr, uint32_t val)
 {
-	IDEState *s = ((IDEState *)opaque)->cur_drive;
+	IDEState *s = ide_if->cur_drive;
 	uint8_t *p;
 
 	if (!s->data_ptr || s->data_ptr > s->data_end)
@@ -2461,9 +2457,9 @@ static void ide_data_writew(void *opaque, uint32_t addr, uint32_t val)
 		s->end_transfer_func(s);
 }
 
-static uint32_t ide_data_readw(void *opaque, uint32_t addr)
+static uint32_t ide_data_readw(IDEState *ide_if, uint32_t addr)
 {
-	IDEState *s = ((IDEState *)opaque)->cur_drive;
+	IDEState *s = ide_if->cur_drive;
 	uint8_t *p;
 	int ret;
 
@@ -2479,9 +2475,9 @@ static uint32_t ide_data_readw(void *opaque, uint32_t addr)
 	return ret;
 }
 
-static void ide_data_writel(void *opaque, uint32_t addr, uint32_t val)
+static void ide_data_writel(IDEState *ide_if, uint32_t addr, uint32_t val)
 {
-	IDEState *s = ((IDEState *)opaque)->cur_drive;
+	IDEState *s = ide_if->cur_drive;
 	uint8_t *p;
 
 	if (!s->data_ptr || s->data_ptr > s->data_end)
@@ -2495,9 +2491,9 @@ static void ide_data_writel(void *opaque, uint32_t addr, uint32_t val)
 		s->end_transfer_func(s);
 }
 
-static uint32_t ide_data_readl(void *opaque, uint32_t addr)
+static uint32_t ide_data_readl(IDEState *ide_if, uint32_t addr)
 {
-	IDEState *s = ((IDEState *)opaque)->cur_drive;
+	IDEState *s = ide_if->cur_drive;
 	uint8_t *p;
 	uint32_t ret;
 
@@ -2602,107 +2598,92 @@ static int guess_disk_lchs(IDEState *s,
 	return -1;
 }
 
-static void ide_init2(IDEState *ide_state, BlockDriverState *hd0,
-                      BlockDriverState *hd1)
+static void ide_init_one(IDEState *s, BlockDriverState *bds)
 {
-	IDEState *s;
 	static int drive_serial = 1;
-	int i, cylinders, heads, secs, translation, lba_detected = 0;
+	int cylinders, heads, secs, translation, lba_detected = 0;
 	uint64_t nb_sectors;
 
-	for (i = 0; i < 2; i++)
+	s->io_buffer = malloc(MAX_MULT_SECTORS * MAX_SECTOR_SIZE + 4);
+	assert(s->io_buffer);
+	s->bs = bds;
+
+	bdrv_get_geometry(s->bs, &nb_sectors);
+	s->nb_sectors = nb_sectors;
+	/* if a geometry hint is available, use it */
+	bdrv_get_geometry_hint(s->bs, &cylinders, &heads, &secs);
+	translation = bdrv_get_translation_hint(s->bs);
+	if (cylinders != 0)
 	{
-		s = ide_state + i;
-		s->cur_drive = s;
-
-		if (!ConfigureParams.Ide[i].bUseDevice)
-			continue;
-
-		s->io_buffer = malloc(MAX_MULT_SECTORS * MAX_SECTOR_SIZE + 4);
-		assert(s->io_buffer);
-		if (i == 0)
-			s->bs = hd0;
-		else
-			s->bs = hd1;
-		if (s->bs)
+		s->cylinders = cylinders;
+		s->heads = heads;
+		s->sectors = secs;
+	}
+	else
+	{
+		if (guess_disk_lchs(s, &cylinders, &heads, &secs) == 0)
 		{
-			bdrv_get_geometry(s->bs, &nb_sectors);
-			s->nb_sectors = nb_sectors;
-			/* if a geometry hint is available, use it */
-			bdrv_get_geometry_hint(s->bs, &cylinders, &heads, &secs);
-			translation = bdrv_get_translation_hint(s->bs);
-			if (cylinders != 0)
+			if (heads > 16)
+			{
+				/* if heads > 16, it means that a BIOS LBA
+				   translation was active, so the default
+				   hardware geometry is OK */
+				lba_detected = 1;
+				goto default_geometry;
+			}
+			else
 			{
 				s->cylinders = cylinders;
 				s->heads = heads;
 				s->sectors = secs;
-			}
-			else
-			{
-				if (guess_disk_lchs(s, &cylinders, &heads, &secs) == 0)
+				/* disable any translation to be in sync with
+				   the logical geometry */
+				if (translation == BIOS_ATA_TRANSLATION_AUTO)
 				{
-					if (heads > 16)
-					{
-						/* if heads > 16, it means that a BIOS LBA
-						   translation was active, so the default
-						   hardware geometry is OK */
-						lba_detected = 1;
-						goto default_geometry;
-					}
-					else
-					{
-						s->cylinders = cylinders;
-						s->heads = heads;
-						s->sectors = secs;
-						/* disable any translation to be in sync with
-						   the logical geometry */
-						if (translation == BIOS_ATA_TRANSLATION_AUTO)
-						{
-							bdrv_set_translation_hint(s->bs,
-							                          BIOS_ATA_TRANSLATION_NONE);
-						}
-					}
+					bdrv_set_translation_hint(s->bs,
+					                          BIOS_ATA_TRANSLATION_NONE);
+				}
+			}
+		}
+		else
+		{
+default_geometry:
+			/* if no geometry, use a standard physical disk geometry */
+			cylinders = nb_sectors / (16 * 63);
+			if (cylinders > 16383)
+				cylinders = 16383;
+			else if (cylinders < 2)
+				cylinders = 2;
+			s->cylinders = cylinders;
+			s->heads = 16;
+			s->sectors = 63;
+			if (lba_detected == 1 && translation == BIOS_ATA_TRANSLATION_AUTO)
+			{
+				if ((s->cylinders * s->heads) <= 131072)
+				{
+					bdrv_set_translation_hint(s->bs,
+					                          BIOS_ATA_TRANSLATION_LARGE);
 				}
 				else
 				{
-default_geometry:
-					/* if no geometry, use a standard physical disk geometry */
-					cylinders = nb_sectors / (16 * 63);
-					if (cylinders > 16383)
-						cylinders = 16383;
-					else if (cylinders < 2)
-						cylinders = 2;
-					s->cylinders = cylinders;
-					s->heads = 16;
-					s->sectors = 63;
-					if ((lba_detected == 1) && (translation == BIOS_ATA_TRANSLATION_AUTO))
-					{
-						if ((s->cylinders * s->heads) <= 131072)
-						{
-							bdrv_set_translation_hint(s->bs,
-							                          BIOS_ATA_TRANSLATION_LARGE);
-						}
-						else
-						{
-							bdrv_set_translation_hint(s->bs,
-							                          BIOS_ATA_TRANSLATION_LBA);
-						}
-					}
+					bdrv_set_translation_hint(s->bs,
+					                          BIOS_ATA_TRANSLATION_LBA);
 				}
-				bdrv_set_geometry_hint(s->bs, s->cylinders, s->heads, s->sectors);
-			}
-			LOG_TRACE(TRACE_IDE, "IDE: using geometry LCHS=%d %d %d for drive %d\n",
-			       s->cylinders, s->heads, s->sectors, i);
-			if (bdrv_get_type_hint(s->bs) == BDRV_TYPE_CDROM)
-			{
-				s->is_cdrom = 1;
-				bdrv_set_change_cb(s->bs, cdrom_change_cb, s);
 			}
 		}
-		s->drive_serial = drive_serial++;
-
-		ide_reset(s);
+		bdrv_set_geometry_hint(s->bs, s->cylinders, s->heads, s->sectors);
 	}
+	LOG_TRACE(TRACE_IDE, "IDE: using geometry LCHS=%d %d %d\n",
+	          s->cylinders, s->heads, s->sectors);
+	if (bdrv_get_type_hint(s->bs) == BDRV_TYPE_CDROM)
+	{
+		s->is_cdrom = 1;
+		bdrv_set_change_cb(s->bs, cdrom_change_cb, s);
+	}
+
+	s->drive_serial = drive_serial++;
+
+	ide_reset(s);
 }
 
 
@@ -2722,18 +2703,22 @@ void Ide_Init(void)
 	if (!Ide_IsAvailable() )
 		return;
 
-	opaque_ide_if = calloc(2, sizeof(IDEState));
-	assert(opaque_ide_if);
+	memset(ide_state, 0, sizeof(ide_state));
 
 	for (i = 0; i < 2; i++)
 	{
 		hd_table[i] = malloc(sizeof(BlockDriverState));
 		assert(hd_table[i]);
 		memset(hd_table[i], 0, sizeof(BlockDriverState));
+		ide_state[i].cur_drive = &ide_state[i];
 		if (ConfigureParams.Ide[i].bUseDevice)
 		{
 			int is_byteswap;
-			bdrv_open(hd_table[i], ConfigureParams.Ide[i].sDeviceFile, ConfigureParams.Ide[i].nBlockSize, 0);
+			if (bdrv_open(hd_table[i], ConfigureParams.Ide[i].sDeviceFile, ConfigureParams.Ide[i].nBlockSize, 0) < 0)
+			{
+				ConfigureParams.Ide[i].bUseDevice = false;
+				continue;
+			}
 			nIDEPartitions += HDC_PartitionCount(hd_table[i]->fhndl, TRACE_IDE, &is_byteswap);
 			/* Our IDE implementation is little endian by default,
 			 * so we need to byteswap if the image is not swapped! */
@@ -2745,11 +2730,9 @@ void Ide_Init(void)
 				  hd_table[i]->byteswap ? "enabled" : "disabled", i);
 			hd_table[i]->sector_size = ConfigureParams.Ide[i].nBlockSize;
 			hd_table[i]->type = ConfigureParams.Ide[i].nDeviceType;
+			ide_init_one(&ide_state[i], hd_table[i]);
 		}
 	}
-
-	ide_init2(&opaque_ide_if[0], hd_table[0],
-	          ConfigureParams.Ide[1].bUseDevice ? hd_table[1] : NULL);
 }
 
 
@@ -2773,18 +2756,13 @@ void Ide_UnInit(void)
 		}
 	}
 
-	if (opaque_ide_if)
+	for (i = 0; i < 2; i++)
 	{
-		for (i = 0; i < 2; i++)
+		if (ide_state[i].io_buffer)
 		{
-			if (opaque_ide_if[i].io_buffer)
-			{
-				free(opaque_ide_if[i].io_buffer);
-				opaque_ide_if[i].io_buffer = NULL;
-			}
+			free(ide_state[i].io_buffer);
+			ide_state[i].io_buffer = NULL;
 		}
-		free(opaque_ide_if);
-		opaque_ide_if = NULL;
 	}
 
 	nIDEPartitions = 0;
