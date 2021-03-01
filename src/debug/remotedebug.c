@@ -39,6 +39,7 @@
 #include "log.h"
 #include "vars.h"
 #include "memory.h"
+#include "configuration.h"
 
 #define REMOTE_DEBUG_PORT          (56001)
 #define REMOTE_DEBUG_CMD_MAX_SIZE  (300)
@@ -127,6 +128,19 @@ static int RemoteDebug_NotifyState(int fd)
 {
 	char tmp[100];
 	sprintf(tmp, "!status %x %x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
+	send_str(fd, tmp);
+	send_term(fd);
+	return 0;
+}
+
+// -----------------------------------------------------------------------------
+static int RemoteDebug_NotifyConfig(int fd)
+{
+	const CNF_SYSTEM* system = &ConfigureParams.System;
+	char tmp[100];
+	sprintf(tmp, "!config %x %x", 
+		system->nMachineType, system->nCpuLevel);
+	
 	send_str(fd, tmp);
 	send_term(fd);
 	return 0;
@@ -681,6 +695,7 @@ static bool RemoteDebug_BreakLoop(void)
 
 	bRemoteBreakIsActive = true;
 	// Notify after state change happens
+	RemoteDebug_NotifyConfig(state->AcceptedFD);
 	RemoteDebug_NotifyState(state->AcceptedFD);
 
 	// Set the socket to blocking on the connection now, so we
@@ -750,6 +765,7 @@ static bool RemoteDebug_BreakLoop(void)
 	// Clear any break request that might have been set
 	bRemoteBreakRequest = false;
 
+	RemoteDebug_NotifyConfig(state->AcceptedFD);
 	RemoteDebug_NotifyState(state->AcceptedFD);
 
 	SetNonBlocking(state->AcceptedFD, 1);
@@ -860,6 +876,7 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 			send_term(state->AcceptedFD);
 
 			// Flag the running status straight away
+			RemoteDebug_NotifyConfig(state->AcceptedFD);
 			RemoteDebug_NotifyState(state->AcceptedFD);
 		}
 	}

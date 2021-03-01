@@ -348,6 +348,11 @@ bool GraphicsInspectorWidget::SetAddressFromVideo()
         uint8_t hi = pVideoRegs->ReadAddressByte(0xff8201);
         uint8_t mi = pVideoRegs->ReadAddressByte(0xff8203);
         uint8_t lo = pVideoRegs->ReadAddressByte(0xff820d);
+        if (m_pTargetModel->GetMachineType() == MACHINE_ST)
+            lo = 0;
+        if (m_pTargetModel->GetMachineType() == MACHINE_MEGA_ST)
+            lo = 0;
+
         m_address = (hi << 16) | (mi << 8) | lo;
         DisplayAddress();
         return true;

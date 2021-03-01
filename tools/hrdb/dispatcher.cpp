@@ -380,6 +380,18 @@ void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
             return;
 		m_pTargetModel->SetStatus(running, pc);
 	}
+    if (type == "!config")
+    {
+        std::string machineTypeStr = s.Split(' ');
+        std::string cpuLevelStr = s.Split(' ');
+        uint32_t machineType;
+        uint32_t cpuLevel;
+        if (!StringParsers::ParseHexString(machineTypeStr.c_str(), machineType))
+            return;
+        if (!StringParsers::ParseHexString(cpuLevelStr.c_str(), cpuLevel))
+            return;
+        m_pTargetModel->SetConfig(machineType, cpuLevel);
+    }
     else if (type == "!connected")
     {
         // Allow new command responses to be processed.

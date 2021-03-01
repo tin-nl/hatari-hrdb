@@ -94,7 +94,12 @@ void TargetModel::SetStatus(int running, uint32_t pc)
         m_pTimer->setSingleShot(true);
         m_pTimer->start(500);
     }
+}
 
+void TargetModel::SetConfig(int machineType, uint32_t cpuLevel)
+{
+    m_machineType = (MACHINETYPE) machineType;
+    m_cpuLevel = cpuLevel;
 }
 
 void TargetModel::SetRegisters(const Registers& regs, uint64_t commandId)
