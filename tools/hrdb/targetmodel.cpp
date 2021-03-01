@@ -159,6 +159,12 @@ void TargetModel::NotifyMemoryChanged(uint32_t address, uint32_t size)
     emit otherMemoryChanged(address, size);
 }
 
+void TargetModel::Flush()
+{
+    emit changedFlush(m_changedFlags);
+    m_changedFlags.Clear();
+}
+
 void TargetModel::delayedTimer()
 {
     m_pTimer->stop();

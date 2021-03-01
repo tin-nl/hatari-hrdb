@@ -43,6 +43,11 @@ Dispatcher::~Dispatcher()
     DeletePending();
 }
 
+uint64_t Dispatcher::InsertFlush()
+{
+    return SendCommandShared(MemorySlot::kNone, "flush");
+}
+
 uint64_t Dispatcher::RequestMemory(MemorySlot slot, uint32_t address, uint32_t size)
 {
     std::string command = std::string("mem ") + std::to_string(address) + " " + std::to_string(size);
@@ -120,6 +125,18 @@ void Dispatcher::ReceivePacket(const char* response)
 		// At this point we can notify others that new data has arrived
 		this->ReceiveResponsePacket(*pPending);
 		delete pPending;
+
+        // Any flushes to handle?
+        while (1)
+        {
+            if (m_sentCommands.size() == 0)
+                break;
+            if (m_sentCommands.back()->m_cmd != "flush")
+                break;
+
+            m_sentCommands.pop_back();
+            m_pTargetModel->Flush();
+        }
 	}
 	else
 	{
@@ -378,8 +395,11 @@ void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
             return;
         if (!StringParsers::ParseHexString(pcStr.c_str(), pc))
             return;
+
+        // This call goes off and lots of views insert requests here, so add a flush into the queue
 		m_pTargetModel->SetStatus(running, pc);
-	}
+        this->InsertFlush();
+    }
     if (type == "!config")
     {
         std::string machineTypeStr = s.Split(' ');
@@ -391,6 +411,7 @@ void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
         if (!StringParsers::ParseHexString(cpuLevelStr.c_str(), cpuLevel))
             return;
         m_pTargetModel->SetConfig(machineType, cpuLevel);
+        this->InsertFlush();
     }
     else if (type == "!connected")
     {

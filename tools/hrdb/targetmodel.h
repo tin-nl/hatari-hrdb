@@ -73,6 +73,8 @@ public:
     void SetExceptionMask(const ExceptionMask& mask);
     void NotifyMemoryChanged(uint32_t address, uint32_t size);
 
+    void Flush();
+
 	// NOTE: all these return copies to avoid data contention
     MACHINETYPE	GetMachineType() const { return m_machineType; }
 
@@ -98,6 +100,8 @@ signals:
     void startStopChangedSignal();
 
     void startStopChangedSignalDelayed(int running);
+
+    void changedFlush(const TargetChangedFlags& flags);
 
 	// When new CPU registers are changed
     void registersChangedSignal(uint64_t commandId);
