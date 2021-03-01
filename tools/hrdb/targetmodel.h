@@ -31,6 +31,28 @@ enum MACHINETYPE
     MACHINE_FALCON = 5
 };
 
+class TargetChangedFlags
+{
+public:
+    enum ChangedState
+    {
+        kPC,
+        kRegs,
+        kBreakpoints,
+        kSymbolTable,
+        kExceptionMask,
+        kOtherMemory,        // e.g. a control set memory elsewhere
+        kChangedStateCount
+    };
+
+    void Clear();
+    void SetChanged(ChangedState ch) { m_changed[ch] = true; }
+    void SetMemoryChanged(MemorySlot slot) { m_memChanged[slot] = true; }
+
+    bool    m_changed[kChangedStateCount];
+    bool    m_memChanged[kMemorySlotCount];
+};
+
 class TargetModel : public QObject
 {
 	Q_OBJECT
@@ -101,6 +123,8 @@ private slots:
     void delayedTimer();
 
 private:
+    TargetChangedFlags  m_changedFlags;
+
     MACHINETYPE	m_machineType;	// Hatari MACHINETYPE enum
     uint32_t	m_cpuLevel;		// CPU 0=000, 1=010, 2=020, 3=030, 4=040, 5=060
 
