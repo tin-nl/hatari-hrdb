@@ -10,7 +10,7 @@ class QComboBox;
 class QCheckBox;
 class QPushButton;
 
-class Breakpoint;
+struct Breakpoint;
 
 class BreakpointsTableModel : public QAbstractTableModel
 {
