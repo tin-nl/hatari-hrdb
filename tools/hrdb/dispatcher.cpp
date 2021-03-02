@@ -45,7 +45,14 @@ Dispatcher::~Dispatcher()
 
 uint64_t Dispatcher::InsertFlush()
 {
-    return SendCommandShared(MemorySlot::kNone, "flush");
+    assert(m_portConnected && !m_waitingConnectionAck);
+    RemoteCommand* pNewCmd = new RemoteCommand();
+    pNewCmd->m_cmd = "flush";
+    pNewCmd->m_memorySlot = MemorySlot::kNone;
+    pNewCmd->m_uid = m_responseUid++;
+    m_sentCommands.push_front(pNewCmd);
+    // Don't send it down the wire!
+    return 0;
 }
 
 uint64_t Dispatcher::RequestMemory(MemorySlot slot, uint32_t address, uint32_t size)
@@ -87,7 +94,20 @@ void Dispatcher::ReceivePacket(const char* response)
 	// THIS HAPPENS ON THE EVENT LOOP
     std::string new_resp(response);
 
-	// Check for a notification
+    // Any flushes to handle?
+    while (1)
+    {
+        if (m_sentCommands.size() == 0)
+            break;
+        if (m_sentCommands.back()->m_cmd != "flush")
+            break;
+
+        delete m_sentCommands.back();
+        m_sentCommands.pop_back();
+        m_pTargetModel->Flush();
+    }
+
+    // Check for a notification
 	if (new_resp.size() > 0)
 	{
 		if (new_resp[0] == '!')
@@ -134,6 +154,7 @@ void Dispatcher::ReceivePacket(const char* response)
             if (m_sentCommands.back()->m_cmd != "flush")
                 break;
 
+            delete m_sentCommands.back();
             m_sentCommands.pop_back();
             m_pTargetModel->Flush();
         }
@@ -374,6 +395,10 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
             return;
 
         m_pTargetModel->NotifyMemoryChanged(addr, size);
+    }
+    else if (type == "flush")
+    {
+                assert(0);
     }
 }
 
