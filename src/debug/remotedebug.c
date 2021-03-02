@@ -689,6 +689,9 @@ static bool RemoteDebug_BreakLoop(void)
 	RemoteDebugState* state;
 	fd_set set;
 	struct timeval timeout;
+#if HAVE_WINSOCK_SOCKETS
+	int winerr;
+#endif
 
 	// TODO set socket as blocking
 	state = &g_rdbState;
@@ -756,7 +759,15 @@ static bool RemoteDebug_BreakLoop(void)
 		else
 		{
 			// On Windows -1 simply means a general error and might be OK.
+			// So we check for known errors that should cause us to exit.
 #if HAVE_WINSOCK_SOCKETS
+			winerr = WSAGetLastError();
+			if (winerr == WSAECONNRESET)
+			{
+				printf("Remote Debug connection reset\n");
+				state->AcceptedFD = -1;
+				break;
+			}
 			printf("Unknown cmd %d\n", WSAGetLastError());
 #endif
 		}
