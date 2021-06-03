@@ -8,8 +8,8 @@
 */
 
 #include <QMainWindow>
-#include "targetmodel.h"
-#include "disassembler.h"
+#include "../models/targetmodel.h"
+#include "../models/disassembler.h"
 
 class QPushButton;
 class QLabel;

@@ -3,7 +3,7 @@
 
 #include <QDockWidget>
 #include <QTableView>
-#include "memory.h"
+#include "../models/memory.h"
 
 class TargetModel;
 class Dispatcher;

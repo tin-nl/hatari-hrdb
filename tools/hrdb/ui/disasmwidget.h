@@ -4,9 +4,9 @@
 #include <QDockWidget>
 #include <QTableView>
 #include <QMenu>
-#include "disassembler.h"
-#include "breakpoint.h"
-#include "memory.h"
+#include "../models/disassembler.h"
+#include "../models/breakpoint.h"
+#include "../models/memory.h"
 
 class TargetModel;
 class Dispatcher;

@@ -6,9 +6,9 @@
 #include <QShortcut>
 #include <QFontDatabase>
 
-#include "dispatcher.h"
-#include "targetmodel.h"
-#include "exceptionmask.h"
+#include "../transport/dispatcher.h"
+#include "../models/targetmodel.h"
+#include "../models/exceptionmask.h"
 
 #include "disasmwidget.h"
 #include "memoryviewwidget.h"

@@ -12,7 +12,7 @@
 #include <stdint.h>
 #include <QObject>
 
-#include "remotecommand.h"
+#include "transport/remotecommand.h"
 #include "breakpoint.h"
 #include "memory.h"
 #include "symboltable.h"

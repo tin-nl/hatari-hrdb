@@ -1,12 +1,12 @@
-#include "dispatcher.h"
+#include "../transport/dispatcher.h"
 #include <QtWidgets>
 #include <QtNetwork>
 
 #include <iostream>
 
-#include "targetmodel.h"
-#include "stringsplitter.h"
-#include "stringparsers.h"
+#include "../models/targetmodel.h"
+#include "../models/stringsplitter.h"
+#include "../models/stringparsers.h"
 
 //#define DISPATCHER_DEBUG
 

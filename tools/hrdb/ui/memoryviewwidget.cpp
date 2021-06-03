@@ -13,10 +13,10 @@
 #include <QPainter>
 #include <QKeyEvent>
 
-#include "dispatcher.h"
-#include "targetmodel.h"
-#include "stringparsers.h"
-#include "symboltablemodel.h"
+#include "../transport/dispatcher.h"
+#include "../models/targetmodel.h"
+#include "../models/stringparsers.h"
+#include "../models/symboltablemodel.h"
 
 MemoryWidget::MemoryWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher,
                                            int windowIndex) :

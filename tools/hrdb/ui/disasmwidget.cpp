@@ -12,11 +12,11 @@
 #include <QCheckBox>
 #include <QCompleter>
 
-#include "dispatcher.h"
-#include "targetmodel.h"
-#include "stringparsers.h"
-#include "symboltablemodel.h"
-#include "memory.h"
+#include "../transport/dispatcher.h"
+#include "../models/targetmodel.h"
+#include "../models/stringparsers.h"
+#include "../models/symboltablemodel.h"
+#include "../models/memory.h"
 
 //-----------------------------------------------------------------------------
 DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher, int windowIndex):
