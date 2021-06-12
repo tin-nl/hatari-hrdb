@@ -565,8 +565,8 @@ DisasmTableView::DisasmTableView(QWidget* parent, DisasmTableModel* pModel, Targ
     m_rightClickMenu.addMenu(pEditMenu);
     m_rightClickMenu.addMenu(pViewMenu);
 
-    new QShortcut(QKeySequence(tr("F3", "Run to cursor")),        this, SLOT(runToCursor()));
-    new QShortcut(QKeySequence(tr("F9", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
+    new QShortcut(QKeySequence(tr("F3",     "Run to cursor")),        this, SLOT(runToCursor()));
+    new QShortcut(QKeySequence(tr("Ctrl+B", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
 
     connect(m_pRunUntilAction,       &QAction::triggered,                  this, &DisasmTableView::runToCursorRightClick);
     connect(m_pBreakpointAction,     &QAction::triggered,                  this, &DisasmTableView::toggleBreakpointRightClick);

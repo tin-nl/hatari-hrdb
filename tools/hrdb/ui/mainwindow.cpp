@@ -31,8 +31,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_pRunningSquare->setFixedSize(10, 25);
     m_pRunningSquare->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
     m_pStartStopButton = new QPushButton("Break", this);
-    m_pStepIntoButton = new QPushButton("Step Into", this);
-    m_pStepOverButton = new QPushButton("Step Over", this);
+    m_pStepIntoButton = new QPushButton("&Step", this);
+    m_pStepOverButton = new QPushButton("&Next", this);
     m_pRunToButton = new QPushButton("Run To:", this);
     m_pRunToCombo = new QComboBox(this);
     m_pRunToCombo->insertItem(0, "RTS");
@@ -124,11 +124,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(windowMenu, &QMenu::aboutToShow, this, &MainWindow::updateWindowMenu);
 
 	// Keyboard shortcuts
-    new QShortcut(QKeySequence(tr("F5", "Start/Stop")), 		 this, 			 SLOT(startStopClicked()));
+    new QShortcut(QKeySequence(tr("Ctrl+R", "Start/Stop")),         this, SLOT(startStopClicked()));
+    new QShortcut(QKeySequence(tr("n",      "Next")),               this, SLOT(nextClicked()));
+    new QShortcut(QKeySequence(tr("s",      "Step")),               this, SLOT(singleStepClicked()));
 
-    new QShortcut(QKeySequence(tr("F10", "Next")),				 this,           SLOT(nextClicked()));
-    new QShortcut(QKeySequence(tr("F11", "Step")),               this,           SLOT(singleStepClicked()));
-    new QShortcut(QKeySequence(tr("Alt+B", "Add Breakpoint...")),this,           SLOT(addBreakpointPressed()));
+    // This should be an action
+    new QShortcut(QKeySequence(tr("Alt+B",  "Add Breakpoint...")),  this, SLOT(addBreakpointPressed()));
 
     // Try initial connect
     Connect();
@@ -234,6 +235,9 @@ void MainWindow::symbolTableChangedSlot(uint64_t commandId)
 
 void MainWindow::startStopClicked()
 {
+    if (!m_pTargetModel->IsConnected())
+        return;
+
 	if (m_pTargetModel->IsRunning())
         m_pDispatcher->SendCommandPacket("break");
 	else
@@ -242,6 +246,9 @@ void MainWindow::startStopClicked()
 
 void MainWindow::singleStepClicked()
 {
+    if (!m_pTargetModel->IsConnected())
+        return;
+
     if (m_pTargetModel->IsRunning())
         return;
     m_pDispatcher->SendCommandPacket("step");
@@ -249,6 +256,9 @@ void MainWindow::singleStepClicked()
 
 void MainWindow::nextClicked()
 {
+    if (!m_pTargetModel->IsConnected())
+        return;
+
     if (m_pTargetModel->IsRunning())
         return;
 
@@ -273,6 +283,8 @@ void MainWindow::nextClicked()
 
 void MainWindow::runToClicked()
 {
+    if (!m_pTargetModel->IsConnected())
+        return;
     if (m_pTargetModel->IsRunning())
         return;
 
