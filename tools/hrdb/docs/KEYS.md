@@ -5,6 +5,10 @@ Normal focus
 - N      - Next (step through bsr/jsr)
 - Alt+B  - Add breakpoint (dialog)
 
+- Alt+D - Focus Disassembly View
+- Alt+M - Focus Memory View
+- Alt+G - Focus Graphics Inspector
+
 Disassembly focus:
 
 - Ctrl+B - Toggle breakpoint

@@ -364,6 +364,11 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     QFontMetrics info(painter.fontMetrics());
     const QPalette& pal = this->palette();
 
+    const QBrush& br = this->hasFocus() ?
+              pal.light().color()
+            : pal.mid().color();
+    painter.fillRect(this->rect(), br);
+
     int y_base = info.ascent();
     int char_width = info.horizontalAdvance("0");
 
@@ -635,14 +640,14 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     this->setWindowTitle(QString::asprintf("Memory %d", windowIndex + 1));
 
     // Make the data first
-    pModel = new MemoryWidget(this, pTargetModel, pDispatcher, windowIndex);
-    pModel->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
+    m_pMemoryWidget = new MemoryWidget(this, pTargetModel, pDispatcher, windowIndex);
+    m_pMemoryWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
 
     m_pComboBox = new QComboBox(this);
     m_pComboBox->insertItem(MemoryWidget::kModeByte, "Byte");
     m_pComboBox->insertItem(MemoryWidget::kModeWord, "Word");
     m_pComboBox->insertItem(MemoryWidget::kModeLong, "Long");
-    m_pComboBox->setCurrentIndex(pModel->GetMode());
+    m_pComboBox->setCurrentIndex(m_pMemoryWidget->GetMode());
 
     m_pLockCheckBox = new QCheckBox(tr("Lock"), this);
 
@@ -664,7 +669,7 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     pTopLayout->addWidget(m_pComboBox);
 
     pMainLayout->addWidget(pTopRegion);
-    pMainLayout->addWidget(pModel);
+    pMainLayout->addWidget(m_pMemoryWidget);
 
     pTopRegion->setLayout(pTopLayout);
     pMainRegion->setLayout(pMainLayout);
@@ -676,6 +681,12 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     connect(m_pComboBox, SIGNAL(currentIndexChanged(int)),  SLOT(modeComboBoxChanged(int)));
 }
 
+void MemoryViewWidget::keyFocus()
+{
+    activateWindow();
+    m_pMemoryWidget->setFocus();
+}
+
 void MemoryViewWidget::requestAddress(int windowIndex, bool isMemory, uint32_t address)
 {
     if (!isMemory)
@@ -684,24 +695,24 @@ void MemoryViewWidget::requestAddress(int windowIndex, bool isMemory, uint32_t a
     if (windowIndex != m_windowIndex)
         return;
 
-    pModel->SetLock(false);
-    pModel->SetAddress(std::to_string(address));
+    m_pMemoryWidget->SetLock(false);
+    m_pMemoryWidget->SetAddress(std::to_string(address));
     m_pLockCheckBox->setChecked(false);
     setVisible(true);
 }
 
 void MemoryViewWidget::textEditChangedSlot()
 {
-    pModel->SetAddress(m_pLineEdit->text().toStdString());
+    m_pMemoryWidget->SetAddress(m_pLineEdit->text().toStdString());
 }
 
 void MemoryViewWidget::lockChangedSlot()
 {
-    pModel->SetLock(m_pLockCheckBox->isChecked());
+    m_pMemoryWidget->SetLock(m_pLockCheckBox->isChecked());
 }
 
 void MemoryViewWidget::modeComboBoxChanged(int index)
 {
-    pModel->SetMode((MemoryWidget::Mode)index);
+    m_pMemoryWidget->SetMode((MemoryWidget::Mode)index);
     //m_pTableView->resizeColumnToContents(MemoryWidget::kColData);
 }

@@ -161,8 +161,12 @@ class DisasmWidget : public QDockWidget
 public:
     DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher, int windowIndex);
 
+    // Grab focus and point to the main widget
+    void keyFocus();
+
 public slots:
     void requestAddress(int windowIndex, bool isMemory, uint32_t address);
+
 
 protected:
 

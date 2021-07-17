@@ -119,7 +119,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pStepOverButton, &QAbstractButton::clicked, this, &MainWindow::nextClicked);
     connect(m_pRunToButton, &QAbstractButton::clicked, this, &MainWindow::runToClicked);
 
-
     // Wire up menu appearance
     connect(windowMenu, &QMenu::aboutToShow, this, &MainWindow::updateWindowMenu);
 
@@ -553,6 +552,25 @@ void MainWindow::createActions()
     connect(memoryWindowAct1, &QAction::triggered, this,     [=] () { this->toggleVis(m_pMemoryViewWidget1); } );
     connect(graphicsInspectorAct, &QAction::triggered, this, [=] () { this->toggleVis(m_pGraphicsInspector); } );
     connect(breakpointsWindowAct, &QAction::triggered, this, [=] () { this->toggleVis(m_pBreakpointsWidget); } );
+
+    {
+        QAction* pFocus = new QAction("Focus Disassembly", this);
+        pFocus->setShortcut(QKeySequence("Alt+D"));
+        connect(pFocus, &QAction::triggered, this,     [=] () { m_pDisasmWidget0->keyFocus(); } );
+        this->addAction(pFocus);
+    }
+    {
+        QAction* pFocus = new QAction("Focus Memory", this);
+        pFocus->setShortcut(QKeySequence("Alt+M"));
+        connect(pFocus, &QAction::triggered, this,     [=] () { m_pMemoryViewWidget0->keyFocus(); } );
+        this->addAction(pFocus);
+    }
+    {
+        QAction* pFocus = new QAction("Focus Graphics Inspector", this);
+        pFocus->setShortcut(QKeySequence("Alt+G"));
+        connect(pFocus, &QAction::triggered, this,     [=] () { m_pGraphicsInspector->keyFocus(); } );
+        this->addAction(pFocus);
+    }
 
     // "About"
     aboutAct = new QAction(tr("&About"), this);

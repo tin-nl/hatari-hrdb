@@ -137,6 +137,12 @@ GraphicsInspectorWidget::~GraphicsInspectorWidget()
 
 }
 
+void GraphicsInspectorWidget::keyFocus()
+{
+    activateWindow();
+    this->setFocus();
+}
+
 void GraphicsInspectorWidget::keyPressEvent(QKeyEvent* ev)
 {
     int offset = 0;

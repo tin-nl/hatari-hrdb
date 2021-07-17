@@ -766,7 +766,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel* pTargetModel, Dispatche
 
     // We don't allow selection. The active key always happens on row 0
     m_pTableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
-    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::NoSelection);
+    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
     m_pTableView->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
 
     // Layouts
@@ -813,6 +813,12 @@ void DisasmWidget::requestAddress(int windowIndex, bool isMemory, uint32_t addre
     m_pTableModel->SetFollowPC(false);
     m_pFollowPC->setChecked(false);
     setVisible(true);
+}
+
+void DisasmWidget::keyFocus()
+{
+    activateWindow();
+    m_pTableView->setFocus();
 }
 
 void DisasmWidget::cellClickedSlot(const QModelIndex &index)
