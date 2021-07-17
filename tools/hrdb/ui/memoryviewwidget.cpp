@@ -364,10 +364,13 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     QFontMetrics info(painter.fontMetrics());
     const QPalette& pal = this->palette();
 
-    const QBrush& br = this->hasFocus() ?
-              pal.light().color()
-            : pal.mid().color();
+    const QBrush& br = pal.background().color();
     painter.fillRect(this->rect(), br);
+    if (hasFocus())
+    {
+        painter.setPen(QPen(pal.dark(), 6));
+        painter.drawRect(this->rect());
+    }
 
     int y_base = info.ascent();
     int char_width = info.horizontalAdvance("0");
