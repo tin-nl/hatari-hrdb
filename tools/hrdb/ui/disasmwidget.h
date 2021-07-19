@@ -30,6 +30,7 @@ public:
     };
 
     DisasmWidget2(QObject * parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher, int windowIndex);
+    virtual ~DisasmWidget2();
 
     void runToCursor();
     void toggleBreakpoint();
@@ -66,8 +67,11 @@ private slots:
     void otherMemoryChangedSlot(uint32_t address, uint32_t size);
 
 private:
-    void paintEvent(QPaintEvent* ev);
-    void keyPressEvent(QKeyEvent* event);
+    virtual void paintEvent(QPaintEvent* ev) override;
+    virtual void keyPressEvent(QKeyEvent* event) override;
+    virtual void mouseMoveEvent(QMouseEvent* event) override;
+    virtual void resizeEvent(QResizeEvent *event) override;
+    virtual bool event(QEvent *ev) override;
 
     void SetAddress(uint32_t addr);
     void RequestMemory();
@@ -90,6 +94,10 @@ private:
     {
         QString     symbol;
         QString     address;
+
+        bool        isPc;
+        bool        isBreakpoint;
+
         QString     hex;
         QString     disasm;
         QString     comments;
@@ -127,7 +135,6 @@ private:
     void memoryViewAddr1();
     void disasmViewAddr0();
     void disasmViewAddr1();
-    void resizeEvent(QResizeEvent *event);
     void RecalcRowCount();
     void RecalcSizes();
 
@@ -149,12 +156,14 @@ private:
     uint32_t              m_rightClickInstructionAddr;
     uint32_t              m_rightClickAddr[2];
 
-    int     m_cursorRow;
+    // Selection state
+    int                   m_cursorRow;
+    int                   m_mouseRow;
 
     // rendering info
-    int     m_charWidth;            // font width in pixels
-    int     m_lineHeight;           // font height in pixels
-    QFont   monoFont;
+    int                   m_charWidth;            // font width in pixels
+    int                   m_lineHeight;           // font height in pixels
+    QFont                 monoFont;
 };
 
 class DisasmTableModel : public QAbstractTableModel

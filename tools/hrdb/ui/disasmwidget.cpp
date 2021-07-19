@@ -34,7 +34,8 @@ DisasmWidget2::DisasmWidget2(QObject *parent, TargetModel *pTargetModel, Dispatc
     m_rightClickMenu(this),
     m_rightClickRow(-1),
     m_rightClickInstructionAddr(0),
-    m_cursorRow(0)
+    m_cursorRow(0),
+    m_mouseRow(-1)
 {
     RecalcSizes();
 
@@ -92,10 +93,17 @@ DisasmWidget2::DisasmWidget2(QObject *parent, TargetModel *pTargetModel, Dispatc
     connect(m_pMemViewAddress[2],    &QAction::triggered,                  this, &DisasmWidget2::memoryViewAddrInst);
     connect(m_pDisassembleAddress[0],&QAction::triggered,                  this, &DisasmWidget2::disasmViewAddr0);
     connect(m_pDisassembleAddress[1],&QAction::triggered,                  this, &DisasmWidget2::disasmViewAddr1);
+    setMouseTracking(true);
+
     repaint();
 
     // This table gets the focus from the parent docking widget
-//    setFocus();
+    //    setFocus();
+}
+
+DisasmWidget2::~DisasmWidget2()
+{
+
 }
 
 #if 0
@@ -443,6 +451,7 @@ void DisasmWidget2::breakpointsChangedSlot(uint64_t commandId)
 {
     // Cache data
     m_breakpoints = m_pTargetModel->GetBreakpoints();
+    CalcDisasm();
     update();
 //    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
 }
@@ -451,6 +460,7 @@ void DisasmWidget2::symbolTableChangedSlot(uint64_t commandId)
 {
     // Don't copy here, just force a re-read
 //    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
+    CalcDisasm();
     update();
 }
 
@@ -491,6 +501,7 @@ void DisasmWidget2::paintEvent(QPaintEvent* ev)
 
     int symbolCol = 1;
     int addressCol = 20;
+    int pcCol = 29;
     int disasmCol = 30;
     int commentsCol = 60;
     int char_width = info.horizontalAdvance("0");
@@ -503,19 +514,27 @@ void DisasmWidget2::paintEvent(QPaintEvent* ev)
         painter.drawRect(0, y_curs, char_width * 100, m_lineHeight);
     }
 
-    for (size_t row = 0; row < m_rowTexts.size(); ++row)
+    for (int row = 0; row < m_rowTexts.size(); ++row)
     {
-        painter.setPen(row == m_cursorRow ?
-                           pal.highlightedText().color() :
-                           pal.text().color());
+        if (row == m_cursorRow)
+            painter.setPen(pal.highlightedText().color());
+        else if (row == m_mouseRow)
+            painter.setPen(pal.dark().color());
+        else
+            painter.setPen(pal.text().color());
 
-        int y = y_base + row * m_lineHeight;       // compensate for descenders TODO use ascent()
+        int y = y_base + row * m_lineHeight;
         const RowText& t = m_rowTexts[row];
 
         painter.drawText(symbolCol * char_width, y, t.symbol);
         painter.drawText(addressCol * char_width, y, t.address);
         painter.drawText(disasmCol * char_width, y, t.disasm);
         painter.drawText(commentsCol * char_width, y, t.comments);
+
+        if (t.isPc)
+            painter.drawPixmap(pcCol * char_width, row * m_lineHeight,
+                               char_width, m_lineHeight,
+                               m_pcPixmap);
     }
 }
 
@@ -530,6 +549,26 @@ void DisasmWidget2::keyPressEvent(QKeyEvent* event)
     default: break;
     }
     QWidget::keyPressEvent(event);
+}
+
+void DisasmWidget2::mouseMoveEvent(QMouseEvent *event)
+{
+    m_mouseRow = event->localPos().y() / m_lineHeight;
+
+    if (this->underMouse())
+        update();
+
+    QWidget::mouseMoveEvent(event);
+}
+
+bool DisasmWidget2::event(QEvent* ev)
+{
+    if (ev->type() == QEvent::Leave) {
+        // overwrite handling of PolishRequest if any
+        m_mouseRow = -1;
+        update();
+    }
+    return QWidget::event(ev);
 }
 
 void DisasmWidget2::CalcDisasm()
@@ -592,9 +631,20 @@ void DisasmWidget2::CalcDisasm()
             ref << "  ";
         printEA(line.inst.op1, regs, line.address, refC);
 
+        // Breakpoint/PC
+        t.isPc = line.address == m_pTargetModel->GetPC();
+        t.isBreakpoint = false;
+        for (size_t i = 0; i < m_breakpoints.m_breakpoints.size(); ++i)
+        {
+            if (m_breakpoints.m_breakpoints[i].m_pcHack == line.address)
+            {
+                t.isBreakpoint = true;
+                break;
+            }
+        }
+
         m_rowTexts.push_back(t);
     }
-
 }
 
 void DisasmWidget2::CalcEAs()
@@ -704,12 +754,9 @@ void DisasmWidget2::printEA(const operand& op, const Registers& regs, uint32_t a
 //-----------------------------------------------------------------------------
 void DisasmWidget2::contextMenuEvent(QContextMenuEvent *event)
 {
-#if 0
-    QModelIndex index = this->indexAt(event->pos());
-    if (!index.isValid())
+    m_rightClickRow = event->y() / m_lineHeight;
+    if (m_rightClickRow < 0 || m_rightClickRow >= m_rowTexts.size())
         return;
-
-    m_rightClickRow = index.row();
 
     m_rightClickInstructionAddr = 0;
     bool vis = GetInstructionAddr(m_rightClickRow, m_rightClickInstructionAddr);
@@ -732,7 +779,6 @@ void DisasmWidget2::contextMenuEvent(QContextMenuEvent *event)
             m_pDisassembleAddress[op]->setVisible(false);
         }
     }
-#endif
     // Run it
     m_rightClickMenu.exec(event->globalPos());
 }
@@ -867,7 +913,6 @@ DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, D
     m_breakpointPixmap   = QPixmap(":/images/breakpoint10.png");
     m_breakpointPcPixmap = QPixmap(":/images/pcbreakpoint10.png");
     m_pcPixmap           = QPixmap(":/images/pc10.png");
-
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmTableModel::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &DisasmTableModel::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::breakpointsChangedSignal, this, &DisasmTableModel::breakpointsChangedSlot);
