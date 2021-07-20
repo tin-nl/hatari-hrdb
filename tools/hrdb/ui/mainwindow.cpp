@@ -31,9 +31,9 @@ MainWindow::MainWindow(QWidget *parent)
     m_pRunningSquare->setFixedSize(10, 25);
     m_pRunningSquare->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
     m_pStartStopButton = new QPushButton("Break", this);
-    m_pStepIntoButton = new QPushButton("&Step", this);
-    m_pStepOverButton = new QPushButton("&Next", this);
-    m_pRunToButton = new QPushButton("Run To:", this);
+    m_pStepIntoButton = new QPushButton("Step", this);
+    m_pStepOverButton = new QPushButton("Next", this);
+    m_pRunToButton = new QPushButton("Run Until:", this);
     m_pRunToCombo = new QComboBox(this);
     m_pRunToCombo->insertItem(0, "RTS");
     m_pRunToCombo->insertItem(1, "RTE");
@@ -126,6 +126,8 @@ MainWindow::MainWindow(QWidget *parent)
     new QShortcut(QKeySequence(tr("Ctrl+R", "Start/Stop")),         this, SLOT(startStopClicked()));
     new QShortcut(QKeySequence(tr("n",      "Next")),               this, SLOT(nextClicked()));
     new QShortcut(QKeySequence(tr("s",      "Step")),               this, SLOT(singleStepClicked()));
+    new QShortcut(QKeySequence(tr("Esc",    "Break")),              this, SLOT(breakPressed()));
+    new QShortcut(QKeySequence(tr("u",      "Run Until")),          this, SLOT(runToClicked()));
 
     // This should be an action
     new QShortcut(QKeySequence(tr("Alt+B",  "Add Breakpoint...")),  this, SLOT(addBreakpointPressed()));
@@ -202,7 +204,7 @@ void MainWindow::startStopDelayedSlot(int running)
     if (running)
     {
         m_pRegistersTextEdit->setEnabled(false);
-        m_pRegistersTextEdit->setText("Running, F5 to break...");
+        m_pRegistersTextEdit->setText("Running, Ctrl+R to break...");
     }
 }
 
@@ -307,6 +309,15 @@ void MainWindow::addBreakpointPressed()
 {
     AddBreakpointDialog dialog(this, m_pTargetModel, m_pDispatcher);
     dialog.exec();
+}
+
+void MainWindow::breakPressed()
+{
+    if (!m_pTargetModel->IsConnected())
+        return;
+
+    if (m_pTargetModel->IsRunning())
+        m_pDispatcher->SendCommandPacket("break");
 }
 
 // Actions

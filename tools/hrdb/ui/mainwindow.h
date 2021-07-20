@@ -52,8 +52,7 @@ private slots:
     void nextClicked();
     void runToClicked();
     void addBreakpointPressed();
-
-    void updateWindowMenu();
+    void breakPressed();
 
     // Menu item callbacks
     void menuConnect();
@@ -62,6 +61,7 @@ private slots:
     void about();
     void aboutQt();
 private:
+    void updateWindowMenu();
     // File Menu
     void Run();
     void Connect();
