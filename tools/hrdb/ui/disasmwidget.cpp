@@ -95,10 +95,8 @@ DisasmWidget2::DisasmWidget2(QObject *parent, TargetModel *pTargetModel, Dispatc
     connect(m_pDisassembleAddress[1],&QAction::triggered,                  this, &DisasmWidget2::disasmViewAddr1);
     setMouseTracking(true);
 
+    this->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
     repaint();
-
-    // This table gets the focus from the parent docking widget
-    //    setFocus();
 }
 
 DisasmWidget2::~DisasmWidget2()
@@ -495,31 +493,37 @@ void DisasmWidget2::paintEvent(QPaintEvent* ev)
         painter.setPen(QPen(pal.dark(), 6));
         painter.drawRect(this->rect());
     }
-
     painter.setFont(monoFont);
     QFontMetrics info(painter.fontMetrics());
 
     int symbolCol = 1;
     int addressCol = 20;
     int pcCol = 29;
-    int disasmCol = 30;
-    int commentsCol = 60;
+    int bpCol = 30;
+
+    int disasmCol = 32;
+    int commentsCol = 62;
     int char_width = info.horizontalAdvance("0");
     int y_base = info.ascent();
 
     {
+        if (m_mouseRow != -1)
+        {
+            painter.setPen(Qt::PenStyle::DashLine);
+            painter.setBrush(Qt::BrushStyle::NoBrush);
+            painter.drawRect(0, m_mouseRow * m_lineHeight, rect().width(), m_lineHeight);
+        }
+
         int y_curs = m_cursorRow * m_lineHeight;       // compensate for descenders TODO use ascent()
+        painter.setPen(Qt::PenStyle::NoPen);
         painter.setBrush(pal.highlight());
-        painter.setPen(QPen(pal.dark(), 1));
-        painter.drawRect(0, y_curs, char_width * 100, m_lineHeight);
+        painter.drawRect(0, y_curs, rect().width(), m_lineHeight);
     }
 
     for (int row = 0; row < m_rowTexts.size(); ++row)
     {
         if (row == m_cursorRow)
             painter.setPen(pal.highlightedText().color());
-        else if (row == m_mouseRow)
-            painter.setPen(pal.dark().color());
         else
             painter.setPen(pal.text().color());
 
@@ -532,9 +536,16 @@ void DisasmWidget2::paintEvent(QPaintEvent* ev)
         painter.drawText(commentsCol * char_width, y, t.comments);
 
         if (t.isPc)
-            painter.drawPixmap(pcCol * char_width, row * m_lineHeight,
-                               char_width, m_lineHeight,
-                               m_pcPixmap);
+        {
+            /*
+            painter.drawPixmap(pcCol * char_width,
+                               row * m_lineHeight + (m_lineHeight - m_pcPixmap.height()) / 2,
+                               m_pcPixmap);*/
+            painter.drawText(pcCol * char_width, y, ">");
+        }
+
+        if (t.isBreakpoint)
+            painter.drawText(bpCol * char_width, y, "*");
     }
 }
 
@@ -666,7 +677,7 @@ void DisasmWidget2::CalcEAs()
 void DisasmWidget2::ToggleBreakpoint(int row)
 {
     // set a breakpoint
-    if (row >= m_disasm.lines.size())
+    if (row < 0 || row >= m_disasm.lines.size())
         return;
 
     Disassembler::line& line = m_disasm.lines[row];
@@ -828,16 +839,14 @@ void DisasmWidget2::disasmViewAddr1()
 
 void DisasmWidget2::runToCursor()
 {
-    // How do we get the selected row?
-//    QModelIndex i = this->currentIndex();
-//    RunToRow(i.row());
+    if (m_cursorRow != -1)
+        RunToRow(m_cursorRow);
 }
 
 void DisasmWidget2::toggleBreakpoint()
 {
-    // How do we get the selected row
-//    QModelIndex i = this->currentIndex();
-//    m_pTableModel->ToggleBreakpoint(i.row());
+    if (m_cursorRow != -1)
+        ToggleBreakpoint(m_cursorRow);
 }
 
 #if 0
@@ -895,6 +904,7 @@ void DisasmWidget2::RecalcSizes()
     m_lineHeight = info.lineSpacing();
 }
 
+#if 0
 //-----------------------------------------------------------------------------
 DisasmTableModel::DisasmTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher, int windowIndex):
     QAbstractTableModel(parent),
@@ -1599,6 +1609,7 @@ void DisasmTableView::RecalcRowCount()
         m_pTableModel->SetRowCount(h / rowh);
 }
 
+#endif
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
@@ -1694,13 +1705,6 @@ void DisasmViewWidget::keyFocus()
 {
     activateWindow();
     m_pWidget->setFocus();
-}
-
-void DisasmViewWidget::cellClickedSlot(const QModelIndex &index)
-{
-    if (index.column() != DisasmTableModel::kColBreakpoint)
-        return;
-    m_pWidget->ToggleBreakpoint(index.row());
 }
 
 void DisasmViewWidget::keyDownPressed()

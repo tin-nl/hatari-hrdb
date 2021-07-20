@@ -32,9 +32,6 @@ public:
     DisasmWidget2(QObject * parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher, int windowIndex);
     virtual ~DisasmWidget2();
 
-    void runToCursor();
-    void toggleBreakpoint();
-
     // "The model emits signals to indicate changes. For example, dataChanged() is emitted whenever items of data made available by the model are changed"
     // So I expect we can emit that if we see the target has changed
 
@@ -65,6 +62,9 @@ private slots:
     void breakpointsChangedSlot(uint64_t commandId);
     void symbolTableChangedSlot(uint64_t commandId);
     void otherMemoryChangedSlot(uint32_t address, uint32_t size);
+
+    void runToCursor();
+    void toggleBreakpoint();
 
 private:
     virtual void paintEvent(QPaintEvent* ev) override;
@@ -166,6 +166,7 @@ private:
     QFont                 monoFont;
 };
 
+#if 0
 class DisasmTableModel : public QAbstractTableModel
 {
     Q_OBJECT
@@ -308,6 +309,7 @@ private:
     uint32_t              m_rightClickInstructionAddr;
     uint32_t              m_rightClickAddr[2];
 };
+#endif
 
 class DisasmViewWidget : public QDockWidget
 {
@@ -325,8 +327,6 @@ public slots:
 protected:
 
 protected slots:
-    void cellClickedSlot(const QModelIndex& index);
-
     void keyDownPressed();
     void keyUpPressed();
     void keyPageDownPressed();

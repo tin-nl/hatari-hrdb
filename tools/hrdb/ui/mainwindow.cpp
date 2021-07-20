@@ -136,6 +136,8 @@ MainWindow::MainWindow(QWidget *parent)
     // Update everything
     connectChangedSlot();
     startStopChangedSlot();
+
+    m_pDisasmWidget0->keyFocus();
 }
 
 MainWindow::~MainWindow()
