@@ -45,7 +45,7 @@ DisasmWidget2::DisasmWidget2(QWidget *parent, TargetModel *pTargetModel, Dispatc
     SetRowCount(8);
     setMinimumSize(0, 10 * m_lineHeight);
 
-    m_memSlot = (MemorySlot)(windowIndex + MemorySlot::kDisasm0);
+    m_memSlot = static_cast<MemorySlot>(windowIndex + MemorySlot::kDisasm0);
 
     m_breakpointPixmap   = QPixmap(":/images/breakpoint10.png");
     m_breakpointPcPixmap = QPixmap(":/images/pcbreakpoint10.png");
@@ -426,16 +426,15 @@ void DisasmWidget2::memoryChangedSlot(int memorySlot, uint64_t commandId)
     update();
 }
 
-void DisasmWidget2::breakpointsChangedSlot(uint64_t commandId)
+void DisasmWidget2::breakpointsChangedSlot(uint64_t /*commandId*/)
 {
     // Cache data
     m_breakpoints = m_pTargetModel->GetBreakpoints();
     CalcDisasm();
     update();
-//    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
 }
 
-void DisasmWidget2::symbolTableChangedSlot(uint64_t commandId)
+void DisasmWidget2::symbolTableChangedSlot(uint64_t /*commandId*/)
 {
     // Don't copy here, just force a re-read
 //    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
@@ -538,17 +537,17 @@ void DisasmWidget2::keyPressEvent(QKeyEvent* event)
 
 void DisasmWidget2::mouseMoveEvent(QMouseEvent *event)
 {
-    m_mouseRow = event->localPos().y() / m_lineHeight;
-
+    m_mouseRow = int(event->localPos().y() / m_lineHeight);
     if (this->underMouse())
-        update();
+        update();       // redraw highlight
 
     QWidget::mouseMoveEvent(event);
 }
 
 bool DisasmWidget2::event(QEvent* ev)
 {
-    if (ev->type() == QEvent::Leave) {
+    if (ev->type() == QEvent::Leave)
+    {
         // overwrite handling of PolishRequest if any
         m_mouseRow = -1;
         update();
@@ -1633,7 +1632,7 @@ DisasmViewWidget::DisasmViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     QFontMetrics fm(monoFont);
 
     // This is across the top
-    int charWidth = fm.width("W");
+    //int charWidth = fm.width("W");
     //m_pTableView->horizontalHeader()->setMinimumSectionSize(12);
     //m_pTableView->setColumnWidth(DisasmTableModel::kColSymbol, charWidth * 15);
     //m_pTableView->setColumnWidth(DisasmTableModel::kColAddress, charWidth * 12);      // Mac needs most

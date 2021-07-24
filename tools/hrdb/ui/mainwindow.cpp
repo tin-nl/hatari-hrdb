@@ -211,13 +211,13 @@ void MainWindow::startStopDelayedSlot(int running)
     }
 }
 
-void MainWindow::registersChangedSlot(uint64_t commandId)
+void MainWindow::registersChangedSlot(uint64_t /*commandId*/)
 {
 	// Update text here
     PopulateRegisters();
 }
 
-void MainWindow::memoryChangedSlot(int slot, uint64_t commandId)
+void MainWindow::memoryChangedSlot(int slot, uint64_t /*commandId*/)
 {
     if (slot != MemorySlot::kMainPC)
         return;
@@ -234,7 +234,7 @@ void MainWindow::memoryChangedSlot(int slot, uint64_t commandId)
     PopulateRegisters();
 }
 
-void MainWindow::symbolTableChangedSlot(uint64_t commandId)
+void MainWindow::symbolTableChangedSlot(uint64_t /*commandId*/)
 {
     PopulateRegisters();
 }
@@ -244,7 +244,7 @@ void MainWindow::startStopClicked()
     if (!m_pTargetModel->IsConnected())
         return;
 
-	if (m_pTargetModel->IsRunning())
+    if (m_pTargetModel->IsRunning())
         m_pDispatcher->SendCommandPacket("break");
 	else
         m_pDispatcher->SendCommandPacket("run");
@@ -410,7 +410,7 @@ void MainWindow::PopulateRegisters()
 	ref << DispSR(m_prevRegs, regs, 1, "V");
 	ref << DispSR(m_prevRegs, regs, 0, "C");
 
-    uint16_t ex = (uint16_t)GET_REG(regs, EX);
+    uint32_t ex = GET_REG(regs, EX);
     if (ex != 0)
         ref << "<br>" << "EXCEPTION: " << ExceptionMask::GetName(ex);
 
@@ -625,12 +625,8 @@ void MainWindow::enableVis(QWidget* pWidget)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (true) {
-        writeSettings();
-        event->accept();
-    } else{
-        event->ignore();
-    }
+    writeSettings();
+    event->accept();
 }
 
 void MainWindow::readSettings()
