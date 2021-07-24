@@ -631,25 +631,25 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::readSettings()
 {
+    //https://doc.qt.io/qt-5/qsettings.html#details
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     settings.setDefaultFormat(QSettings::Format::IniFormat);
 
-    const QByteArray geometry = settings.value("geometry", QByteArray()).toByteArray();
-    if (geometry.isEmpty()) {
-        QWindow wid;
-        const QRect availableGeometry = wid.screen()->availableGeometry();
-        resize(availableGeometry.width() / 3, availableGeometry.height() / 2);
-        move((availableGeometry.width() - width()) / 2,
-             (availableGeometry.height() - height()) / 2);
-    } else {
-        restoreGeometry(geometry);
-    }
+    settings.beginGroup("MainWindow");
+    restoreGeometry(settings.value("geometry").toByteArray());
+    restoreState(settings.value("windowState").toByteArray());
 
-
+    m_pRunToCombo->setCurrentIndex(settings.value("runto", QVariant(0)).toInt());
+    settings.endGroup();
 }
 
 void MainWindow::writeSettings()
 {
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    settings.beginGroup("MainWindow");
     settings.setValue("geometry", saveGeometry());
+    settings.setValue("windowState", saveState());
+
+    settings.setValue("runto", m_pRunToCombo->currentIndex());
+    settings.endGroup();
 }
