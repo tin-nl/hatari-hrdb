@@ -21,7 +21,8 @@
 
 
 
-DisasmWidget2::DisasmWidget2(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher, int windowIndex):
+DisasmWidget2::DisasmWidget2(QWidget *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher, int windowIndex):
+    QWidget(parent),
     m_memory(0, 0),
     m_rowCount(25),
     m_requestedAddress(0),
@@ -31,6 +32,7 @@ DisasmWidget2::DisasmWidget2(QObject *parent, TargetModel *pTargetModel, Dispatc
     m_windowIndex(windowIndex),
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher),
+    m_bShowHex(true),
     m_rightClickMenu(this),
     m_rightClickRow(-1),
     m_rightClickInstructionAddr(0),
@@ -84,7 +86,7 @@ DisasmWidget2::DisasmWidget2(QObject *parent, TargetModel *pTargetModel, Dispatc
     connect(m_pTargetModel, &TargetModel::breakpointsChangedSignal, this, &DisasmWidget2::breakpointsChangedSlot);
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &DisasmWidget2::symbolTableChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal, this, &DisasmWidget2::connectChangedSlot);
-    connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &DisasmWidget2::CalcEAs);
+    connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &DisasmWidget2::CalcOpAddresses);
     connect(m_pTargetModel, &TargetModel::otherMemoryChanged,       this, &DisasmWidget2::otherMemoryChangedSlot);
 
     // UI connects
@@ -500,11 +502,12 @@ void DisasmWidget2::paintEvent(QPaintEvent* ev)
         int y = y_base + row * m_lineHeight;
         const RowText& t = m_rowTexts[row];
 
-        painter.drawText(symbolCol * char_width, y, t.symbol);
-        painter.drawText(addressCol * char_width, y, t.address);
-        painter.drawText(hexCol * char_width, y, t.hex);
-        painter.drawText(disasmCol * char_width, y, t.disasm);
-        painter.drawText(commentsCol * char_width, y, t.comments);
+        painter.drawText(m_symbolCol * char_width, y, t.symbol);
+        painter.drawText(m_addressCol * char_width, y, t.address);
+        if (m_bShowHex)
+            painter.drawText(m_hexCol * char_width, y, t.hex);
+        painter.drawText(m_disasmCol * char_width, y, t.disasm);
+        painter.drawText(m_commentsCol * char_width, y, t.comments);
 
         if (t.isPc)
         {
@@ -512,11 +515,11 @@ void DisasmWidget2::paintEvent(QPaintEvent* ev)
             painter.drawPixmap(pcCol * char_width,
                                row * m_lineHeight + (m_lineHeight - m_pcPixmap.height()) / 2,
                                m_pcPixmap);*/
-            painter.drawText(pcCol * char_width, y, ">");
+            painter.drawText(m_pcCol * char_width, y, ">");
         }
 
         if (t.isBreakpoint)
-            painter.drawText(bpCol * char_width, y, "*");
+            painter.drawText(m_bpCol * char_width, y, "*");
     }
 }
 
@@ -567,7 +570,7 @@ void DisasmWidget2::CalcDisasm()
     buffer_reader disasmBuf(m_memory.GetData() + offset, size);
     m_disasm.lines.clear();
     Disassembler::decode_buf(disasmBuf, m_disasm, m_logicalAddr, m_rowCount);
-    CalcEAs();
+    CalcOpAddresses();
 
     // Recalc Text (which depends on e.g. symbols
     m_rowTexts.clear();
@@ -633,7 +636,7 @@ void DisasmWidget2::CalcDisasm()
     }
 }
 
-void DisasmWidget2::CalcEAs()
+void DisasmWidget2::CalcOpAddresses()
 {
     // Precalc EAs
     m_opAddresses.clear();
@@ -709,9 +712,17 @@ void DisasmWidget2::SetRowCount(int count)
     }
 }
 
+void DisasmWidget2::SetShowHex(bool show)
+{
+    m_bShowHex = show;
+    RecalcColums();
+    update();
+}
+
 void DisasmWidget2::SetFollowPC(bool bFollow)
 {
     m_bFollowPC = bFollow;
+    update();
 }
 
 
@@ -881,13 +892,13 @@ void DisasmWidget2::GetLineHeight()
 
 void DisasmWidget2::RecalcColums()
 {
-    symbolCol = 1;
-    addressCol = symbolCol + 19;
-    pcCol = addressCol + 9;
-    bpCol = pcCol + 1;
-    hexCol = bpCol + 2;
-    disasmCol = hexCol + 10 * 2 + 1; // max size 10 bytes (opcode + 2 longs)
-    commentsCol = disasmCol + 40;
+    m_symbolCol = 1;
+    m_addressCol = m_symbolCol + 19;
+    m_pcCol = m_addressCol + 9;
+    m_bpCol = m_pcCol + 1;
+    m_hexCol = m_bpCol + 2;
+    m_disasmCol = m_bShowHex ? m_hexCol + 10 * 2 + 1 : m_hexCol; // max size 10 bytes (opcode + 2 longs)
+    m_commentsCol = m_disasmCol + 40;
 }
 
 #if 0
@@ -1610,6 +1621,9 @@ DisasmViewWidget::DisasmViewWidget(QWidget *parent, TargetModel* pTargetModel, D
 
     // Top group box
     m_pLineEdit = new QLineEdit(this);
+    m_pShowHex = new QCheckBox("Show hex", this);
+    m_pShowHex->setTristate(false);
+    m_pShowHex->setChecked(m_pWidget->GetShowHex());
     m_pFollowPC = new QCheckBox("Follow PC", this);
     m_pFollowPC->setTristate(false);
     m_pFollowPC->setChecked(m_pWidget->GetFollowPC());
@@ -1645,6 +1659,7 @@ DisasmViewWidget::DisasmViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     //pMainGroupBox->setFlat(true);
 
     pTopLayout->addWidget(m_pLineEdit);
+    pTopLayout->addWidget(m_pShowHex);
     pTopLayout->addWidget(m_pFollowPC);
 
     pMainLayout->addWidget(pTopRegion);
@@ -1667,6 +1682,7 @@ DisasmViewWidget::DisasmViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     connect(m_pLineEdit,    &QLineEdit::returnPressed,            this, &DisasmViewWidget::returnPressedSlot);
     connect(m_pLineEdit,    &QLineEdit::textEdited,               this, &DisasmViewWidget::textChangedSlot);
     connect(m_pFollowPC,    &QCheckBox::clicked,                  this, &DisasmViewWidget::followPCClickedSlot);
+    connect(m_pShowHex,     &QCheckBox::clicked,                  this, &DisasmViewWidget::showHexClickedSlot);
 
     this->resizeEvent(nullptr);
 }
@@ -1734,6 +1750,11 @@ void DisasmViewWidget::textChangedSlot()
     pal.setColor(QPalette::Base, col);
     m_pLineEdit-> setAutoFillBackground(true);
     m_pLineEdit->setPalette(pal);
+}
+
+void DisasmViewWidget::showHexClickedSlot()
+{
+    m_pWidget->SetShowHex(m_pShowHex->isChecked());
 }
 
 void DisasmViewWidget::followPCClickedSlot()
