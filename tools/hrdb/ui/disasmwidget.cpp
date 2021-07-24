@@ -37,7 +37,8 @@ DisasmWidget2::DisasmWidget2(QObject *parent, TargetModel *pTargetModel, Dispatc
     m_cursorRow(0),
     m_mouseRow(-1)
 {
-    RecalcSizes();
+    RecalcColums();
+    GetLineHeight();
 
     SetRowCount(8);
     setMinimumSize(0, 10 * m_lineHeight);
@@ -47,14 +48,6 @@ DisasmWidget2::DisasmWidget2(QObject *parent, TargetModel *pTargetModel, Dispatc
     m_breakpointPixmap   = QPixmap(":/images/breakpoint10.png");
     m_breakpointPcPixmap = QPixmap(":/images/pcbreakpoint10.png");
     m_pcPixmap           = QPixmap(":/images/pc10.png");
-
-    connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmWidget2::startStopChangedSlot);
-    connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &DisasmWidget2::memoryChangedSlot);
-    connect(m_pTargetModel, &TargetModel::breakpointsChangedSignal, this, &DisasmWidget2::breakpointsChangedSlot);
-    connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &DisasmWidget2::symbolTableChangedSlot);
-    connect(m_pTargetModel, &TargetModel::connectChangedSignal, this, &DisasmWidget2::connectChangedSlot);
-    connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &DisasmWidget2::CalcEAs);
-    connect(m_pTargetModel, &TargetModel::otherMemoryChanged,       this, &DisasmWidget2::otherMemoryChangedSlot);
 
     // Actions for right-click menu
     m_pRunUntilAction = new QAction(tr("Run to here"), this);
@@ -85,6 +78,16 @@ DisasmWidget2::DisasmWidget2(QObject *parent, TargetModel *pTargetModel, Dispatc
     new QShortcut(QKeySequence(tr("F3",     "Run to cursor")),        this, SLOT(runToCursor()));
     new QShortcut(QKeySequence(tr("Ctrl+B", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
 
+    // Target connects
+    connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &DisasmWidget2::startStopChangedSlot);
+    connect(m_pTargetModel, &TargetModel::memoryChangedSignal, this, &DisasmWidget2::memoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::breakpointsChangedSignal, this, &DisasmWidget2::breakpointsChangedSlot);
+    connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &DisasmWidget2::symbolTableChangedSlot);
+    connect(m_pTargetModel, &TargetModel::connectChangedSignal, this, &DisasmWidget2::connectChangedSlot);
+    connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &DisasmWidget2::CalcEAs);
+    connect(m_pTargetModel, &TargetModel::otherMemoryChanged,       this, &DisasmWidget2::otherMemoryChangedSlot);
+
+    // UI connects
     connect(m_pRunUntilAction,       &QAction::triggered,                  this, &DisasmWidget2::runToCursorRightClick);
     connect(m_pBreakpointAction,     &QAction::triggered,                  this, &DisasmWidget2::toggleBreakpointRightClick);
     connect(m_pNopAction,            &QAction::triggered,                  this, &DisasmWidget2::nopRightClick);
@@ -197,29 +200,6 @@ QVariant DisasmWidget2::data(const QModelIndex &index, int role) const
     return QVariant(); // invalid item
 }
 
-QVariant DisasmWidget2::headerData(int section, Qt::Orientation orientation, int role) const
-{
-    if (orientation == Qt::Orientation::Horizontal)
-    {
-        if (role == Qt::DisplayRole)
-        {
-            switch (section)
-            {
-            case kColSymbol: return QString("Symbol");
-            case kColAddress: return QString("Address");
-            case kColBreakpoint: return QString("");    // Too narrow
-            case kColHex: return QString("Hex");    // Too narrow
-            case kColDisasm: return QString("Disassembly");
-            case kColComments: return QString("");
-            }
-        }
-        if (role == Qt::TextAlignmentRole)
-        {
-            return Qt::AlignLeft;
-        }
-    }
-    return QVariant();
-}
 #endif
 
 void DisasmWidget2::SetAddress(uint32_t addr)
@@ -442,7 +422,6 @@ void DisasmWidget2::memoryChangedSlot(int memorySlot, uint64_t commandId)
     // Clear the request, to say we are up to date
     m_requestId = 0;
     update();
-//    emit dataChanged(this->createIndex(0, 0), this->createIndex(m_rowCount - 1, kColCount));
 }
 
 void DisasmWidget2::breakpointsChangedSlot(uint64_t commandId)
@@ -494,13 +473,6 @@ void DisasmWidget2::paintEvent(QPaintEvent* ev)
     if (m_disasm.lines.size() == 0)
         return;
 
-    int symbolCol = 1;
-    int addressCol = 20;
-    int pcCol = 29;
-    int bpCol = 30;
-
-    int disasmCol = 32;
-    int commentsCol = 62;
     int char_width = info.horizontalAdvance("0");
     int y_base = info.ascent();
 
@@ -530,6 +502,7 @@ void DisasmWidget2::paintEvent(QPaintEvent* ev)
 
         painter.drawText(symbolCol * char_width, y, t.symbol);
         painter.drawText(addressCol * char_width, y, t.address);
+        painter.drawText(hexCol * char_width, y, t.hex);
         painter.drawText(disasmCol * char_width, y, t.disasm);
         painter.drawText(commentsCol * char_width, y, t.comments);
 
@@ -626,6 +599,10 @@ void DisasmWidget2::CalcDisasm()
             if (m_pTargetModel->GetSymbolTable().Find(addr, sym))
                 t.symbol = QString::fromStdString(sym.name) + ":";
         }
+
+        // Hex
+        for (uint32_t i = 0; i < line.inst.byte_count; ++i)
+            t.hex += QString::asprintf("%02x", line.mem[i]);
 
         // Disassembly
         QTextStream ref(&t.disasm);
@@ -882,7 +859,7 @@ QModelIndex DisasmWidget2::moveCursor(QAbstractItemView::CursorAction cursorActi
 }
 #endif
 
-void DisasmWidget2::resizeEvent(QResizeEvent* event)
+void DisasmWidget2::resizeEvent(QResizeEvent* )
 {
     RecalcRowCount();
 }
@@ -895,11 +872,22 @@ void DisasmWidget2::RecalcRowCount()
         SetRowCount(h / rowh);
 }
 
-void DisasmWidget2::RecalcSizes()
+void DisasmWidget2::GetLineHeight()
 {
     monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     QFontMetrics info(monoFont);
     m_lineHeight = info.lineSpacing();
+}
+
+void DisasmWidget2::RecalcColums()
+{
+    symbolCol = 1;
+    addressCol = symbolCol + 19;
+    pcCol = addressCol + 9;
+    bpCol = pcCol + 1;
+    hexCol = bpCol + 2;
+    disasmCol = hexCol + 10 * 2 + 1; // max size 10 bytes (opcode + 2 longs)
+    commentsCol = disasmCol + 40;
 }
 
 #if 0

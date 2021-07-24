@@ -17,18 +17,6 @@ class DisasmWidget2 : public QWidget
 {
     Q_OBJECT
 public:
-    enum Column
-    {
-        kColSymbol,
-        kColAddress,
-        kColBreakpoint,
-        kColHex,
-        kColDisasm,
-        kColComments,
-
-        kColCount
-    };
-
     DisasmWidget2(QObject * parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher, int windowIndex);
     virtual ~DisasmWidget2();
 
@@ -136,7 +124,8 @@ private:
     void disasmViewAddr0();
     void disasmViewAddr1();
     void RecalcRowCount();
-    void RecalcSizes();
+    void GetLineHeight();
+    void RecalcColums();
 
     TargetModel*          m_pTargetModel;   // for inter-window
     Dispatcher*           m_pDispatcher;
@@ -148,6 +137,15 @@ private:
 
     QAction*              m_pMemViewAddress[3];
     QAction*              m_pDisassembleAddress[2];
+
+    // Column layout
+    int                   symbolCol;
+    int                   addressCol;
+    int                   pcCol;
+    int                   bpCol;
+    int                   hexCol;
+    int                   disasmCol;
+    int                   commentsCol;
 
     QMenu                 m_rightClickMenu;
 
