@@ -12,6 +12,7 @@
 #include <QCompleter>
 #include <QPainter>
 #include <QKeyEvent>
+#include <QSettings>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -641,6 +642,8 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     m_windowIndex(windowIndex)
 {
     this->setWindowTitle(QString::asprintf("Memory %d", windowIndex + 1));
+    QString key = QString::asprintf("MemoryView%d", m_windowIndex);
+    setObjectName(key);
 
     // Make the data first
     m_pMemoryWidget = new MemoryWidget(this, pTargetModel, pDispatcher, windowIndex);
@@ -678,6 +681,8 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     pMainRegion->setLayout(pMainLayout);
     setWidget(pMainRegion);
 
+    loadSettings();
+
     // Listen for start/stop, so we can update our memory request
     connect(m_pLineEdit, &QLineEdit::returnPressed,         this, &MemoryViewWidget::textEditChangedSlot);
     connect(m_pLockCheckBox, &QCheckBox::stateChanged,      this, &MemoryViewWidget::lockChangedSlot);
@@ -688,6 +693,31 @@ void MemoryViewWidget::keyFocus()
 {
     activateWindow();
     m_pMemoryWidget->setFocus();
+}
+
+
+void MemoryViewWidget::loadSettings()
+{
+    QSettings settings;
+    QString key = QString::asprintf("MemoryView%d", m_windowIndex);
+    settings.beginGroup(key);
+
+    restoreGeometry(settings.value("geometry").toByteArray());
+    int mode = settings.value("mode", QVariant(0)).toInt();
+    m_pMemoryWidget->SetMode(static_cast<MemoryWidget::Mode>(mode));
+    m_pComboBox->setCurrentIndex(m_pMemoryWidget->GetMode());
+    settings.endGroup();
+}
+
+void MemoryViewWidget::saveSettings()
+{
+    QSettings settings;
+    QString key = QString::asprintf("MemoryView%d", m_windowIndex);
+    settings.beginGroup(key);
+
+    settings.setValue("geometry", saveGeometry());
+    settings.setValue("mode", static_cast<int>(m_pMemoryWidget->GetMode()));
+    settings.endGroup();
 }
 
 void MemoryViewWidget::requestAddress(int windowIndex, bool isMemory, uint32_t address)

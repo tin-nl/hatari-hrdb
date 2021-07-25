@@ -12,6 +12,7 @@
 #include <QCheckBox>
 #include <QCompleter>
 #include <QPainter>
+#include <QSettings>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -1615,6 +1616,9 @@ DisasmViewWidget::DisasmViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     m_pDispatcher(pDispatcher),
     m_windowIndex(windowIndex)
 {
+    QString key = QString::asprintf("DisasmView%d", m_windowIndex);
+    setObjectName(key);
+
     m_pWidget = new DisasmWidget2(this, pTargetModel, pDispatcher, windowIndex);
     m_pWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
 
@@ -1675,6 +1679,10 @@ DisasmViewWidget::DisasmViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     pCompl->setCaseSensitivity(Qt::CaseSensitivity::CaseInsensitive);
     m_pLineEdit->setCompleter(pCompl);
 
+
+    // Now that everything is set up we can load the setings
+    loadSettings();
+
     // Listen for start/stop, so we can update our memory request
 //    connect(m_pWidget,      &DisasmWidget2::clicked,              this, &DisasmWidget::cellClickedSlot);
     connect(m_pWidget,      &DisasmWidget2::addressChanged,       this, &DisasmViewWidget::UpdateTextBox);
@@ -1704,6 +1712,37 @@ void DisasmViewWidget::keyFocus()
 {
     activateWindow();
     m_pWidget->setFocus();
+}
+
+#include <QDebug>
+void DisasmViewWidget::loadSettings()
+{
+    QSettings settings;
+    QString key = QString::asprintf("DisasmView%d", m_windowIndex);
+    settings.beginGroup(key);
+
+    qDebug() << this->objectName() << "/" << this->rect().x();
+
+    //restoreGeometry(settings.value("geometry").toByteArray());
+    //setVisiHidden(settings.value("hidden", QVariant(true)).toBool());
+    m_pWidget->SetShowHex(settings.value("showHex", QVariant(true)).toBool());
+    m_pWidget->SetFollowPC(settings.value("followPC", QVariant(true)).toBool());
+    m_pShowHex->setChecked(m_pWidget->GetShowHex());
+    m_pFollowPC->setChecked(m_pWidget->GetFollowPC());
+    settings.endGroup();
+}
+
+void DisasmViewWidget::saveSettings()
+{
+    QSettings settings;
+    QString key = QString::asprintf("DisasmView%d", m_windowIndex);
+    settings.beginGroup(key);
+
+    //settings.setValue("geometry", saveGeometry());
+    //settings.setValue("hidden", isHidden());
+    settings.setValue("showHex", m_pWidget->GetShowHex());
+    settings.setValue("followPC", m_pWidget->GetFollowPC());
+    settings.endGroup();
 }
 
 void DisasmViewWidget::keyDownPressed()

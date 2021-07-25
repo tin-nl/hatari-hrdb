@@ -22,6 +22,8 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , tcpSocket(new QTcpSocket(this))
 {
+    setObjectName("MainWindow");
+
     // Create the core data models, since other object want to connect to them.
     m_pTargetModel = new TargetModel();
     m_pDispatcher = new Dispatcher(tcpSocket, m_pTargetModel);
@@ -64,10 +66,6 @@ MainWindow::MainWindow(QWidget *parent)
     m_pBreakpointsWidget->setWindowTitle("Breakpoints (Alt+B)");
     m_pExceptionDialog = new ExceptionDialog(this, m_pTargetModel, m_pDispatcher);
     m_pRunDialog = new RunDialog(this, m_pTargetModel, m_pDispatcher);
-
-    // Set up menus
-    createActions();
-    createMenus();
 
     // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
     QVBoxLayout *vlayout = new QVBoxLayout;
@@ -491,6 +489,47 @@ void MainWindow::updateButtonEnable()
     exceptionsAct->setEnabled(isConnected);
 }
 
+
+void MainWindow::loadSettings()
+{
+    //https://doc.qt.io/qt-5/qsettings.html#details
+    QSettings settings;
+
+    settings.beginGroup("MainWindow");
+    restoreGeometry(settings.value("geometry").toByteArray());
+    if(!restoreState(settings.value("windowState").toByteArray()))
+    {
+        // Default docking status
+        //m_pDisasmWidget0->setVisible(true);
+        //m_pDisasmWidget1->setVisible(false);
+        //m_pMemoryViewWidget0->setVisible(true);
+        //m_pMemoryViewWidget1->setVisible(false);
+        m_pGraphicsInspector->setVisible(true);
+        m_pBreakpointsWidget->setVisible(true);
+    }
+
+    m_pRunToCombo->setCurrentIndex(settings.value("runto", QVariant(0)).toInt());
+    settings.endGroup();
+}
+
+void MainWindow::saveSettings()
+{
+    // enclose in scope so it's saved before widgets are saved
+    {
+        QSettings settings;
+        settings.beginGroup("MainWindow");
+        settings.setValue("geometry", saveGeometry());
+        settings.setValue("windowState", saveState());
+        settings.setValue("runto", m_pRunToCombo->currentIndex());
+        settings.endGroup();
+    }
+
+    //m_pDisasmWidget0->saveSettings();
+    //m_pDisasmWidget1->saveSettings();
+    //m_pMemoryViewWidget0->saveSettings();
+    //m_pMemoryViewWidget1->saveSettings();
+}
+
 void MainWindow::menuConnect()
 {
     Connect();
@@ -620,36 +659,11 @@ void MainWindow::createMenus()
 void MainWindow::enableVis(QWidget* pWidget)
 {
     // This used to be a toggle
-    pWidget->show();
+    pWidget->setVisible(true);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    writeSettings();
+    saveSettings();
     event->accept();
-}
-
-void MainWindow::readSettings()
-{
-    //https://doc.qt.io/qt-5/qsettings.html#details
-    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
-    settings.setDefaultFormat(QSettings::Format::IniFormat);
-
-    settings.beginGroup("MainWindow");
-    restoreGeometry(settings.value("geometry").toByteArray());
-    restoreState(settings.value("windowState").toByteArray());
-
-    m_pRunToCombo->setCurrentIndex(settings.value("runto", QVariant(0)).toInt());
-    settings.endGroup();
-}
-
-void MainWindow::writeSettings()
-{
-    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
-    settings.beginGroup("MainWindow");
-    settings.setValue("geometry", saveGeometry());
-    settings.setValue("windowState", saveState());
-
-    settings.setValue("runto", m_pRunToCombo->currentIndex());
-    settings.endGroup();
 }

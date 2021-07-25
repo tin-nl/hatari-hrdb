@@ -12,6 +12,7 @@ class TargetModel;
 class Dispatcher;
 class QCheckBox;
 class QPaintEvent;
+class QSettings;
 
 class DisasmWidget2 : public QWidget
 {
@@ -317,6 +318,9 @@ public:
 
     // Grab focus and point to the main widget
     void keyFocus();
+
+    void loadSettings();
+    void saveSettings();
 
 public slots:
     void requestAddress(int windowIndex, bool isMemory, uint32_t address);

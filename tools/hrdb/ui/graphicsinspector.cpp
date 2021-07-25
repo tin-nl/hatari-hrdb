@@ -82,7 +82,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_requestIdBitmap(0U),
     m_requestIdPalette(0U)
 {
-    QString name("Graphics Inspector");
+    QString name("GraphicsInspector");
     this->setObjectName(name);
     this->setWindowTitle(name);
     this->setFocusPolicy(Qt::FocusPolicy::StrongFocus);

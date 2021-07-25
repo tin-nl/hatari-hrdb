@@ -194,6 +194,7 @@ BreakpointsWidget::BreakpointsWidget(QWidget *parent, TargetModel* pTargetModel,
     m_pDispatcher(pDispatcher)
 {
     this->setWindowTitle("Breakpoints");
+    setObjectName("BreakpointsWidget");
 
     // Make the data first
     pModel = new BreakpointsTableModel(this, pTargetModel, pDispatcher);
