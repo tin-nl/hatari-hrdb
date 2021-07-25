@@ -348,7 +348,7 @@ private:
     QCheckBox*      m_pFollowPC;
 //    QTableView*     m_pTableView;
 //    DisasmTableModel* m_pTableModel;
-    DisasmWidget2*  m_pWidget;
+    DisasmWidget2*  m_pDisasmWidget;
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
     QAbstractItemModel* m_pSymbolTableModel;

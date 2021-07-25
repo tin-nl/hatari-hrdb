@@ -521,17 +521,11 @@ void MainWindow::loadSettings()
         QDockWidget** pCurr = wlist;
         while (*pCurr)
         {
-            qDebug() << (*pCurr)->objectName() << (*pCurr)->pos().x() << (*pCurr)->pos().y()
-                     << (*pCurr)->size().width() << (*pCurr)->size().height()
-                     << (*pCurr)->isVisible() << (*pCurr)->isHidden()
-                     << (*pCurr)->isFloating();
-
             // Fix for docking system: for some reason, we need to manually
             // activate floating docking windows for them to appear
             if ((*pCurr)->isFloating())
             {
                 (*pCurr)->activateWindow();
-                //(*pCurr)->raise();
             }
             ++pCurr;
         }
@@ -551,24 +545,6 @@ void MainWindow::saveSettings()
         settings.setValue("windowState", saveState());
         settings.setValue("runto", m_pRunToCombo->currentIndex());
         settings.endGroup();
-    }
-
-
-    QDockWidget* wlist[] =
-    {
-        m_pDisasmWidget0, m_pDisasmWidget1,
-        m_pMemoryViewWidget0, m_pMemoryViewWidget1,
-        m_pBreakpointsWidget, m_pGraphicsInspector,
-        nullptr
-    };
-    QDockWidget** pCurr = wlist;
-    while (*pCurr)
-    {
-        qDebug() << (*pCurr)->objectName() << (*pCurr)->pos().x() << (*pCurr)->pos().y()
-                 << (*pCurr)->size().width() << (*pCurr)->size().height()
-                 << (*pCurr)->isVisible() << (*pCurr)->isHidden()
-                 << (*pCurr)->isFloating();
-        ++pCurr;
     }
 
     m_pDisasmWidget0->saveSettings();
