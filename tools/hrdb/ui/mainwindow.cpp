@@ -97,11 +97,12 @@ MainWindow::MainWindow(QWidget *parent)
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWidget1);
     this->addDockWidget(Qt::LeftDockWidgetArea, m_pGraphicsInspector);
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pBreakpointsWidget);
-    m_pMemoryViewWidget1->hide();
-    m_pDisasmWidget1->hide();
-    m_pBreakpointsWidget->hide();
 
-    readSettings();
+    loadSettings();
+
+    // Set up menus (reflecting current state)
+    createActions();
+    createMenus();
 
     // Listen for target changes
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
@@ -140,7 +141,7 @@ MainWindow::MainWindow(QWidget *parent)
     connectChangedSlot();
     startStopChangedSlot();
 
-    m_pDisasmWidget0->keyFocus();
+//    m_pDisasmWidget0->keyFocus();
 }
 
 MainWindow::~MainWindow()
@@ -500,12 +501,40 @@ void MainWindow::loadSettings()
     if(!restoreState(settings.value("windowState").toByteArray()))
     {
         // Default docking status
-        //m_pDisasmWidget0->setVisible(true);
-        //m_pDisasmWidget1->setVisible(false);
-        //m_pMemoryViewWidget0->setVisible(true);
-        //m_pMemoryViewWidget1->setVisible(false);
+        m_pDisasmWidget0->setVisible(true);
+        m_pDisasmWidget1->setVisible(false);
+        m_pMemoryViewWidget0->setVisible(true);
+        m_pMemoryViewWidget1->setVisible(false);
         m_pGraphicsInspector->setVisible(true);
         m_pBreakpointsWidget->setVisible(true);
+    }
+    else
+    {
+
+        QDockWidget* wlist[] =
+        {
+            m_pDisasmWidget0, m_pDisasmWidget1,
+            m_pMemoryViewWidget0, m_pMemoryViewWidget1,
+            m_pBreakpointsWidget, m_pGraphicsInspector,
+            nullptr
+        };
+        QDockWidget** pCurr = wlist;
+        while (*pCurr)
+        {
+            qDebug() << (*pCurr)->objectName() << (*pCurr)->pos().x() << (*pCurr)->pos().y()
+                     << (*pCurr)->size().width() << (*pCurr)->size().height()
+                     << (*pCurr)->isVisible() << (*pCurr)->isHidden()
+                     << (*pCurr)->isFloating();
+
+            // Fix for docking system: for some reason, we need to manually
+            // activate floating docking windows for them to appear
+            if ((*pCurr)->isFloating())
+            {
+                (*pCurr)->activateWindow();
+                //(*pCurr)->raise();
+            }
+            ++pCurr;
+        }
     }
 
     m_pRunToCombo->setCurrentIndex(settings.value("runto", QVariant(0)).toInt());
@@ -522,6 +551,24 @@ void MainWindow::saveSettings()
         settings.setValue("windowState", saveState());
         settings.setValue("runto", m_pRunToCombo->currentIndex());
         settings.endGroup();
+    }
+
+
+    QDockWidget* wlist[] =
+    {
+        m_pDisasmWidget0, m_pDisasmWidget1,
+        m_pMemoryViewWidget0, m_pMemoryViewWidget1,
+        m_pBreakpointsWidget, m_pGraphicsInspector,
+        nullptr
+    };
+    QDockWidget** pCurr = wlist;
+    while (*pCurr)
+    {
+        qDebug() << (*pCurr)->objectName() << (*pCurr)->pos().x() << (*pCurr)->pos().y()
+                 << (*pCurr)->size().width() << (*pCurr)->size().height()
+                 << (*pCurr)->isVisible() << (*pCurr)->isHidden()
+                 << (*pCurr)->isFloating();
+        ++pCurr;
     }
 
     //m_pDisasmWidget0->saveSettings();
@@ -606,9 +653,9 @@ void MainWindow::createActions()
     breakpointsWindowAct->setCheckable(true);
 
     connect(disasmWindowAct0, &QAction::triggered, this,     [=] () { this->enableVis(m_pDisasmWidget0); m_pDisasmWidget0->keyFocus(); } );
-    connect(disasmWindowAct1, &QAction::triggered, this,     [=] () { this->enableVis(m_pDisasmWidget1); } );
+    connect(disasmWindowAct1, &QAction::triggered, this,     [=] () { this->enableVis(m_pDisasmWidget1); m_pDisasmWidget1->keyFocus(); } );
     connect(memoryWindowAct0, &QAction::triggered, this,     [=] () { this->enableVis(m_pMemoryViewWidget0); m_pMemoryViewWidget0->keyFocus(); } );
-    connect(memoryWindowAct1, &QAction::triggered, this,     [=] () { this->enableVis(m_pMemoryViewWidget1); } );
+    connect(memoryWindowAct1, &QAction::triggered, this,     [=] () { this->enableVis(m_pMemoryViewWidget1); m_pMemoryViewWidget1->keyFocus(); } );
     connect(graphicsInspectorAct, &QAction::triggered, this, [=] () { this->enableVis(m_pGraphicsInspector); m_pGraphicsInspector->keyFocus(); } );
     connect(breakpointsWindowAct, &QAction::triggered, this, [=] () { this->enableVis(m_pBreakpointsWidget); m_pBreakpointsWidget->keyFocus(); } );
 
@@ -660,6 +707,7 @@ void MainWindow::enableVis(QWidget* pWidget)
 {
     // This used to be a toggle
     pWidget->setVisible(true);
+    pWidget->setHidden(false);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
