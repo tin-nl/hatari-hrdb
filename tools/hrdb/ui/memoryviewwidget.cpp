@@ -407,6 +407,7 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     }
 
     // Draw highlight/cursor area in the hex
+    if (m_cursorRow >= 0 && m_cursorRow < m_rows.size())
     {
         int y_curs = m_cursorRow * m_lineHeight;       // compensate for descenders TODO use ascent()
         int x_curs = GetHexCharX(m_cursorCol);
@@ -491,7 +492,7 @@ void MemoryWidget::RequestMemory()
 void MemoryWidget::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
-//    RecalcRowCount(true);
+    RecalcRowCount();
 }
 
 void MemoryWidget::RecalcRowCount()
@@ -502,6 +503,11 @@ void MemoryWidget::RecalcRowCount()
     int rowh = m_lineHeight;
     if (rowh != 0)
         this->SetRowCount(h / rowh);
+
+    if (m_cursorRow >= m_rowCount)
+    {
+        m_cursorRow = m_rowCount - 1;
+    }
 }
 
 void MemoryWidget::RecalcSizes()
