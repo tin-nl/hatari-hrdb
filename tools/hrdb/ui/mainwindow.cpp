@@ -571,10 +571,11 @@ void MainWindow::saveSettings()
         ++pCurr;
     }
 
-    //m_pDisasmWidget0->saveSettings();
-    //m_pDisasmWidget1->saveSettings();
-    //m_pMemoryViewWidget0->saveSettings();
-    //m_pMemoryViewWidget1->saveSettings();
+    m_pDisasmWidget0->saveSettings();
+    m_pDisasmWidget1->saveSettings();
+    m_pMemoryViewWidget0->saveSettings();
+    m_pMemoryViewWidget1->saveSettings();
+    m_pGraphicsInspector->saveSettings();
 }
 
 void MainWindow::menuConnect()
