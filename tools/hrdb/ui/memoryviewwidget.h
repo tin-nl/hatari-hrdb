@@ -112,31 +112,6 @@ private:
     QFont   monoFont;
 };
 
-#if 0
-class MemoryTableView : public QTableView
-{
-    Q_OBJECT
-public:
-    MemoryTableView(QWidget* parent, MemoryViewTableModel* pModel, TargetModel* pTargetModel);
-
-public slots:
-
-protected:
-    QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers);
-private:
-    // override -- this doesn't trigger at the start?
-    virtual void resizeEvent(QResizeEvent*);
-private slots:
-    void RecalcRowCount();
-
-private:
-    MemoryViewTableModel*     m_pTableModel;
-
-    // Remembers which row we right-clicked on
-    int                   m_rightClickRow;
-};
-#endif
-
 class MemoryViewWidget : public QDockWidget
 {
     Q_OBJECT
