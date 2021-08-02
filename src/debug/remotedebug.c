@@ -70,6 +70,7 @@ typedef struct RemoteDebugState
 	FILE* original_stdout;						/* original file pointers for redirecting output */
 	FILE* original_stderr;
 	FILE* original_debugOutput;
+	FILE* debugOutput;							/* our file handle to output */
 } RemoteDebugState;
 
 // Transmission functions (wrapped for platform portability)
@@ -161,6 +162,29 @@ static int RemoteDebug_NotifyConfig(RemoteDebugState* state)
 	return 0;
 }
 
+// -----------------------------------------------------------------------------
+/* Restore any debugOutput settings to the original saved state. Close
+   any file we opened. */
+static void RemoteDebug_CloseDebugOutput(RemoteDebugState* state)
+{
+	/* Restore old stdio, if set */
+	if (state->original_stderr != NULL)
+		stderr = state->original_stderr;
+	if (state->original_stdout != NULL)
+		stdout = state->original_stdout;
+	if (state->original_debugOutput != NULL)
+		stdout = state->original_debugOutput;
+	if (state->debugOutput)
+		fclose(state->debugOutput);
+
+	state->original_stderr = NULL;
+	state->original_stdout = NULL;
+	state->original_debugOutput = NULL;
+	state->debugOutput = NULL;
+}
+
+// -----------------------------------------------------------------------------
+//    DEBUGGER COMMANDS
 // -----------------------------------------------------------------------------
 /* Return short status info in a useful format, mainly whether it's running */
 static int RemoteDebug_Status(int nArgc, char *psArgs[], RemoteDebugState* state)
@@ -523,6 +547,8 @@ static int RemoteDebug_console(int nArgc, char *psArgs[], RemoteDebugState* stat
 		if (cmdRet == DEBUGGER_END)
 			bRemoteBreakIsActive = false;
 
+		fflush(debugOutput);
+		fflush(stderr);
 		// Insert an out-of-band notification, in case of restart
 		RemoteDebug_NotifyState(state);
 	}
@@ -541,18 +567,19 @@ static int RemoteDebug_setstd(int nArgc, char *psArgs[], RemoteDebugState* state
 		FILE* outpipe = fopen(psArgs[1], "w");
 		if (outpipe)
 		{
-			// Record the original states
-			if (!state->original_stderr)
-				state->original_stderr = stderr;
-			if (!state->original_stdout)
-				state->original_stdout = stdout;
-			if (!state->original_debugOutput)
-				state->original_debugOutput = debugOutput;
+			// Switch back to "normal settings"
+			RemoteDebug_CloseDebugOutput(state);
 
-			// Perform redirect
+			// Record the original states
+			state->original_stderr = stderr;
+			state->original_stdout = stdout;
+			state->original_debugOutput = debugOutput;
+
+			// Switch over redirect
 			stderr = outpipe;
 			stdout = outpipe;
 			debugOutput = outpipe;
+			state->debugOutput = outpipe;
 			send_str(state, "OK");
 			return 0;
 		}
@@ -703,6 +730,7 @@ static void RemoteDebugState_Init(RemoteDebugState* state)
 	state->original_stdout = NULL;
 	state->original_stderr = NULL;
 	state->original_debugOutput = NULL;
+	state->debugOutput = NULL;
 }
 
 /* Process any command data that has been read into the pending
@@ -983,15 +1011,9 @@ void RemoteDebug_Init(void)
 
 void RemoteDebug_UnInit()
 {
-	/* Restore old stdio */
-	if (g_rdbState.original_stderr != NULL)
-		stderr = g_rdbState.original_stderr;
-	if (g_rdbState.original_stdout != NULL)
-		stdout = g_rdbState.original_stdout;
-	if (g_rdbState.original_debugOutput != NULL)
-		stdout = g_rdbState.original_debugOutput;
-
 	printf("Stopping remote debug\n");
+
+	RemoteDebug_CloseDebugOutput(&g_rdbState);
 	if (g_rdbState.AcceptedFD != -1)
 	{
 		RDB_CLOSE(g_rdbState.AcceptedFD);
@@ -1002,9 +1024,6 @@ void RemoteDebug_UnInit()
 		RDB_CLOSE(g_rdbState.SocketFD);
 	}
 
-	g_rdbState.original_stderr = NULL;
-	g_rdbState.original_stdout = NULL;
-	g_rdbState.original_debugOutput = NULL;
 	g_rdbState.AcceptedFD = -1;
 	g_rdbState.SocketFD = -1;
 	g_rdbState.cmd_pos = 0;
