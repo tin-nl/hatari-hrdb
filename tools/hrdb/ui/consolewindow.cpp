@@ -4,15 +4,11 @@
 #include <QLineEdit>
 #include <QVBoxLayout>
 #include <QHeaderView>
-#include <QCompleter>
-#include <QPainter>
 #include <QKeyEvent>
 #include <QSettings>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
-#include "../models/stringparsers.h"
-#include "../models/symboltablemodel.h"
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -41,7 +37,7 @@ ConsoleWindow::ConsoleWindow(QWidget *parent, TargetModel* pTargetModel, Dispatc
 
     loadSettings();
 
-    // Listen for start/stop, so we can update our memory request
+    // Connect text entry
     connect(m_pLineEdit, &QLineEdit::returnPressed,         this, &ConsoleWindow::textEditChangedSlot);
 }
 
@@ -71,7 +67,11 @@ void ConsoleWindow::saveSettings()
 
 void ConsoleWindow::textEditChangedSlot()
 {
-    QString string = "console ";
-    string += m_pLineEdit->text();
-    m_pDispatcher->SendCommandPacket(string.toStdString().c_str());
+    if (m_pTargetModel->IsConnected() && !m_pTargetModel->IsRunning())
+    {
+        QString string = "console ";
+        string += m_pLineEdit->text();
+        m_pDispatcher->SendCommandPacket(string.toStdString().c_str());
+    }
+    m_pLineEdit->clear();
 }
