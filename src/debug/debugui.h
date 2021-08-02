@@ -42,4 +42,7 @@ extern void DebugUI_MemorySnapShot_Capture(const char *path, bool bSave);
 // Register the callback to process remote command input
 extern void DebugUI_RegisterRemoteDebug(DebugUI_ProcessRemoteCommands cmdCallback);
 
+// Process command from remote debug
+extern void DebugUI_ParseConsoleCommand(const char* command);
+
 #endif /* HATARI_DEBUGUI_H */

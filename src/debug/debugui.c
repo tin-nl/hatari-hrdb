@@ -1396,8 +1396,18 @@ void DebugUI_Exceptions(int nr, long pc)
 	DebugUI(REASON_CPU_EXCEPTION);
 }
 
+void DebugUI_Trigger()
+{
+	DebugUI(REASON_USER);
+}
+
 /* Register the callback to process remote command input */
 void DebugUI_RegisterRemoteDebug(DebugUI_ProcessRemoteCommands cmdCallback)
 {
 	remoteDebugcmdCallback = cmdCallback;
+}
+
+void DebugUI_ParseConsoleCommand(const char* command)
+{
+	(void) DebugUI_ParseCommand(command);
 }

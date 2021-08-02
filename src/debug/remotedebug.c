@@ -496,6 +496,18 @@ static int RemoteDebug_exmask(int nArgc, char *psArgs[], int fd)
 }
 
 // -----------------------------------------------------------------------------
+/* "console <text>" pass command to debugui console input
+/* returns "OK <mask val>"" */
+static int RemoteDebug_console(int nArgc, char *psArgs[], int fd)
+{
+	if (nArgc == 2)
+	{
+		DebugUI_ParseConsoleCommand(psArgs[1]);
+	}
+	return 0;
+}
+
+// -----------------------------------------------------------------------------
 /* DebugUI command structure */
 typedef struct
 {
@@ -518,6 +530,7 @@ static const rdbcommand_t remoteDebugCommandList[] = {
 	{ RemoteDebug_bpdel,	"bpdel"		, true		},
 	{ RemoteDebug_symlist,	"symlist"	, true		},
 	{ RemoteDebug_exmask,	"exmask"	, true		},
+	{ RemoteDebug_console,	"console"	, false		},
 
 	/* Terminator */
 	{ NULL, NULL }
