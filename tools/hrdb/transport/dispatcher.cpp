@@ -258,6 +258,7 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     if (cmd_status != std::string("OK"))
     {
         std::cout << "Repsonse dropped: " << cmd.m_response << std::endl;
+        std::cout << "Original command: " << cmd.m_cmd << std::endl;
         return;
     }
 
