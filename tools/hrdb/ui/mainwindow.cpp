@@ -560,6 +560,7 @@ void MainWindow::saveSettings()
     m_pMemoryViewWidget0->saveSettings();
     m_pMemoryViewWidget1->saveSettings();
     m_pGraphicsInspector->saveSettings();
+    m_pConsoleWindow->saveSettings();
 }
 
 void MainWindow::menuConnect()
