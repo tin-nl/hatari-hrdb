@@ -311,12 +311,10 @@ void DisasmWidget2::memoryChangedSlot(int memorySlot, uint64_t commandId)
     if (commandId != m_requestId)
         return;
 
-    printf("Mem changed current\n");
     const Memory* pMemOrig = m_pTargetModel->GetMemory(m_memSlot);
     if (!pMemOrig)
         return;
 
-    printf("Mem changed %x\n", pMemOrig->GetAddress());
     if (m_logicalAddr == kInvalid)
     {
         m_logicalAddr = pMemOrig->GetAddress();
