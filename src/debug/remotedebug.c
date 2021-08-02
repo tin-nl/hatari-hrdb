@@ -49,8 +49,8 @@
 #define RDB_MEM_BLOCK_SIZE         (2048)
 
 // Network timeout when in break loop, to allow event handler update.
-// Currently 0.2sec
-#define RDB_SELECT_TIMEOUT_USEC   (200000)
+// Currently 0.5sec
+#define RDB_SELECT_TIMEOUT_USEC   (500000)
 
 /* Remote debugging break command was sent from debugger */
 static bool bRemoteBreakRequest = false;
@@ -794,8 +794,6 @@ static bool RemoteDebug_BreakLoop(void)
 	// sleep until data is available.
 	SetNonBlocking(state->AcceptedFD, 0);
 
-	timeout.tv_sec = 0;
-	timeout.tv_usec = RDB_SELECT_TIMEOUT_USEC;
 	while (bRemoteBreakIsActive)
 	{
 		if (state->AcceptedFD == -1 || 
@@ -807,6 +805,11 @@ static bool RemoteDebug_BreakLoop(void)
 		// Check socket with timeout
 		FD_ZERO(&set);
 		FD_SET(state->AcceptedFD, &set);
+
+		// On Linux, need to reset the timeout on each loop
+		// see "select(2)"
+		timeout.tv_sec = 0;
+		timeout.tv_usec = RDB_SELECT_TIMEOUT_USEC;
 
 		int rv = select(state->AcceptedFD + 1, &set, NULL, NULL, &timeout);
 		if (rv < 0)
