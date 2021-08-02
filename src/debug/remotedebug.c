@@ -502,8 +502,16 @@ static int RemoteDebug_console(int nArgc, char *psArgs[], int fd)
 {
 	if (nArgc == 2)
 	{
-		DebugUI_ParseConsoleCommand(psArgs[1]);
+		int cmdRet = DebugUI_ParseConsoleCommand(psArgs[1]);
+
+		/* handle a command that restarts execution */
+		if (cmdRet == DEBUGGER_END)
+			bRemoteBreakIsActive = false;
+
+		// Insert an out-of-band notification, in case of restart
+		RemoteDebug_NotifyState(fd);
 	}
+	send_str(fd, "OK");
 	return 0;
 }
 

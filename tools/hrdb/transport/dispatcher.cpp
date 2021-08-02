@@ -400,6 +400,11 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     {
                 assert(0);
     }
+    else if (type == "console")
+    {
+        // Anything could have happened here!
+        m_pTargetModel->ConsoleCommand();
+    }
 }
 
 void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)

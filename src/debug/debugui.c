@@ -1407,7 +1407,7 @@ void DebugUI_RegisterRemoteDebug(DebugUI_ProcessRemoteCommands cmdCallback)
 	remoteDebugcmdCallback = cmdCallback;
 }
 
-void DebugUI_ParseConsoleCommand(const char* command)
+int DebugUI_ParseConsoleCommand(const char* command)
 {
-	(void) DebugUI_ParseCommand(command);
+	return DebugUI_ParseCommand(command);
 }

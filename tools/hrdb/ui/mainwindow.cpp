@@ -14,6 +14,7 @@
 #include "memoryviewwidget.h"
 #include "graphicsinspector.h"
 #include "breakpointswidget.h"
+#include "consolewindow.h"
 #include "addbreakpointdialog.h"
 #include "exceptiondialog.h"
 #include "rundialog.h"
@@ -64,6 +65,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_pGraphicsInspector->setWindowTitle("Graphics Inspector (Alt+G)");
     m_pBreakpointsWidget = new BreakpointsWidget(this, m_pTargetModel, m_pDispatcher);
     m_pBreakpointsWidget->setWindowTitle("Breakpoints (Alt+B)");
+    m_pConsoleWindow = new ConsoleWindow(this, m_pTargetModel, m_pDispatcher);
+
     m_pExceptionDialog = new ExceptionDialog(this, m_pTargetModel, m_pDispatcher);
     m_pRunDialog = new RunDialog(this, m_pTargetModel, m_pDispatcher);
 
@@ -97,6 +100,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pDisasmWidget1);
     this->addDockWidget(Qt::LeftDockWidgetArea, m_pGraphicsInspector);
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pBreakpointsWidget);
+    this->addDockWidget(Qt::BottomDockWidgetArea, m_pConsoleWindow);
 
     loadSettings();
 
@@ -256,6 +260,7 @@ void MainWindow::singleStepClicked()
 
     if (m_pTargetModel->IsRunning())
         return;
+
     m_pDispatcher->SendCommandPacket("step");
 }
 
@@ -468,6 +473,7 @@ void MainWindow::updateWindowMenu()
     memoryWindowAct1->setChecked(m_pMemoryViewWidget1->isVisible());
     graphicsInspectorAct->setChecked(m_pGraphicsInspector->isVisible());
     breakpointsWindowAct->setChecked(m_pBreakpointsWidget->isVisible());
+    consoleWindowAct->setChecked(m_pConsoleWindow->isVisible());
 }
 
 void MainWindow::updateButtonEnable()
@@ -507,6 +513,7 @@ void MainWindow::loadSettings()
         m_pMemoryViewWidget1->setVisible(false);
         m_pGraphicsInspector->setVisible(true);
         m_pBreakpointsWidget->setVisible(true);
+        m_pConsoleWindow->setVisible(false);
     }
     else
     {
@@ -516,6 +523,7 @@ void MainWindow::loadSettings()
             m_pDisasmWidget0, m_pDisasmWidget1,
             m_pMemoryViewWidget0, m_pMemoryViewWidget1,
             m_pBreakpointsWidget, m_pGraphicsInspector,
+            m_pConsoleWindow,
             nullptr
         };
         QDockWidget** pCurr = wlist;
@@ -629,12 +637,17 @@ void MainWindow::createActions()
     breakpointsWindowAct->setStatusTip(tr("Show the Breakpoints window"));
     breakpointsWindowAct->setCheckable(true);
 
+    consoleWindowAct = new QAction(tr("&Console"), this);
+    consoleWindowAct->setStatusTip(tr("Show the Console window"));
+    consoleWindowAct->setCheckable(true);
+
     connect(disasmWindowAct0, &QAction::triggered, this,     [=] () { this->enableVis(m_pDisasmWidget0); m_pDisasmWidget0->keyFocus(); } );
     connect(disasmWindowAct1, &QAction::triggered, this,     [=] () { this->enableVis(m_pDisasmWidget1); m_pDisasmWidget1->keyFocus(); } );
     connect(memoryWindowAct0, &QAction::triggered, this,     [=] () { this->enableVis(m_pMemoryViewWidget0); m_pMemoryViewWidget0->keyFocus(); } );
     connect(memoryWindowAct1, &QAction::triggered, this,     [=] () { this->enableVis(m_pMemoryViewWidget1); m_pMemoryViewWidget1->keyFocus(); } );
     connect(graphicsInspectorAct, &QAction::triggered, this, [=] () { this->enableVis(m_pGraphicsInspector); m_pGraphicsInspector->keyFocus(); } );
     connect(breakpointsWindowAct, &QAction::triggered, this, [=] () { this->enableVis(m_pBreakpointsWidget); m_pBreakpointsWidget->keyFocus(); } );
+    connect(consoleWindowAct,     &QAction::triggered, this, [=] () { this->enableVis(m_pConsoleWindow); m_pConsoleWindow->keyFocus(); } );
 
     // This should be an action
     new QShortcut(QKeySequence(tr("Shift+Alt+B",  "Add Breakpoint...")),  this, SLOT(addBreakpointPressed()));
@@ -674,6 +687,7 @@ void MainWindow::createMenus()
     windowMenu->addAction(memoryWindowAct1);
     windowMenu->addAction(graphicsInspectorAct);
     windowMenu->addAction(breakpointsWindowAct);
+    windowMenu->addAction(consoleWindowAct);
 
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAct);

@@ -36,7 +36,8 @@ SOURCES += \
     ui/graphicsinspector.cpp \
     ui/mainwindow.cpp \
     ui/memoryviewwidget.cpp \
-    ui/rundialog.cpp
+    ui/rundialog.cpp \
+    ui/consolewindow.cpp
 
 HEADERS += \
     hopper/buffer.h \
@@ -62,7 +63,8 @@ HEADERS += \
     ui/mainwindow.h \
     ui/memoryviewwidget.h \
     ui/quicklayout.h \
-    ui/rundialog.h
+    ui/rundialog.h \
+    ui/consolewindow.h
 
 RESOURCES     = hrdb.qrc    
 
