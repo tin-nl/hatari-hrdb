@@ -1188,12 +1188,6 @@ void DebugUI(debug_reason_t reason)
 		 * for when single-stepping or breakpointing has occurred.
 		 */
 
-		/* override paused message so that user knows to look at debugger
-		 * on how to continue in case he invoked the debugger by accident.
-		 */
-		Statusbar_AddMessage("Remote Debugging", 100);
-		Statusbar_Update(sdlscrn, true);
-
 		/* Pass control to remote debugging */
 		(void) remoteDebugcmdCallback();
 	}
