@@ -48,6 +48,9 @@
 // How many bytes we collect to send chunks for the "mem" command
 #define RDB_MEM_BLOCK_SIZE         (2048)
 
+// How many bytes in the internal network send buffer
+#define RBD_SEND_BUFFER_SIZE       (512)
+
 // Network timeout when in break loop, to allow event handler update.
 // Currently 0.5sec
 #define RDB_SELECT_TIMEOUT_USEC   (500000)
@@ -71,49 +74,73 @@ typedef struct RemoteDebugState
 	FILE* original_stderr;
 	FILE* original_debugOutput;
 	FILE* debugOutput;							/* our file handle to output */
+
+	char sendBuffer[RBD_SEND_BUFFER_SIZE];		/* buffer for replies */
+	int sendBufferPos;
 } RemoteDebugState;
 
+// -----------------------------------------------------------------------------
+// Force send of data in sendBuffer
+static void flush_data(RemoteDebugState* state)
+{
+	// Flush existing data
+	send(state->AcceptedFD, state->sendBuffer, state->sendBufferPos, 0);
+	state->sendBufferPos = 0;
+}
+
+// -----------------------------------------------------------------------------
+// Add data to sendBuffer, flush if necessary
+static void add_data(RemoteDebugState* state, const char* data, size_t size)
+{
+	// Flush data if it won't fit
+	if (state->sendBufferPos + size > RBD_SEND_BUFFER_SIZE)
+		flush_data(state);
+
+	memcpy(state->sendBuffer + state->sendBufferPos, data, size);
+	state->sendBufferPos += size;
+}
+
+// -----------------------------------------------------------------------------
 // Transmission functions (wrapped for platform portability)
 // -----------------------------------------------------------------------------
-static void send_str(RemoteDebugState* fd, const char* pStr)
+static void send_str(RemoteDebugState* state, const char* pStr)
 {
-	send(fd->AcceptedFD, pStr, strlen(pStr), 0);
+	add_data(state, pStr, strlen(pStr));
 }
 
 // -----------------------------------------------------------------------------
-static void send_hex(RemoteDebugState* fd, uint32_t val)
+static void send_hex(RemoteDebugState* state, uint32_t val)
 {
 	char str[9];
-	sprintf(str, "%X", val);
-	send(fd->AcceptedFD, str, strlen(str), 0);
+	int size = sprintf(str, "%X", val);
+	add_data(state, str, size);
 }
 
 // -----------------------------------------------------------------------------
-static void send_char(RemoteDebugState* fd, char val)
+static void send_char(RemoteDebugState* state, char val)
 {
-	send(fd->AcceptedFD, &val, 1, 0);
+	add_data(state, &val, 1);
 }
 
 // -----------------------------------------------------------------------------
-static void send_bool(RemoteDebugState* fd, bool val)
+static void send_bool(RemoteDebugState* state, bool val)
 {
-	send_char(fd, val ? '1' : '0');
+	send_char(state, val ? '1' : '0');
 }
 
 // -----------------------------------------------------------------------------
-static void send_key_value(RemoteDebugState* fd, const char* pStr, uint32_t val)
+static void send_key_value(RemoteDebugState* state, const char* pStr, uint32_t val)
 {
-	send_str(fd, " ");
-	send_str(fd, pStr);
-	send_str(fd, ":");
-	send_hex(fd, val);
+	send_str(state, " ");
+	send_str(state, pStr);
+	send_str(state, ":");
+	send_hex(state, val);
 }
 
 // -----------------------------------------------------------------------------
-static void send_term(RemoteDebugState* fd)
+static void send_term(RemoteDebugState* state)
 {
-	char null = 0;
-	send(fd->AcceptedFD, &null, 1, 0);
+	send_char(state, 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -322,6 +349,9 @@ static int RemoteDebug_Mem(int nArgc, char *psArgs[], RemoteDebugState* state)
 	send_str(state, " ");
 	send_hex(state, memdump_count);
 	send_str(state, " ");
+
+	// Need to flush here before we switch to our existing buffer system
+	flush_data(state);
 
 	// Send data in blocks of "buffer_size" memory bytes
 	// (We don't need a terminator when sending)
@@ -731,6 +761,7 @@ static void RemoteDebugState_Init(RemoteDebugState* state)
 	state->original_stderr = NULL;
 	state->original_debugOutput = NULL;
 	state->debugOutput = NULL;
+	state->sendBufferPos = 1;
 }
 
 /* Process any command data that has been read into the pending
@@ -739,6 +770,7 @@ static void RemoteDebugState_Init(RemoteDebugState* state)
 static void RemoteDebug_ProcessBuffer(RemoteDebugState* state)
 {
 	int cmd_ret;
+	int num_commands = 0;
 	while (1)
 	{
 		// Scan for a complete command
@@ -765,7 +797,11 @@ static void RemoteDebug_ProcessBuffer(RemoteDebugState* state)
 		int extra_length = state->cmd_pos - length - 1;
 		memcpy(state->cmd_buf, endptr + 1, extra_length);
 		state->cmd_pos = extra_length;
+		++num_commands;
 	}
+
+	if (num_commands)
+		flush_data(state);
 }
 
 /*
@@ -789,6 +825,7 @@ static bool RemoteDebug_BreakLoop(void)
 	// Notify after state change happens
 	RemoteDebug_NotifyConfig(state);
 	RemoteDebug_NotifyState(state);
+	flush_data(state);
 
 	// Set the socket to blocking on the connection now, so we
 	// sleep until data is available.
@@ -874,6 +911,7 @@ static bool RemoteDebug_BreakLoop(void)
 
 	RemoteDebug_NotifyConfig(state);
 	RemoteDebug_NotifyState(state);
+	flush_data(state);
 
 	SetNonBlocking(state->AcceptedFD, 1);
 	return true;
@@ -977,6 +1015,8 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 			DebugUI_RegisterRemoteDebug(RemoteDebug_BreakLoop);
 			SetNonBlocking(state->AcceptedFD, 1);
 
+			// reset send buffer
+			state->sendBufferPos = 0;
 			// Send connected handshake, so client can
 			// drop any subsequent commands
 			send_str(state, "!connected");
@@ -985,6 +1025,7 @@ static void RemoteDebugState_Update(RemoteDebugState* state)
 			// Flag the running status straight away
 			RemoteDebug_NotifyConfig(state);
 			RemoteDebug_NotifyState(state);
+			flush_data(state);
 		}
 	}
 }
