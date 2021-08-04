@@ -822,6 +822,10 @@ static bool RemoteDebug_BreakLoop(void)
 			// timeout, socket does not have anything to read.
 			// Update main event handler so that the UI window can update/redraw.
 			Main_EventHandler();
+
+			// Main events can set a quit request here, so listen to it
+			if (bQuitProgram)
+				break;
 			continue;
 		}
 
