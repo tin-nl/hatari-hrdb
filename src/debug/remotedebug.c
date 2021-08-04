@@ -761,7 +761,7 @@ static void RemoteDebugState_Init(RemoteDebugState* state)
 	state->original_stderr = NULL;
 	state->original_debugOutput = NULL;
 	state->debugOutput = NULL;
-	state->sendBufferPos = 1;
+	state->sendBufferPos = 0;
 }
 
 /* Process any command data that has been read into the pending
