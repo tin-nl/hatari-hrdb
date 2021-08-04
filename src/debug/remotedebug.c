@@ -195,6 +195,7 @@ static int RemoteDebug_NotifyConfig(RemoteDebugState* state)
 static void RemoteDebug_CloseDebugOutput(RemoteDebugState* state)
 {
 	/* Restore old stdio, if set */
+#ifndef __WINDOWS__
 	if (state->original_stderr != NULL)
 		stderr = state->original_stderr;
 	if (state->original_stdout != NULL)
@@ -203,7 +204,7 @@ static void RemoteDebug_CloseDebugOutput(RemoteDebugState* state)
 		stdout = state->original_debugOutput;
 	if (state->debugOutput)
 		fclose(state->debugOutput);
-
+#endif
 	state->original_stderr = NULL;
 	state->original_stdout = NULL;
 	state->original_debugOutput = NULL;
@@ -606,8 +607,10 @@ static int RemoteDebug_setstd(int nArgc, char *psArgs[], RemoteDebugState* state
 			state->original_debugOutput = debugOutput;
 
 			// Switch over redirect
+#ifndef __WINDOWS__
 			stderr = outpipe;
 			stdout = outpipe;
+#endif
 			debugOutput = outpipe;
 			state->debugOutput = outpipe;
 			send_str(state, "OK");
