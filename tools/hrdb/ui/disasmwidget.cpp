@@ -395,35 +395,52 @@ void DisasmWidget2::paintEvent(QPaintEvent* ev)
         painter.drawRect(0, y_curs, rect().width(), m_lineHeight);
     }
 
-    for (int row = 0; row < m_rowTexts.size(); ++row)
+    for (int col = 0; col < kNumColumns; ++col)
     {
-        if (row == m_cursorRow)
-            painter.setPen(pal.highlightedText().color());
-        else
-            painter.setPen(pal.text().color());
+        int x = m_columnLeft[col] * char_width;
+        int x2 = m_columnLeft[col + 1] * char_width;
 
-        int y = y_base + row * m_lineHeight;
-        const RowText& t = m_rowTexts[row];
-
-        painter.drawText(m_symbolCol * char_width, y, t.symbol);
-        painter.drawText(m_addressCol * char_width, y, t.address);
-        if (m_bShowHex)
-            painter.drawText(m_hexCol * char_width, y, t.hex);
-        painter.drawText(m_disasmCol * char_width, y, t.disasm);
-        painter.drawText(m_commentsCol * char_width, y, t.comments);
-
-        if (t.isPc)
+        // Clip the column to prevent overdraw
+        painter.setClipRect(x, 0, x2 - x, height());
+        for (int row = 0; row < m_rowTexts.size(); ++row)
         {
-            /*
-            painter.drawPixmap(pcCol * char_width,
-                               row * m_lineHeight + (m_lineHeight - m_pcPixmap.height()) / 2,
-                               m_pcPixmap);*/
-            painter.drawText(m_pcCol * char_width, y, ">");
-        }
+            if (row == m_cursorRow)
+                painter.setPen(pal.highlightedText().color());
+            else
+                painter.setPen(pal.text().color());
 
-        if (t.isBreakpoint)
-            painter.drawText(m_bpCol * char_width, y, "*");
-    }
+            int y = y_base + row * m_lineHeight;
+            const RowText& t = m_rowTexts[row];
+
+            switch (col)
+            {
+            case kSymbol:
+                painter.drawText(x, y, t.symbol);
+                break;
+            case kAddress:
+                painter.drawText(x, y, t.address);
+                break;
+            case kPC:
+                if (t.isPc)
+                    painter.drawText(x, y, ">");
+                break;
+            case kHex:
+                if (m_bShowHex)
+                    painter.drawText(x, y, t.hex);
+                break;
+            case kDisasm:
+                painter.drawText(x, y, t.disasm);
+                break;
+            case kComments:
+                painter.drawText(x, y, t.comments);
+                break;
+            case kBreakpoint:
+                if (t.isBreakpoint)
+                    painter.drawText(x, y, "*");
+                break;
+            }
+        } // row
+    }   // col
 }
 
 void DisasmWidget2::keyPressEvent(QKeyEvent* event)
@@ -760,13 +777,15 @@ void DisasmWidget2::GetLineHeight()
 
 void DisasmWidget2::RecalcColums()
 {
-    m_symbolCol = 1;
-    m_addressCol = m_symbolCol + 19;
-    m_pcCol = m_addressCol + 9;
-    m_bpCol = m_pcCol + 1;
-    m_hexCol = m_bpCol + 2;
-    m_disasmCol = m_bShowHex ? m_hexCol + 10 * 2 + 1 : m_hexCol; // max size 10 bytes (opcode + 2 longs)
-    m_commentsCol = m_disasmCol + 40;
+    int pos = 1;
+    m_columnLeft[kSymbol] = pos; pos += 19;
+    m_columnLeft[kAddress] = pos; pos += 9;
+    m_columnLeft[kPC] = pos; pos += 1;
+    m_columnLeft[kBreakpoint] = pos; pos += 1;
+    m_columnLeft[kHex] = pos; pos += (m_bShowHex) ? 10 * 2 + 1 : 0;
+    m_columnLeft[kDisasm] = pos; pos += 40;
+    m_columnLeft[kComments] = pos; pos += 80;
+    m_columnLeft[kNumColumns] = pos;
 }
 
 //-----------------------------------------------------------------------------

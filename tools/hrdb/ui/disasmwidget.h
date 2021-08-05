@@ -140,13 +140,19 @@ private:
 
     // Column layout
     bool                  m_bShowHex;
-    int                   m_symbolCol;
-    int                   m_addressCol;
-    int                   m_pcCol;
-    int                   m_bpCol;
-    int                   m_hexCol;
-    int                   m_disasmCol;
-    int                   m_commentsCol;
+
+    enum Column
+    {
+        kSymbol,
+        kAddress,
+        kPC,
+        kBreakpoint,
+        kHex,
+        kDisasm,
+        kComments,
+        kNumColumns
+    };
+    int                   m_columnLeft[kNumColumns + 1];    // Include +1 for RHS
 
     // Rightclick menu
     QMenu                 m_rightClickMenu;
