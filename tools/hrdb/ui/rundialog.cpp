@@ -18,46 +18,46 @@ RunDialog::RunDialog(QWidget *parent, Session* pSession) :
 {
     this->setWindowTitle(tr("Run Hatari"));
 
+    // Bottom OK/Cancel buttons
     QPushButton* pOkButton = new QPushButton("&OK", this);
     pOkButton->setDefault(true);
     QPushButton* pCancelButton = new QPushButton("&Cancel", this);
-
     QHBoxLayout* pHLayout = new QHBoxLayout(this);
+    pHLayout->addStretch(20);
     pHLayout->addWidget(pOkButton);
     pHLayout->addWidget(pCancelButton);
+    pHLayout->addStretch(20);
     QWidget* pButtonContainer = new QWidget(this);
     pButtonContainer->setLayout(pHLayout);
-    QPushButton* pExeButton = new QPushButton("Executable", this);
-    QPushButton* pWDButton = new QPushButton("Working Directory", this);
 
-    QWidget* list1, * list2, * list3;
+    // Options grid box
+    QGroupBox* gridGroupBox = new QGroupBox(tr("Launch options"));
+    QGridLayout *gridLayout = new QGridLayout;
 
-    {
-        m_pExecutableTextEdit = new QLineEdit("hatari", this);
+    QPushButton* pExeButton = new QPushButton(tr("Browse..."), this);
+    QPushButton* pWDButton = new QPushButton(tr("Browse..."), this);
 
-        QWidget* list[] = { pExeButton, m_pExecutableTextEdit, nullptr};
-        list1 = CreateHorizLayout(this, list);
-    }
+    m_pExecutableTextEdit = new QLineEdit("hatari", this);
+    m_pArgsTextEdit = new QLineEdit("", this);
+    m_pWorkingDirectoryTextEdit = new QLineEdit("", this);
 
-    {
-        m_pArgsTextEdit = new QLineEdit("", this);
-        QLabel* pFront = new QLabel("Arguments", this);
+    gridLayout->addWidget(new QLabel(tr("Executable:"), this), 0, 0);
+    gridLayout->addWidget(m_pExecutableTextEdit, 0, 2);
+    gridLayout->addWidget(pExeButton, 0, 4);
 
-        QWidget* list[] = { pFront, m_pArgsTextEdit, nullptr };
-        list2 = CreateHorizLayout(this, list);
-    }
+    gridLayout->addWidget(new QLabel("Arguments:", this), 1, 0);
+    gridLayout->addWidget(m_pArgsTextEdit, 1, 2);
 
-    {
-        m_pWorkingDirectoryTextEdit = new QLineEdit("", this);
+    gridLayout->addWidget(new QLabel(tr("Working Directory:"), this), 2, 0);
+    gridLayout->addWidget(m_pWorkingDirectoryTextEdit, 2, 2);
+    gridLayout->addWidget(pWDButton, 2, 4);
 
-        QWidget* list[] = { pWDButton, m_pWorkingDirectoryTextEdit, nullptr };
-        list3 = CreateHorizLayout(this, list);
-    }
+    gridLayout->setColumnStretch(2, 20);
+    gridGroupBox->setLayout(gridLayout);
 
+    // Overall layout (options at top, buttons at bottom)
     QVBoxLayout* pLayout = new QVBoxLayout(this);
-    pLayout->addWidget(list1);
-    pLayout->addWidget(list2);
-    pLayout->addWidget(list3);
+    pLayout->addWidget(gridGroupBox);
     pLayout->addWidget(pButtonContainer);
 
     connect(pExeButton, &QPushButton::clicked, this, &RunDialog::exeClicked);
