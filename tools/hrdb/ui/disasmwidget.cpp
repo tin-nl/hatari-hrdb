@@ -545,12 +545,11 @@ void DisasmWidget::CalcDisasm()
         Disassembler::print(line.inst, line.address, ref);
 
         // Comments
-        QString str;
         QTextStream refC(&t.comments);
         Registers regs = m_pTargetModel->GetRegs();
         printEA(line.inst.op0, regs, line.address, refC);
-        if (str.size() != 0)
-            ref << "  ";
+        if (t.comments.size() != 0)
+            refC << "  ";
         printEA(line.inst.op1, regs, line.address, refC);
 
         // Breakpoint/PC
