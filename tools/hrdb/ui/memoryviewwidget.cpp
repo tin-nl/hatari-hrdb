@@ -574,7 +574,7 @@ void MemoryWidget::GetCursorInfo(uint32_t &address, bool &bottomNybble)
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher, int windowIndex) :
+MemoryWindow::MemoryWindow(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher, int windowIndex) :
     QDockWidget(parent),
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher),
@@ -623,19 +623,19 @@ MemoryViewWidget::MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, D
     loadSettings();
 
     // Listen for start/stop, so we can update our memory request
-    connect(m_pLineEdit, &QLineEdit::returnPressed,         this, &MemoryViewWidget::textEditChangedSlot);
-    connect(m_pLockCheckBox, &QCheckBox::stateChanged,      this, &MemoryViewWidget::lockChangedSlot);
+    connect(m_pLineEdit, &QLineEdit::returnPressed,         this, &MemoryWindow::textEditChangedSlot);
+    connect(m_pLockCheckBox, &QCheckBox::stateChanged,      this, &MemoryWindow::lockChangedSlot);
     connect(m_pComboBox, SIGNAL(currentIndexChanged(int)),  SLOT(modeComboBoxChanged(int)));
 }
 
-void MemoryViewWidget::keyFocus()
+void MemoryWindow::keyFocus()
 {
     activateWindow();
     m_pMemoryWidget->setFocus();
 }
 
 
-void MemoryViewWidget::loadSettings()
+void MemoryWindow::loadSettings()
 {
     QSettings settings;
     QString key = QString::asprintf("MemoryView%d", m_windowIndex);
@@ -648,7 +648,7 @@ void MemoryViewWidget::loadSettings()
     settings.endGroup();
 }
 
-void MemoryViewWidget::saveSettings()
+void MemoryWindow::saveSettings()
 {
     QSettings settings;
     QString key = QString::asprintf("MemoryView%d", m_windowIndex);
@@ -659,7 +659,7 @@ void MemoryViewWidget::saveSettings()
     settings.endGroup();
 }
 
-void MemoryViewWidget::requestAddress(int windowIndex, bool isMemory, uint32_t address)
+void MemoryWindow::requestAddress(int windowIndex, bool isMemory, uint32_t address)
 {
     if (!isMemory)
         return;
@@ -673,17 +673,17 @@ void MemoryViewWidget::requestAddress(int windowIndex, bool isMemory, uint32_t a
     setVisible(true);
 }
 
-void MemoryViewWidget::textEditChangedSlot()
+void MemoryWindow::textEditChangedSlot()
 {
     m_pMemoryWidget->SetAddress(m_pLineEdit->text().toStdString());
 }
 
-void MemoryViewWidget::lockChangedSlot()
+void MemoryWindow::lockChangedSlot()
 {
     m_pMemoryWidget->SetLock(m_pLockCheckBox->isChecked());
 }
 
-void MemoryViewWidget::modeComboBoxChanged(int index)
+void MemoryWindow::modeComboBoxChanged(int index)
 {
     m_pMemoryWidget->SetMode((MemoryWidget::Mode)index);
     //m_pTableView->resizeColumnToContents(MemoryWidget::kColData);

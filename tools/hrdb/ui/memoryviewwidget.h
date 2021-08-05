@@ -116,11 +116,11 @@ private:
     QFont   monoFont;
 };
 
-class MemoryViewWidget : public QDockWidget
+class MemoryWindow : public QDockWidget
 {
     Q_OBJECT
 public:
-    MemoryViewWidget(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher, int windowIndex);
+    MemoryWindow(QWidget *parent, TargetModel* pTargetModel, Dispatcher* m_pDispatcher, int windowIndex);
 
     // Grab focus and point to the main widget
     void keyFocus();

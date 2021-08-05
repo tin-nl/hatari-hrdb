@@ -50,17 +50,17 @@ MainWindow::MainWindow(QWidget *parent)
     m_pRegistersTextEdit->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
     m_pRegistersTextEdit->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
 
-    m_pDisasmWidget0 = new DisasmViewWidget(this, m_pTargetModel, m_pDispatcher, 0);
+    m_pDisasmWidget0 = new DisasmWindow(this, m_pTargetModel, m_pDispatcher, 0);
     m_pDisasmWidget0->setWindowTitle("Disassembly (Alt+D)");
-    m_pDisasmWidget1 = new DisasmViewWidget(this, m_pTargetModel, m_pDispatcher, 1);
+    m_pDisasmWidget1 = new DisasmWindow(this, m_pTargetModel, m_pDispatcher, 1);
     m_pDisasmWidget1->setWindowTitle("Disassembly 2");
-    m_pMemoryViewWidget0 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 0);
+    m_pMemoryViewWidget0 = new MemoryWindow(this, m_pTargetModel, m_pDispatcher, 0);
     m_pMemoryViewWidget0->setWindowTitle("Memory (Alt+M)");
-    m_pMemoryViewWidget1 = new MemoryViewWidget(this, m_pTargetModel, m_pDispatcher, 1);
+    m_pMemoryViewWidget1 = new MemoryWindow(this, m_pTargetModel, m_pDispatcher, 1);
     m_pMemoryViewWidget1->setWindowTitle("Memory 2");
     m_pGraphicsInspector = new GraphicsInspectorWidget(this, m_pTargetModel, m_pDispatcher);
     m_pGraphicsInspector->setWindowTitle("Graphics Inspector (Alt+G)");
-    m_pBreakpointsWidget = new BreakpointsWidget(this, m_pTargetModel, m_pDispatcher);
+    m_pBreakpointsWidget = new BreakpointsWindow(this, m_pTargetModel, m_pDispatcher);
     m_pBreakpointsWidget->setWindowTitle("Breakpoints (Alt+B)");
     m_pConsoleWindow = new ConsoleWindow(this, m_pTargetModel, m_pDispatcher);
 
@@ -114,10 +114,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pTargetModel, &TargetModel::startStopChangedSignalDelayed,this, &MainWindow::startStopDelayedSlot);
 
     // Wire up cross-window requests
-    connect(m_pTargetModel, &TargetModel::addressRequested, m_pMemoryViewWidget0, &MemoryViewWidget::requestAddress);
-    connect(m_pTargetModel, &TargetModel::addressRequested, m_pMemoryViewWidget1, &MemoryViewWidget::requestAddress);
-    connect(m_pTargetModel, &TargetModel::addressRequested, m_pDisasmWidget0,     &DisasmViewWidget::requestAddress);
-    connect(m_pTargetModel, &TargetModel::addressRequested, m_pDisasmWidget1,     &DisasmViewWidget::requestAddress);
+    connect(m_pTargetModel, &TargetModel::addressRequested, m_pMemoryViewWidget0, &MemoryWindow::requestAddress);
+    connect(m_pTargetModel, &TargetModel::addressRequested, m_pMemoryViewWidget1, &MemoryWindow::requestAddress);
+    connect(m_pTargetModel, &TargetModel::addressRequested, m_pDisasmWidget0,     &DisasmWindow::requestAddress);
+    connect(m_pTargetModel, &TargetModel::addressRequested, m_pDisasmWidget1,     &DisasmWindow::requestAddress);
 
     // Wire up buttons to actions
     connect(m_pStartStopButton, &QAbstractButton::clicked, this, &MainWindow::startStopClicked);

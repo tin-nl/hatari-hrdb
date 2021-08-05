@@ -22,10 +22,10 @@ class QComboBox;
 class Dispatcher;
 class TargetModel;
 
-class DisasmViewWidget;
-class MemoryViewWidget;
+class DisasmWindow;
+class MemoryWindow;
 class GraphicsInspectorWidget;
-class BreakpointsWidget;
+class BreakpointsWindow;
 class ConsoleWindow;
 class ExceptionDialog;
 class RunDialog;
@@ -96,12 +96,12 @@ private:
     RunDialog*          m_pRunDialog;
 
     // Docking windows
-    DisasmViewWidget*           m_pDisasmWidget0;
-    DisasmViewWidget*           m_pDisasmWidget1;
-    MemoryViewWidget*           m_pMemoryViewWidget0;
-    MemoryViewWidget*           m_pMemoryViewWidget1;
+    DisasmWindow*           m_pDisasmWidget0;
+    DisasmWindow*           m_pDisasmWidget1;
+    MemoryWindow*           m_pMemoryViewWidget0;
+    MemoryWindow*           m_pMemoryViewWidget1;
     GraphicsInspectorWidget*    m_pGraphicsInspector;
-    BreakpointsWidget*          m_pBreakpointsWidget;
+    BreakpointsWindow*          m_pBreakpointsWidget;
     ConsoleWindow*              m_pConsoleWindow;
 
     // Low-level data
