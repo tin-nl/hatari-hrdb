@@ -16,6 +16,7 @@ RunDialog::RunDialog(QWidget *parent, Session* pSession) :
     QDialog(parent),
     m_pSession(pSession)
 {
+    this->setObjectName("RunDialog");
     this->setWindowTitle(tr("Run Hatari"));
 
     // Bottom OK/Cancel buttons
