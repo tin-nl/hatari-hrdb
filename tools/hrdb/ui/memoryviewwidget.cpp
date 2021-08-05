@@ -31,6 +31,7 @@ MemoryWidget::MemoryWidget(QWidget *parent, TargetModel *pTargetModel, Dispatche
     m_rowCount(1),
     m_requestId(0),
     m_windowIndex(windowIndex),
+    m_previousMemory(0, 0),
     m_cursorRow(0),
     m_cursorCol(0)
 {
@@ -300,6 +301,8 @@ void MemoryWidget::RecalcText()
         Row& row = m_rows[r];
         row.m_hexText.clear();
         row.m_asciiText.clear();
+        row.m_byteChanged.resize(row.m_rawBytes.size());
+
         for (uint32_t i = 0; i < row.m_rawBytes.size(); ++i)
         {
             uint8_t c = row.m_rawBytes[i];
@@ -309,6 +312,16 @@ void MemoryWidget::RecalcText()
                 row.m_asciiText += QString::asprintf("%c", c);
             else
                 row.m_asciiText += ".";
+
+            uint32_t addr = row.m_address + i;
+            bool changed = false;
+            if (m_previousMemory.HasAddress(addr))
+            {
+                uint8_t oldC = m_previousMemory.ReadAddressByte(addr);
+                if (oldC != c)
+                    changed = true;
+            }
+            row.m_byteChanged[i] = changed;
         }
     }
     repaint();
@@ -331,6 +344,16 @@ void MemoryWidget::startStopChangedSlot()
             }
         }
         RequestMemory();
+    }
+    else {
+        // Starting to run
+        // Copy the previous set of memory we have
+        const Memory* pMem = m_pTargetModel->GetMemory(m_memSlot);
+        if (pMem)
+            m_previousMemory = *pMem;
+        else {
+            m_previousMemory = Memory(0, 0);
+        }
     }
 }
 
@@ -394,16 +417,23 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
         // We write out the values per-nybble
         for (size_t col = 0; col < m_columnPositions.size(); ++col)
         {
-            //size_t byteOffset = i / 2;
-            //uint32_t shiftDown = (i % 2) * 4;
+            size_t byteOffset = col / 2;
+            bool changed = r.m_byteChanged[byteOffset];
+            painter.setPen(changed ? Qt::red : pal.text().color());
 
             int x = GetHexCharX(col);
             QChar st = r.m_hexText.at(col);
             painter.drawText(x, y, st);
         }
 
-        int x_ascii = GetAsciiCharX();
-        painter.drawText(x_ascii, y, m_rows[row].m_asciiText);
+        for (size_t col = 0; col < r.m_asciiText.size(); ++col)
+        {
+            int x_ascii = GetAsciiCharX(col);
+            bool changed = r.m_byteChanged[col];
+            painter.setPen(changed ? Qt::red : pal.text().color());
+            QString t = r.m_asciiText.at(col);
+            painter.drawText(x_ascii, y, t);
+        }
     }
 
     // Draw highlight/cursor area in the hex
@@ -529,10 +559,10 @@ int MemoryWidget::GetHexCharX(int column) const
     return GetAddrX() + (10 + m_columnPositions[column]) * m_charWidth;
 }
 
-int MemoryWidget::GetAsciiCharX() const
+int MemoryWidget::GetAsciiCharX(int column) const
 {
     uint32_t lastCharX = m_columnPositions.back();
-    return GetAddrX() + (10 + lastCharX + 3) * m_charWidth;
+    return GetAddrX() + (10 + lastCharX + 3 + column) * m_charWidth;
 }
 
 void MemoryWidget::GetCursorInfo(uint32_t &address, bool &bottomNybble)

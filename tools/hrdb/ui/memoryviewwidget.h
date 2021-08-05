@@ -68,7 +68,7 @@ private:
     int GetAddrX() const;
     // Get the x-coord of the hex-character at cursor column
     int GetHexCharX(int column) const;
-    int GetAsciiCharX() const;
+    int GetAsciiCharX(int column) const;
 
     void GetCursorInfo(uint32_t& address, bool& bottomNybble);
     void SetRowCount(uint32_t rowCount);
@@ -80,7 +80,9 @@ private:
     struct Row
     {
         uint32_t m_address;
+
         std::vector<uint8_t> m_rawBytes;
+        std::vector<bool> m_byteChanged;
         QString m_hexText;
         QString m_asciiText;
     };
@@ -100,6 +102,8 @@ private:
     uint64_t m_requestId;
     int      m_windowIndex;        // e.g. "memory 0", "memory 1"
     MemorySlot  m_memSlot;
+
+    Memory  m_previousMemory;       // Copy before we restarted the CPU
 
     // Cursor
     int     m_cursorRow;
