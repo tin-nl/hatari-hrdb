@@ -332,6 +332,7 @@ void MainWindow::Run()
 {
     m_pRunDialog->setModal(true);
     m_pRunDialog->show();
+    // We can't connect here since the dialog hasn't really run yet.
 }
 
 void MainWindow::Connect()

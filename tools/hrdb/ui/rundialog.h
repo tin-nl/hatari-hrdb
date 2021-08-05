@@ -14,19 +14,27 @@ public:
     RunDialog(QWidget* parent, TargetModel* pTargetModel, Dispatcher* pDispatcher);
     virtual ~RunDialog();
 
+    // Settings
+    void loadSettings();
+    void saveSettings();
+
 protected:
-    void showEvent(QShowEvent *event);
+    virtual void showEvent(QShowEvent *event);
+    virtual void closeEvent(QCloseEvent *event);
 
 private slots:
     void okClicked();
+    void exeClicked();
+    void workingDirectoryClicked();
 
 private:
 
     QLineEdit*      m_pExecutableTextEdit;
     QLineEdit*      m_pArgsTextEdit;
+    QLineEdit*      m_pWorkingDirectoryTextEdit;
 
-    TargetModel* m_pTargetModel;
-    Dispatcher* m_pDispatcher;
+    TargetModel*    m_pTargetModel;
+    Dispatcher*     m_pDispatcher;
 };
 
 #endif // RUNDIALOG_H
