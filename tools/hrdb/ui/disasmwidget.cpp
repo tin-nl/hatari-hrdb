@@ -408,34 +408,41 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
             else
                 painter.setPen(pal.text().color());
 
-            int y = y_base + row * m_lineHeight;
+            int row_top_y = row * m_lineHeight;
+            int text_y = y_base + row * m_lineHeight;
             const RowText& t = m_rowTexts[row];
 
             switch (col)
             {
             case kSymbol:
-                painter.drawText(x, y, t.symbol);
+                painter.drawText(x, text_y, t.symbol);
                 break;
             case kAddress:
-                painter.drawText(x, y, t.address);
+                painter.drawText(x, text_y, t.address);
                 break;
             case kPC:
                 if (t.isPc)
-                    painter.drawText(x, y, ">");
-                break;
-            case kHex:
-                if (m_bShowHex)
-                    painter.drawText(x, y, t.hex);
-                break;
-            case kDisasm:
-                painter.drawText(x, y, t.disasm);
-                break;
-            case kComments:
-                painter.drawText(x, y, t.comments);
+                    painter.drawText(x, text_y, ">");
                 break;
             case kBreakpoint:
                 if (t.isBreakpoint)
-                    painter.drawText(x, y, "*");
+                {
+                    // Y is halfway between text bottom and row top
+                    int circle_y = (text_y + row_top_y) / 2;
+                    int circle_rad = (text_y - row_top_y) / 2;
+                    painter.setBrush(Qt::red);
+                    painter.drawEllipse(x, circle_y, circle_rad, circle_rad);
+                }
+                break;
+            case kHex:
+                if (m_bShowHex)
+                    painter.drawText(x, text_y, t.hex);
+                break;
+            case kDisasm:
+                painter.drawText(x, text_y, t.disasm);
+                break;
+            case kComments:
+                painter.drawText(x, text_y, t.comments);
                 break;
             }
         } // row
