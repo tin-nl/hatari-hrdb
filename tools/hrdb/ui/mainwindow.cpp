@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <QtWidgets>
-#include <QtNetwork>
 #include <QShortcut>
 #include <QFontDatabase>
 
@@ -21,13 +20,11 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , tcpSocket(new QTcpSocket(this))
 {
     setObjectName("MainWindow");
 
-    // Create the core data models, since other object want to connect to them.
     m_pTargetModel = new TargetModel();
-    m_pDispatcher = new Dispatcher(tcpSocket, m_pTargetModel);
+    m_pDispatcher = new Dispatcher(m_session.m_pTcpSocket, m_pTargetModel);
 
     // Top row of buttons
     m_pRunningSquare = new QWidget(this);
@@ -68,7 +65,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_pConsoleWindow = new ConsoleWindow(this, m_pTargetModel, m_pDispatcher);
 
     m_pExceptionDialog = new ExceptionDialog(this, m_pTargetModel, m_pDispatcher);
-    m_pRunDialog = new RunDialog(this, m_pTargetModel, m_pDispatcher);
+    m_pRunDialog = new RunDialog(this, &m_session);
 
     // https://doc.qt.io/qt-5/qtwidgets-layouts-basiclayouts-example.html
     QVBoxLayout *vlayout = new QVBoxLayout;
@@ -153,7 +150,6 @@ MainWindow::~MainWindow()
 	delete m_pDispatcher;
     delete m_pTargetModel;
 }
-
 
 void MainWindow::connectChangedSlot()
 {
@@ -337,14 +333,12 @@ void MainWindow::Run()
 
 void MainWindow::Connect()
 {
-    // Create the TCP socket and start listening
-    QHostAddress qha(QHostAddress::LocalHost);
-    tcpSocket->connectToHost(qha, 56001);
+    m_session.Connect();
 }
 
 void MainWindow::Disconnect()
 {
-    tcpSocket->disconnectFromHost();
+    m_session.Disconnect();
 }
 
 void MainWindow::ExceptionsDialog()

@@ -10,6 +10,7 @@
 #include <QMainWindow>
 #include "../models/targetmodel.h"
 #include "../models/disassembler.h"
+#include "../models/session.h"
 
 class QPushButton;
 class QLabel;
@@ -104,13 +105,13 @@ private:
     ConsoleWindow*              m_pConsoleWindow;
 
     // Low-level data
-	QTcpSocket* 	tcpSocket;
-    Dispatcher*		m_pDispatcher;
-	TargetModel*	m_pTargetModel;
+    Session                     m_session;
+    Dispatcher*             	m_pDispatcher;
+    TargetModel*                m_pTargetModel;
 
     // Shown data
-    Registers                      m_prevRegs;
-    Disassembler::disassembly      m_disasm;
+    Registers                   m_prevRegs;
+    Disassembler::disassembly   m_disasm;
 
     // Menus
     void createActions();

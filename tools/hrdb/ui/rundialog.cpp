@@ -9,14 +9,12 @@
 #include <QFileDialog>
 #include <QPushButton>
 
-#include "../models/targetmodel.h"
-#include "../transport/dispatcher.h"
+#include "../models/session.h"
 #include "quicklayout.h"
 
-RunDialog::RunDialog(QWidget *parent, TargetModel* pTargetModel, Dispatcher* pDispatcher) :
+RunDialog::RunDialog(QWidget *parent, Session* pSession) :
     QDialog(parent),
-    m_pTargetModel(pTargetModel),
-    m_pDispatcher(pDispatcher)
+    m_pSession(pSession)
 {
     this->setWindowTitle(tr("Run Hatari"));
 
