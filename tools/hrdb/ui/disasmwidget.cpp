@@ -464,6 +464,20 @@ void DisasmWidget::mouseMoveEvent(QMouseEvent *event)
     QWidget::mouseMoveEvent(event);
 }
 
+void DisasmWidget::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton)
+    {
+        int row = int(event->localPos().y() / m_lineHeight);
+        if (row < m_rowCount)
+        {
+            m_cursorRow = row;
+            if (this->underMouse())
+                update();       // redraw highlight
+        }
+    }
+}
+
 bool DisasmWidget::event(QEvent* ev)
 {
     if (ev->type() == QEvent::Leave)
