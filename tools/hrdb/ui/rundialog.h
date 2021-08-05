@@ -4,6 +4,7 @@
 #include <QDialog>
 
 class QLineEdit;
+class QComboBox;
 class TargetModel;
 class Dispatcher;
 class Session;
@@ -29,12 +30,21 @@ private slots:
     void workingDirectoryClicked();
 
 private:
+    // UI elements
     QLineEdit*      m_pExecutableTextEdit;
     QLineEdit*      m_pArgsTextEdit;
     QLineEdit*      m_pWorkingDirectoryTextEdit;
+    QComboBox*      m_pBreakModeCombo;
 
-    TargetModel*    m_pTargetModel;
-    Dispatcher*     m_pDispatcher;
+    // What sort of automatic breakpoint to use
+    enum BreakMode
+    {
+        kNone,
+        kBoot,
+        kProgStart
+    };
+
+    // Shared session data pointer (storage for launched process, temp file etc)
     Session*        m_pSession;
 };
 
