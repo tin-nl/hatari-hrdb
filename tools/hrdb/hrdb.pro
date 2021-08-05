@@ -49,6 +49,7 @@ HEADERS += \
     models/exceptionmask.h \
     models/memory.h \
     models/registers.h \
+    models/session.h \
     models/stringparsers.h \
     models/stringsplitter.h \
     models/symboltable.h \
@@ -65,8 +66,7 @@ HEADERS += \
     ui/memoryviewwidget.h \
     ui/quicklayout.h \
     ui/rundialog.h \
-    ui/consolewindow.h \
-    models/session.h
+    ui/consolewindow.h
 
 RESOURCES     = hrdb.qrc    
 
