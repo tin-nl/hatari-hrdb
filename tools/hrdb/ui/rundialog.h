@@ -1,6 +1,7 @@
 #ifndef RUNDIALOG_H
 #define RUNDIALOG_H
 
+#include <QObject>
 #include <QDialog>
 
 class QLineEdit;
@@ -11,18 +12,19 @@ class Session;
 
 class RunDialog : public QDialog
 {
-   // Q_OBJECT
+private:
+    Q_OBJECT
 public:
     RunDialog(QWidget* parent, Session* pSession);
-    virtual ~RunDialog();
+    virtual ~RunDialog() override;
 
     // Settings
     void loadSettings();
     void saveSettings();
 
 protected:
-    virtual void showEvent(QShowEvent *event);
-    virtual void closeEvent(QCloseEvent *event);
+    virtual void showEvent(QShowEvent *event) override;
+    virtual void closeEvent(QCloseEvent *event) override;
 
 private slots:
     void okClicked();
