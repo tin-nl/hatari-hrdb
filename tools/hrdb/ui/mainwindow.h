@@ -69,6 +69,8 @@ private:
         TokenType type;
         uint32_t subIndex;      // subIndex e.g "4" for D4, 0x12345 for symbol address, bitnumber for SR field
         bool highlight;
+
+        QRect rect;             // bounding rectangle, updated when rendered
     };
 
     QString FindSymbol(uint32_t addr);

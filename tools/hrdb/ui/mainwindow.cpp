@@ -97,9 +97,15 @@ void RegisterWidget::paintEvent(QPaintEvent * ev)
 
     for (int i = 0; i < m_tokens.size(); ++i)
     {
-        const Token& tok = m_tokens[i];
+        Token& tok = m_tokens[i];
         painter.setPen(tok.highlight ? Qt::red : pal.text().color());
         painter.drawText(tok.x * char_width, y_base + tok.y * y_height, tok.text);
+
+        int x = tok.x * char_width;
+        int y = 0 + tok.y * y_height;
+        int w = info.horizontalAdvance(tok.text);
+        int h = y_height;
+        tok.rect.setRect(x, y, w, h);
     }
 }
 
@@ -112,12 +118,7 @@ bool RegisterWidget::event(QEvent *event)
         for (int i = 0; i < m_tokens.size(); ++i)
         {
             const Token& tok = m_tokens[i];
-            int x = tok.x * char_width;
-            int y = 0 + tok.y * y_height;
-            int w = tok.text.size() * char_width;
-            int h = y_height;
-
-            if (QRect(x, y, w, h).contains(helpEvent->pos()))
+            if (tok.rect.contains(helpEvent->pos()))
             {
                 index = i;
                 break;
@@ -174,7 +175,7 @@ void RegisterWidget::startStopDelayedSlot(int running)
     if (running)
     {
         m_tokens.clear();
-        AddToken(0, 0, tr("Running, Ctrl+R to break..."), TokenType::kNone, 0, false);
+        AddToken(1, 1, tr("Running, Ctrl+R to break..."), TokenType::kNone, 0, false);
         update();
     }
 }
@@ -211,7 +212,7 @@ void RegisterWidget::PopulateRegisters()
     m_tokens.clear();
     if (!m_pTargetModel->IsConnected())
     {
-        AddToken(0, 0, tr("Not connected."), TokenType::kNone, 0, false);
+        AddToken(1, 1, tr("Not connected."), TokenType::kNone, 0, false);
         update();
         return;
     }
@@ -219,7 +220,7 @@ void RegisterWidget::PopulateRegisters()
     // Build up the text area
     regs = m_pTargetModel->GetRegs();
 
-    AddReg32(0, 0, Registers::PC, m_prevRegs, regs);
+    AddReg32(1, 0, Registers::PC, m_prevRegs, regs);
     QString disasmText;
     QTextStream ref(&disasmText);
     if (m_disasm.lines.size() > 0)
@@ -240,10 +241,10 @@ void RegisterWidget::PopulateRegisters()
         if (sym.size() != 0)
             ref << "     ;" << sym;
 
-        AddToken(20, 0, disasmText, TokenType::kNone, 0, false);
+        AddToken(21, 0, disasmText, TokenType::kNone, 0, false);
     }
 
-    AddReg16(0, 2, Registers::SR, m_prevRegs, regs);
+    AddReg16(1, 2, Registers::SR, m_prevRegs, regs);
     AddSR(10, 2, m_prevRegs, regs, 15, "T");
     AddSR(11, 2, m_prevRegs, regs, 14, "T");
     AddSR(12, 2, m_prevRegs, regs, 13, "S");
@@ -259,15 +260,15 @@ void RegisterWidget::PopulateRegisters()
 
     uint32_t ex = GET_REG(regs, EX);
     if (ex != 0)
-        AddToken(0, 4, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), TokenType::kNone, 0, true);
+        AddToken(1, 4, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), TokenType::kNone, 0, true);
 
     for (uint32_t reg = 0; reg < 8; ++reg)
     {
         int32_t y = 4 + static_cast<int>(reg);
-        AddReg32(0, y, Registers::D0 + reg, m_prevRegs, regs); AddReg32(14, y, Registers::A0 + reg, m_prevRegs, regs); AddSymbol(28, y, regs.m_value[Registers::A0 + reg]);
+        AddReg32(1, y, Registers::D0 + reg, m_prevRegs, regs); AddReg32(15, y, Registers::A0 + reg, m_prevRegs, regs); AddSymbol(29, y, regs.m_value[Registers::A0 + reg]);
     }
-    AddReg32(13, 12, Registers::USP, m_prevRegs, regs); AddSymbol(28, 12, regs.m_value[Registers::USP]);
-    AddReg32(13, 13, Registers::ISP, m_prevRegs, regs); AddSymbol(28, 13, regs.m_value[Registers::ISP]);
+    AddReg32(14, 12, Registers::USP, m_prevRegs, regs); AddSymbol(29, 12, regs.m_value[Registers::USP]);
+    AddReg32(14, 13, Registers::ISP, m_prevRegs, regs); AddSymbol(29, 13, regs.m_value[Registers::ISP]);
 
     // Sundry info
     AddToken(1, 15, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(regs, VBL), GET_REG(regs, FrameCycles)), TokenType::kNone, 0, false);
