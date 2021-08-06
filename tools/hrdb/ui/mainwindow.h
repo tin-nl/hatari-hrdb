@@ -52,29 +52,44 @@ private:
     void PopulateRegisters();
     void UpdateFont();
 
-    QString FindSymbol(uint32_t addr);
-
-    void AddToken(int x, int y, QString text, QString tooltip, bool highlight);
-    void AddReg16(int x, int y, int regIndex, const Registers &prevRegs, const Registers &regs);
-    void AddReg32(int x, int y, int regIndex, const Registers &prevRegs, const Registers &regs);
-    void AddSR(int x, int y, const Registers &prevRegs, const Registers &regs, uint32_t bit, const char *pName);
-    void AddSymbol(int x, int y, uint32_t address);
-
-    Dispatcher*             	m_pDispatcher;
-    TargetModel*                m_pTargetModel;
-
-    // Shown data
-    Registers                   m_prevRegs;
-    Disassembler::disassembly   m_disasm;
+    // Tokens etc
+    enum TokenType
+    {
+        kRegister,
+        kSymbol,
+        kNone,
+    };
 
     struct Token
     {
         int x;
         int y;
         QString text;
-        QString tooltip;
+
+        TokenType type;
+        uint32_t subIndex;      // subIndex e.g "4" for D4, 0x12345 for symbol address, bitnumber for SR field
         bool highlight;
     };
+
+    QString FindSymbol(uint32_t addr);
+
+    void AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex, bool highlight);
+    void AddReg16(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &regs);
+    void AddReg32(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &regs);
+
+    void AddSR(int x, int y, const Registers &prevRegs, const Registers &regs, uint32_t bit, const char *pName);
+    void AddSymbol(int x, int y, uint32_t address);
+
+    QString GetTooltipText(const Token& token);
+
+    Dispatcher*             	m_pDispatcher;
+    TargetModel*                m_pTargetModel;
+
+    // Shown data
+    Registers                   regs;           // current regs
+    Registers                   m_prevRegs;     // regs when PC started
+    Disassembler::disassembly   m_disasm;
+
     QVector<Token>              m_tokens;
 
     // Render info

@@ -18,6 +18,43 @@
 #include "exceptiondialog.h"
 #include "rundialog.h"
 
+static QString CreateNumberTooltip(uint32_t value)
+{
+    uint16_t word = value & 0xffff;
+    uint16_t byte = value & 0xff;
+
+    QString final;
+    QTextStream ref(&final);
+
+    if (value & 0x80000000)
+        ref << QString::asprintf("LONG %u (%d)\n", value, static_cast<int32_t>(value));
+    else
+        ref << QString::asprintf("LONG %u\n", value);
+    if (value & 0x8000)
+        ref << QString::asprintf("WORD %u (%d)\n", word, static_cast<int16_t>(word));
+    else
+        ref << QString::asprintf("WORD %u\n", word);
+    if (value & 0x80)
+        ref << QString::asprintf("BYTE %u (%d)\n", byte, static_cast<int8_t>(byte));
+    else
+        ref << QString::asprintf("BYTE %u\n", byte);
+
+    ref << "BINARY ";
+    for (int bit = 31; bit >= 0; --bit)
+        ref << ((value & (1U << bit)) ? "1" : "0");
+    ref << "\n";
+
+    ref << "ASCII \"";
+    for (int bit = 3; bit >= 0; --bit)
+    {
+        unsigned char val = static_cast<unsigned char>(value >> (bit * 8));
+        ref << ((val >= 32 && val < 128) ? QString(val) : ".");
+    }
+    ref << "\"\n";
+
+    return final;
+}
+
 
 RegisterWidget::RegisterWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher *pDispatcher) :
     QWidget(parent),
@@ -90,9 +127,11 @@ bool RegisterWidget::event(QEvent *event)
             }
         }
 
-        if (index != -1 && m_tokens[index].tooltip.size() != 0)
+        if (index != -1)
         {
-            QToolTip::showText(helpEvent->globalPos(), m_tokens[index].tooltip);
+            QString text = GetTooltipText(m_tokens[index]);
+            if (text.size() != 0)
+                QToolTip::showText(helpEvent->globalPos(), text);
         }
         else
         {
@@ -138,7 +177,7 @@ void RegisterWidget::startStopDelayedSlot(int running)
     if (running)
     {
         m_tokens.clear();
-        AddToken(0, 0, tr("Running, Ctrl+R to break..."), "", false);
+        AddToken(0, 0, tr("Running, Ctrl+R to break..."), TokenType::kNone, 0, false);
         update();
     }
 }
@@ -176,13 +215,13 @@ void RegisterWidget::PopulateRegisters()
     m_tokens.clear();
     if (!m_pTargetModel->IsConnected())
     {
-        AddToken(0, 0, tr("Not connected."), "", false);
+        AddToken(0, 0, tr("Not connected."), TokenType::kNone, 0, false);
         update();
         return;
     }
 
     // Build up the text area
-    Registers regs = m_pTargetModel->GetRegs();
+    regs = m_pTargetModel->GetRegs();
 
     AddReg32(0, 0, Registers::PC, m_prevRegs, regs);
     QString disasmText;
@@ -194,7 +233,7 @@ void RegisterWidget::PopulateRegisters()
         if (sym.size() != 0)
             ref << "     ;" << sym;
 
-        AddToken(20, 0, disasmText, "", false);
+        AddToken(20, 0, disasmText, TokenType::kNone, 0, false);
     }
 
     AddReg16(0, 2, Registers::SR, m_prevRegs, regs);
@@ -213,16 +252,19 @@ void RegisterWidget::PopulateRegisters()
 
     uint32_t ex = GET_REG(regs, EX);
     if (ex != 0)
-        AddToken(0, 4, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), "", true);
+        AddToken(0, 4, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), TokenType::kNone, 0, true);
 
-    for (int reg = 0; reg < 8; ++reg)
+    for (uint32_t reg = 0; reg < 8; ++reg)
     {
-        int y = 5 + reg;
-        AddReg32(0, y, Registers::D0 + reg, m_prevRegs, regs); AddReg32(14, y, Registers::A0 + reg, m_prevRegs, regs); AddSymbol(28, y, regs.m_value[Registers::A0 + reg] & 0xffffff);
+        int32_t y = 4 + static_cast<int>(reg);
+        AddReg32(0, y, Registers::D0 + reg, m_prevRegs, regs); AddReg32(14, y, Registers::A0 + reg, m_prevRegs, regs); AddSymbol(28, y, regs.m_value[Registers::A0 + reg]);
     }
+    AddReg32(13, 12, Registers::USP, m_prevRegs, regs); AddSymbol(28, 12, regs.m_value[Registers::USP]);
+    AddReg32(13, 13, Registers::ISP, m_prevRegs, regs); AddSymbol(28, 13, regs.m_value[Registers::ISP]);
 
-    AddToken(1, 15, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(regs, VBL), GET_REG(regs, FrameCycles)), "", false);
-    AddToken(1, 16, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(regs, HBL), GET_REG(regs, LineCycles)), "", false);
+    // Sundry info
+    AddToken(1, 15, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(regs, VBL), GET_REG(regs, FrameCycles)), TokenType::kNone, 0, false);
+    AddToken(1, 16, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(regs, HBL), GET_REG(regs, LineCycles)), TokenType::kNone, 0, false);
     update();
 }
 
@@ -249,41 +291,36 @@ QString RegisterWidget::FindSymbol(uint32_t addr)
     return QString::fromStdString(sym.name);
 }
 
-void RegisterWidget::AddToken(int x, int y, QString text, QString tooltip, bool highlight)
+void RegisterWidget::AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex, bool highlight)
 {
     Token tok;
     tok.x = x;
     tok.y = y;
     tok.text = text;
-    tok.tooltip = tooltip;
+    tok.type = type;
+    tok.subIndex = subIndex;
     tok.highlight = highlight;
     m_tokens.push_back(tok);
 }
 
-static QString CreateTooltip(uint32_t value)
-{
-    return QString::asprintf(
-                "Hex: %x\nDec: %u", value, value);
-}
-
-void RegisterWidget::AddReg16(int x, int y, int regIndex, const Registers& prevRegs, const Registers& regs)
+void RegisterWidget::AddReg16(int x, int y, uint32_t regIndex, const Registers& prevRegs, const Registers& regs)
 {
     bool highlight = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]);
 
     QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
     QString value = QString::asprintf("%04x", regs.m_value[regIndex]);
-    AddToken(x, y, label, "", false);
-    AddToken(x + label.size() + 1, y, value, CreateTooltip(regs.m_value[regIndex]), highlight);
+    AddToken(x, y, label, TokenType::kNone, 0, false);
+    AddToken(x + label.size() + 1, y, value, TokenType::kRegister, regIndex, highlight);
 }
 
-void RegisterWidget::AddReg32(int x, int y, int regIndex, const Registers& prevRegs, const Registers& regs)
+void RegisterWidget::AddReg32(int x, int y, uint32_t regIndex, const Registers& prevRegs, const Registers& regs)
 {
     bool highlight = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]);
 
     QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
     QString value = QString::asprintf("%08x", regs.m_value[regIndex]);
-    AddToken(x, y, label, "", false);
-    AddToken(x + label.size() + 1, y, value, CreateTooltip(regs.m_value[regIndex]), highlight);
+    AddToken(x, y, label, TokenType::kNone, 0, false);
+    AddToken(x + label.size() + 1, y, value, TokenType::kRegister, regIndex, highlight);
 }
 
 void RegisterWidget::AddSR(int x, int y, const Registers& prevRegs, const Registers& regs, uint32_t bit, const char* pName)
@@ -294,18 +331,33 @@ void RegisterWidget::AddSR(int x, int y, const Registers& prevRegs, const Regist
     bool highlight = valNew != valOld;
     const char* text = valNew != 0 ? pName : ".";
 
-    QString tooltip = QString::asprintf("Flag: %s = %s", pName, valNew != 0 ? "TRUE" : "FALSE");
-    AddToken(x, y, text, tooltip, highlight);
+    AddToken(x, y, text, TokenType::kNone, 0, highlight);
 }
 
 void RegisterWidget::AddSymbol(int x, int y, uint32_t address)
 {
-    QString symText = FindSymbol(address);
+    QString symText = FindSymbol(address & 0xffffff);
     if (!symText.size())
         return;
 
-    QString tooltip = QString::asprintf("Address: $%08X", address);
-    AddToken(x, y, symText, tooltip, false);
+    AddToken(x, y, symText, TokenType::kSymbol, address, false);
+}
+
+QString RegisterWidget::GetTooltipText(const RegisterWidget::Token& token)
+{
+    switch (token.type)
+    {
+    case TokenType::kRegister:
+        {
+            uint32_t value = regs.Get(token.subIndex);
+            return CreateNumberTooltip(value);
+        }
+    case TokenType::kSymbol:
+        return QString::asprintf("Original address: $%08x", token.subIndex);
+    default:
+        break;
+    }
+    return "";
 }
 
 MainWindow::MainWindow(QWidget *parent)
