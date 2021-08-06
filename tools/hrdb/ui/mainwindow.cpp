@@ -92,11 +92,8 @@ void RegisterWidget::paintEvent(QPaintEvent * ev)
 
     const QBrush& br = pal.background().color();
     painter.fillRect(this->rect(), br);
-    if (hasFocus())
-    {
-        painter.setPen(QPen(pal.dark(), 6));
-        painter.drawRect(this->rect());
-    }
+    painter.setPen(QPen(pal.dark(), hasFocus() ? 6 : 2));
+    painter.drawRect(this->rect());
 
     for (int i = 0; i < m_tokens.size(); ++i)
     {

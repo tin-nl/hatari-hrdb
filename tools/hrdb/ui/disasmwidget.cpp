@@ -363,12 +363,8 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
 
     QPainter painter(this);
     const QPalette& pal = this->palette();
-
-    if (hasFocus())
-    {
-        painter.setPen(QPen(pal.dark(), 6));
-        painter.drawRect(this->rect());
-    }
+    painter.setPen(QPen(pal.dark(), hasFocus() ? 6 : 2));
+    painter.drawRect(this->rect());
 
     painter.setFont(monoFont);
     QFontMetrics info(painter.fontMetrics());
