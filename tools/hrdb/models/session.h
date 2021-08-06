@@ -20,6 +20,7 @@ public:
 
     QTcpSocket*      m_pTcpSocket;
     QTemporaryFile*  m_pStartupFile;
+    QTemporaryFile*  m_pLoggingFile;
 
 private slots:
 

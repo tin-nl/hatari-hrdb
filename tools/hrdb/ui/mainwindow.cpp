@@ -495,6 +495,16 @@ void MainWindow::connectChangedSlot()
 {
     PopulateRunningSquare();
     updateButtonEnable();
+#if 0
+    // Experimental: force Hatari output to a file
+    if (m_pTargetModel->IsConnected())
+    {
+        QString logCmd("setstd ");
+        m_session.m_pLoggingFile->open();
+        logCmd += m_session.m_pLoggingFile->fileName();
+        m_pDispatcher->SendCommandPacket(logCmd.toStdString().c_str());
+    }
+#endif
 }
 
 void MainWindow::startStopChangedSlot()
