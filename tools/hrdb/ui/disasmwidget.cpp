@@ -77,8 +77,8 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel *pTargetModel, Dispatche
     m_rightClickMenu.addMenu(pEditMenu);
     m_rightClickMenu.addMenu(pViewMenu);
 
-    new QShortcut(QKeySequence(tr("F3",     "Run to cursor")),        this, SLOT(runToCursor()));
-    new QShortcut(QKeySequence(tr("Ctrl+B", "Toggle breakpoint")),    this, SLOT(toggleBreakpoint()));
+    new QShortcut(QKeySequence(tr("Ctrl+H", "Run to Here")),        this, SLOT(runToCursor()));
+    new QShortcut(QKeySequence(tr("Ctrl+B", "Toggle breakpoint")),  this, SLOT(toggleBreakpoint()));
 
     // Target connects
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &DisasmWidget::startStopChangedSlot);
