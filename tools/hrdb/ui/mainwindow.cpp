@@ -209,7 +209,6 @@ void RegisterWidget::symbolTableChangedSlot(uint64_t /*commandId*/)
     PopulateRegisters();
 }
 
-
 void RegisterWidget::PopulateRegisters()
 {
     m_tokens.clear();
@@ -228,8 +227,19 @@ void RegisterWidget::PopulateRegisters()
     QTextStream ref(&disasmText);
     if (m_disasm.lines.size() > 0)
     {
-        Disassembler::print(m_disasm.lines[0].inst, m_disasm.lines[0].address, ref);
+        const instruction& inst = m_disasm.lines[0].inst;
+        Disassembler::print(inst, m_disasm.lines[0].address, ref);
         QString sym = FindSymbol(GET_REG(regs, PC) & 0xffffff);
+
+        bool branchTaken;
+        if (DisAnalyse::isBranch(inst, regs, branchTaken))
+        {
+            if (branchTaken)
+                ref << " [TAKEN]";
+            else
+                ref << " [NOT TAKEN]";
+        }
+
         if (sym.size() != 0)
             ref << "     ;" << sym;
 

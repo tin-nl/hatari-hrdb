@@ -57,6 +57,9 @@ public:
     // True if trap, trapv
     static bool isTrap(const instruction& inst);
     static bool isBackDbf(const instruction& inst);
+
+    // See if this is a branch and whether it would be taken
+    static bool isBranch(const instruction &inst, const Registers& regs, bool& takeBranch);
 };
 
 #endif // DISASSEMBLER_H
