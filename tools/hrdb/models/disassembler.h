@@ -51,8 +51,12 @@ public:
 class DisAnalyse
 {
 public:
+    // True if bsr/jsr
     static bool isSubroutine(const instruction& inst);
+
+    // True if trap, trapv
     static bool isTrap(const instruction& inst);
+    static bool isBackDbf(const instruction& inst);
 };
 
 #endif // DISASSEMBLER_H

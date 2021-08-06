@@ -6,7 +6,7 @@
 #include "symboltable.h"
 #include "registers.h"
 
-const char* instruction_names[Opcode::COUNT] =
+static const char* instruction_names[Opcode::COUNT] =
 {
     "none",
     "abcd",
@@ -489,7 +489,23 @@ bool DisAnalyse::isTrap(const instruction &inst)
     switch (inst.opcode)
     {
         case Opcode::TRAP:
+        case Opcode::TRAPV:
             return true;
+        default:
+            break;
+    }
+    return false;
+}
+
+bool DisAnalyse::isBackDbf(const instruction &inst)
+{
+    switch (inst.opcode)
+    {
+        case Opcode::DBF:
+        case Opcode::DBRA:
+            if (inst.op1.type == OpType::RELATIVE_BRANCH)
+                return inst.op1.relative_branch.disp <= 0;
+            break;
         default:
             break;
     }

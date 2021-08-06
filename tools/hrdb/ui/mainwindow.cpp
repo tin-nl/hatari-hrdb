@@ -571,7 +571,8 @@ void MainWindow::nextClicked()
     const Disassembler::line& nextInst = m_disasm.lines[0];
     // Either "next" or set breakpoint to following instruction
     bool shouldStepOver = DisAnalyse::isSubroutine(nextInst.inst) ||
-                          DisAnalyse::isTrap(nextInst.inst);
+                          DisAnalyse::isTrap(nextInst.inst) ||
+                          DisAnalyse::isBackDbf(nextInst.inst);
     if (shouldStepOver)
     {
         uint32_t next_pc = nextInst.inst.byte_count + nextInst.address;
