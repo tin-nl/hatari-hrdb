@@ -139,7 +139,7 @@ void RunDialog::okClicked()
         if (breakMode == BreakMode::kBoot)
             ref << QString("b pc ! 0 : once\r\n");
         else if (breakMode == BreakMode::kProgStart)
-            ref << QString("b pc=TEXT && pc < $e00000 : once\r\n");
+            ref << QString("b pc=TEXT && pc<$e00000 : once\r\n");
 
         // Create the temp file
         // In theory we need to be careful about reuse?
