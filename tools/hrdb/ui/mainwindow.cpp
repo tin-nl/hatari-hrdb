@@ -18,6 +18,242 @@
 #include "exceptiondialog.h"
 #include "rundialog.h"
 
+
+RegisterWidget::RegisterWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher *pDispatcher) :
+    QWidget(parent),
+    m_pDispatcher(pDispatcher),
+    m_pTargetModel(pTargetModel)
+{
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    // Listen for target changes
+    connect(m_pTargetModel, &TargetModel::startStopChangedSignal,        this, &RegisterWidget::startStopChangedSlot);
+    connect(m_pTargetModel, &TargetModel::registersChangedSignal,        this, &RegisterWidget::registersChangedSlot);
+    connect(m_pTargetModel, &TargetModel::connectChangedSignal,          this, &RegisterWidget::connectChangedSlot);
+    connect(m_pTargetModel, &TargetModel::memoryChangedSignal,           this, &RegisterWidget::memoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal,      this, &RegisterWidget::symbolTableChangedSlot);
+    connect(m_pTargetModel, &TargetModel::startStopChangedSignalDelayed, this, &RegisterWidget::startStopDelayedSlot);
+
+    setFocusPolicy(Qt::FocusPolicy::StrongFocus);
+}
+
+RegisterWidget::~RegisterWidget()
+{
+
+}
+
+void RegisterWidget::paintEvent(QPaintEvent * ev)
+{
+    QWidget::paintEvent(ev);
+
+    QPainter painter(this);
+    QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    painter.setFont(monoFont);
+    QFontMetrics info(painter.fontMetrics());
+    const QPalette& pal = this->palette();
+
+    const QBrush& br = pal.background().color();
+    painter.fillRect(this->rect(), br);
+    if (hasFocus())
+    {
+        painter.setPen(QPen(pal.dark(), 6));
+        painter.drawRect(this->rect());
+    }
+
+    int y_base = info.ascent();
+    int y_height = info.lineSpacing();
+    int char_width = info.horizontalAdvance("0");
+
+    for (int i = 0; i < m_tokens.size(); ++i)
+    {
+        const Token& tok = m_tokens[i];
+        painter.setPen(tok.highlight ? Qt::red : pal.text().color());
+        painter.drawText(tok.x * char_width, y_base + tok.y * y_height, tok.text);
+    }
+}
+
+void RegisterWidget::connectChangedSlot()
+{
+    PopulateRegisters();
+}
+
+void RegisterWidget::startStopChangedSlot()
+{
+    bool isRunning = m_pTargetModel->IsRunning();
+
+    // Update text here
+    if (isRunning)
+    {
+        // Update our previous values
+        // TODO: this is not the ideal way to do this, since there
+        // are timing issues. In future, parcel up the stopping updates so
+        // that widget refreshes happen as one.
+        m_prevRegs = m_pTargetModel->GetRegs();
+
+        // Don't populate display here, since it causes colours to flash
+    }
+    else
+    {
+        // STOPPED
+        // We don't do any requests here; the MainWindow does them.
+        // We just listen for the callbacks.
+    }
+}
+
+void RegisterWidget::startStopDelayedSlot(int running)
+{
+    if (running)
+    {
+        m_tokens.clear();
+        AddToken(0, 0, tr("Running, Ctrl+R to break..."), false);
+        update();
+    }
+}
+
+void RegisterWidget::registersChangedSlot(uint64_t /*commandId*/)
+{
+    // Update text here
+    PopulateRegisters();
+}
+
+void RegisterWidget::memoryChangedSlot(int slot, uint64_t /*commandId*/)
+{
+    if (slot != MemorySlot::kMainPC)
+        return;
+
+    // Disassemble the first instruction
+    m_disasm.lines.clear();
+    const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kMainPC);
+    if (!pMem)
+        return;
+
+    buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize());
+    Disassembler::decode_buf(disasmBuf, m_disasm, pMem->GetAddress(), 2);
+    PopulateRegisters();
+}
+
+void RegisterWidget::symbolTableChangedSlot(uint64_t /*commandId*/)
+{
+    PopulateRegisters();
+}
+
+
+void RegisterWidget::PopulateRegisters()
+{
+    m_tokens.clear();
+    if (!m_pTargetModel->IsConnected())
+    {
+        AddToken(0, 0, tr("Not connected."), false);
+        update();
+        return;
+    }
+
+    // Build up the text area
+    Registers regs = m_pTargetModel->GetRegs();
+
+    AddReg32(0, 0, Registers::PC, m_prevRegs, regs);
+    QString disasmText;
+    QTextStream ref(&disasmText);
+    if (m_disasm.lines.size() > 0)
+    {
+        Disassembler::print(m_disasm.lines[0].inst, m_disasm.lines[0].address, ref);
+        QString sym = FindSymbol(GET_REG(regs, PC) & 0xffffff);
+        if (sym.size() != 0)
+            ref << "     ;" << sym;
+
+        AddToken(20, 0, disasmText, false);
+    }
+
+    AddReg16(0, 2, Registers::SR, m_prevRegs, regs);
+    AddSR(10, 2, m_prevRegs, regs, 15, "T");
+    AddSR(11, 2, m_prevRegs, regs, 14, "T");
+    AddSR(12, 2, m_prevRegs, regs, 13, "S");
+    AddSR(15, 2, m_prevRegs, regs, 10, "2");
+    AddSR(16, 2, m_prevRegs, regs, 9, "1");
+    AddSR(17, 2, m_prevRegs, regs, 8, "0");
+
+    AddSR(20, 2, m_prevRegs, regs, 4, "X");
+    AddSR(21, 2, m_prevRegs, regs, 3, "N");
+    AddSR(22, 2, m_prevRegs, regs, 2, "Z");
+    AddSR(23, 2, m_prevRegs, regs, 1, "V");
+    AddSR(24, 2, m_prevRegs, regs, 0, "C");
+
+    uint32_t ex = GET_REG(regs, EX);
+    if (ex != 0)
+        AddToken(0, 4, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), true);
+
+    for (int reg = 0; reg < 8; ++reg)
+    {
+        int y = 5 + reg;
+        AddReg32(0, y, Registers::D0 + reg, m_prevRegs, regs); AddReg32(14, y, Registers::A0 + reg, m_prevRegs, regs); AddSymbol(28, y, regs.m_value[Registers::A0 + reg] & 0xffffff);
+    }
+
+    AddToken(1, 15, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(regs, VBL), GET_REG(regs, FrameCycles)), false);
+    AddToken(1, 16, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(regs, HBL), GET_REG(regs, LineCycles)), false);
+    update();
+}
+
+QString RegisterWidget::FindSymbol(uint32_t addr)
+{
+    Symbol sym;
+    if (!m_pTargetModel->GetSymbolTable().FindLowerOrEqual(addr & 0xffffff, sym))
+        return QString();
+
+    uint32_t offset = addr - sym.address;
+    if (offset)
+        return QString::asprintf("%s+%d", sym.name.c_str(), offset);
+    return QString::fromStdString(sym.name);
+}
+
+void RegisterWidget::AddToken(int x, int y, QString text, bool highlight)
+{
+    Token tok;
+    tok.x = x;
+    tok.y = y;
+    tok.text = text;
+    tok.highlight = highlight;
+    m_tokens.push_back(tok);
+}
+
+void RegisterWidget::AddReg16(int x, int y, int regIndex, const Registers& prevRegs, const Registers& regs)
+{
+    bool highlight = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]);
+
+    QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
+    QString value = QString::asprintf("%04x", regs.m_value[regIndex]);
+    AddToken(x, y, label, false);
+    AddToken(x + label.size() + 1, y, value, highlight);
+}
+
+void RegisterWidget::AddReg32(int x, int y, int regIndex, const Registers& prevRegs, const Registers& regs)
+{
+    bool highlight = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]);
+
+    QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
+    QString value = QString::asprintf("%08x", regs.m_value[regIndex]);
+    AddToken(x, y, label, false);
+    AddToken(x + label.size() + 1, y, value, highlight);
+}
+
+void RegisterWidget::AddSR(int x, int y, const Registers& prevRegs, const Registers& regs, uint32_t bit, const char* pName)
+{
+    uint32_t mask = 1U << bit;
+    uint32_t valNew = regs.m_value[Registers::SR] & mask;
+    uint32_t valOld = prevRegs.m_value[Registers::SR] & mask;
+    bool highlight = valNew != valOld;
+    const char* text = valNew != 0 ? pName : ".";
+    AddToken(x, y, text, highlight);
+}
+
+void RegisterWidget::AddSymbol(int x, int y, uint32_t address)
+{
+    QString symText = FindSymbol(address);
+    if (!symText.size())
+        return;
+
+    AddToken(x, y, symText, false);
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -41,14 +277,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_pRunToCombo->insertItem(3, "Next HBL");
 
     // Register/status window
-    m_pRegistersTextEdit = new QTextEdit("", this);
-	m_pRegistersTextEdit->setReadOnly(true);
-	m_pRegistersTextEdit->setAcceptRichText(false);
-
-    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    m_pRegistersTextEdit->setCurrentFont(monoFont);
-    m_pRegistersTextEdit->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
-    m_pRegistersTextEdit->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
+    m_pRegisterWidget = new RegisterWidget(this, m_pTargetModel, m_pDispatcher);
 
     m_pDisasmWidget0 = new DisasmWindow(this, m_pTargetModel, m_pDispatcher, 0);
     m_pDisasmWidget0->setWindowTitle("Disassembly (Alt+D)");
@@ -84,7 +313,7 @@ MainWindow::MainWindow(QWidget *parent)
     pTopGroupBox->setLayout(hlayout);
 
     vlayout->addWidget(pTopGroupBox);
-    vlayout->addWidget(m_pRegistersTextEdit);
+    vlayout->addWidget(m_pRegisterWidget);
     vlayout->setAlignment(Qt::Alignment(Qt::AlignTop));
     pMainGroupBox->setFlat(true);
     pMainGroupBox->setLayout(vlayout);
@@ -107,11 +336,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Listen for target changes
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
-    connect(m_pTargetModel, &TargetModel::registersChangedSignal, this, &MainWindow::registersChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,   this, &MainWindow::connectChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,    this, &MainWindow::memoryChangedSlot);
-    connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal,this, &MainWindow::symbolTableChangedSlot);
-    connect(m_pTargetModel, &TargetModel::startStopChangedSignalDelayed,this, &MainWindow::startStopDelayedSlot);
 
     // Wire up cross-window requests
     connect(m_pTargetModel, &TargetModel::addressRequested, m_pMemoryViewWidget0, &MemoryWindow::requestAddress);
@@ -153,11 +379,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::connectChangedSlot()
 {
-    bool isConnect = m_pTargetModel->IsConnected() ? true : false;
-    m_pRegistersTextEdit->setEnabled(isConnect);
-
     PopulateRunningSquare();
-    PopulateRegisters();
     updateButtonEnable();
 }
 
@@ -166,18 +388,11 @@ void MainWindow::startStopChangedSlot()
     bool isRunning = m_pTargetModel->IsRunning();
 
     // Update text here
-    if (isRunning)
-	{       
-        // Update our previous values
-        // TODO: this is not the ideal way to do this, since there
-        // are timing issues. In future, parcel up the stopping updates so
-        // that widget refreshes happen as one.
-        m_prevRegs = m_pTargetModel->GetRegs();
-    }
-	else
-	{
+    if (!isRunning)
+    {
         // STOPPED
 		// TODO this is where all windows should put in requests for data
+        // The Main Window does this and other windows feed from it.
 
         // Do all the "essentials" straight away.
         m_pDispatcher->SendCommandPacket("regs");
@@ -192,28 +407,9 @@ void MainWindow::startStopChangedSlot()
         // Only re-request symbols if we didn't find any the first time
         if (m_pTargetModel->GetSymbolTable().m_userSymbolCount == 0)  // NO CHECK
             m_pDispatcher->SendCommandPacket("symlist");
-
-        m_pRegistersTextEdit->setEnabled(true);
     }
     PopulateRunningSquare();
-    PopulateRegisters();
-
     updateButtonEnable();
-}
-
-void MainWindow::startStopDelayedSlot(int running)
-{
-    if (running)
-    {
-        m_pRegistersTextEdit->setEnabled(false);
-        m_pRegistersTextEdit->setText("Running, Ctrl+R to break...");
-    }
-}
-
-void MainWindow::registersChangedSlot(uint64_t /*commandId*/)
-{
-	// Update text here
-    PopulateRegisters();
 }
 
 void MainWindow::memoryChangedSlot(int slot, uint64_t /*commandId*/)
@@ -227,15 +423,9 @@ void MainWindow::memoryChangedSlot(int slot, uint64_t /*commandId*/)
     if (!pMem)
         return;
 
-    // Fetch underlying data, this is picked up by the model class
+    // Fetch data and decode the next instruction.
     buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize());
-    Disassembler::decode_buf(disasmBuf, m_disasm, pMem->GetAddress(), 2);
-    PopulateRegisters();
-}
-
-void MainWindow::symbolTableChangedSlot(uint64_t /*commandId*/)
-{
-    PopulateRegisters();
+    Disassembler::decode_buf(disasmBuf, m_disasm, pMem->GetAddress(), 1);
 }
 
 void MainWindow::startStopClicked()
@@ -345,100 +535,6 @@ void MainWindow::ExceptionsDialog()
 {
     m_pExceptionDialog->setModal(true);
     m_pExceptionDialog->show();
-}
-
-QString DispReg16(int regIndex, const Registers& prevRegs, const Registers& regs)
-{
-    const char* col = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]) ? "red" : "black";
-    return QString::asprintf("%s: <span style=\"color:%s\">%04x</span>", Registers::s_names[regIndex], col, regs.m_value[regIndex]);
-}
-QString DispReg32(int regIndex, const Registers& prevRegs, const Registers& regs)
-{
-    const char* col = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]) ? "red" : "black";
-    return QString::asprintf("%s: <span style=\"color:%s\">%08x</span>", Registers::s_names[regIndex], col, regs.m_value[regIndex]);
-}
-
-QString DispSR(const Registers& prevRegs, const Registers& regs, uint32_t bit, const char* pName)
-{
-	uint32_t mask = 1U << bit;
-	uint32_t valNew = regs.m_value[Registers::SR] & mask;
-	uint32_t valOld = prevRegs.m_value[Registers::SR] & mask;
-
-    const char* col = valNew != valOld ? "red" : "black";
-	const char* text = valNew != 0 ? pName : ".";
-    return QString::asprintf("<span style=\"color:%s\">%s</span>", col, text);
-}
-
-void MainWindow::PopulateRegisters()
-{
-    if (!m_pTargetModel->IsConnected())
-    {
-        m_pRegistersTextEdit->clear();
-        return;
-    }
-
-    if (m_pTargetModel->IsRunning())
-		return;
-
-	// Build up the text area
-	QString regsText;
-    QTextStream ref(&regsText);
-
-	Registers regs = m_pTargetModel->GetRegs();
-
-    ref << "<pre>";
-
-    ref << DispReg32(Registers::PC, m_prevRegs, regs) << "   ";
-    if (m_disasm.lines.size() > 0)
-        Disassembler::print(m_disasm.lines[0].inst, m_disasm.lines[0].address, ref);
-    ref << "     ;" << FindSymbol(GET_REG(regs, PC) & 0xffffff);
-    ref << "<br>";
-    ref << DispReg16(Registers::SR, m_prevRegs, regs) << "   ";
-	ref << DispSR(m_prevRegs, regs, 15, "T");
-	ref << DispSR(m_prevRegs, regs, 14, "T");
-	ref << " ";
-	ref << DispSR(m_prevRegs, regs, 13, "S");
-	ref << " ";
-	ref << DispSR(m_prevRegs, regs, 10, "2");
-	ref << DispSR(m_prevRegs, regs, 9, "1");
-	ref << DispSR(m_prevRegs, regs, 8, "0");
-	ref << " ";
-	ref << DispSR(m_prevRegs, regs, 4, "X");
-	ref << DispSR(m_prevRegs, regs, 3, "N");
-	ref << DispSR(m_prevRegs, regs, 2, "Z");
-	ref << DispSR(m_prevRegs, regs, 1, "V");
-	ref << DispSR(m_prevRegs, regs, 0, "C");
-
-    uint32_t ex = GET_REG(regs, EX);
-    if (ex != 0)
-        ref << "<br>" << "EXCEPTION: " << ExceptionMask::GetName(ex);
-
-    ref << "<br><br>";
-    ref << DispReg32(Registers::D0, m_prevRegs, regs) << " " << DispReg32(Registers::A0, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A0] & 0xffffff) << "<br>";
-    ref << DispReg32(Registers::D1, m_prevRegs, regs) << " " << DispReg32(Registers::A1, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A1] & 0xffffff) << "<br>";
-    ref << DispReg32(Registers::D2, m_prevRegs, regs) << " " << DispReg32(Registers::A2, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A2] & 0xffffff) << "<br>";
-    ref << DispReg32(Registers::D3, m_prevRegs, regs) << " " << DispReg32(Registers::A3, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A3] & 0xffffff) << "<br>";
-    ref << DispReg32(Registers::D4, m_prevRegs, regs) << " " << DispReg32(Registers::A4, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A4] & 0xffffff) << "<br>";
-    ref << DispReg32(Registers::D5, m_prevRegs, regs) << " " << DispReg32(Registers::A5, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A5] & 0xffffff) << "<br>";
-    ref << DispReg32(Registers::D6, m_prevRegs, regs) << " " << DispReg32(Registers::A6, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A6] & 0xffffff) << "<br>";
-    ref << DispReg32(Registers::D7, m_prevRegs, regs) << " " << DispReg32(Registers::A7, m_prevRegs, regs) << " " << FindSymbol(regs.m_value[Registers::A7] & 0xffffff) << "<br>";
-    ref << "<br>";
-    ref << QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(regs, VBL), GET_REG(regs, FrameCycles)) << "<br>";
-    ref << QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(regs, HBL), GET_REG(regs, LineCycles)) << "<br>";
-    ref << "</pre>";
-    m_pRegistersTextEdit->setHtml(regsText);
-}
-
-QString MainWindow::FindSymbol(uint32_t addr)
-{
-    Symbol sym;
-    if (!m_pTargetModel->GetSymbolTable().FindLowerOrEqual(addr & 0xffffff, sym))
-        return QString();
-
-    uint32_t offset = addr - sym.address;
-    if (offset)
-        return QString::asprintf("%s+%d", sym.name.c_str(), offset);
-    return QString::fromStdString(sym.name);
 }
 
 void MainWindow::PopulateRunningSquare()
@@ -702,3 +798,4 @@ void MainWindow::closeEvent(QCloseEvent *event)
     saveSettings();
     event->accept();
 }
+
