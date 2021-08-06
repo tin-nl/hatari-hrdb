@@ -38,6 +38,7 @@ public:
     virtual ~RegisterWidget() override;
 
     virtual void paintEvent(QPaintEvent*) override;
+    virtual bool event(QEvent *event) override;
 
 private slots:
     void connectChangedSlot();
@@ -49,9 +50,11 @@ private slots:
 
 private:
     void PopulateRegisters();
+    void UpdateFont();
 
     QString FindSymbol(uint32_t addr);
-    void AddToken(int x, int y, QString text, bool highlight);
+
+    void AddToken(int x, int y, QString text, QString tooltip, bool highlight);
     void AddReg16(int x, int y, int regIndex, const Registers &prevRegs, const Registers &regs);
     void AddReg32(int x, int y, int regIndex, const Registers &prevRegs, const Registers &regs);
     void AddSR(int x, int y, const Registers &prevRegs, const Registers &regs, uint32_t bit, const char *pName);
@@ -69,9 +72,16 @@ private:
         int x;
         int y;
         QString text;
+        QString tooltip;
         bool highlight;
     };
     QVector<Token>              m_tokens;
+
+    // Render info
+    QFont monoFont;
+    int y_base;
+    int y_height;
+    int char_width;
 };
 
 class MainWindow : public QMainWindow

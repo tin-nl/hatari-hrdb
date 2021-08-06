@@ -35,6 +35,8 @@ RegisterWidget::RegisterWidget(QWidget *parent, TargetModel *pTargetModel, Dispa
     connect(m_pTargetModel, &TargetModel::startStopChangedSignalDelayed, this, &RegisterWidget::startStopDelayedSlot);
 
     setFocusPolicy(Qt::FocusPolicy::StrongFocus);
+    setMouseTracking(true);
+    UpdateFont();
 }
 
 RegisterWidget::~RegisterWidget()
@@ -47,7 +49,6 @@ void RegisterWidget::paintEvent(QPaintEvent * ev)
     QWidget::paintEvent(ev);
 
     QPainter painter(this);
-    QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     painter.setFont(monoFont);
     QFontMetrics info(painter.fontMetrics());
     const QPalette& pal = this->palette();
@@ -60,16 +61,48 @@ void RegisterWidget::paintEvent(QPaintEvent * ev)
         painter.drawRect(this->rect());
     }
 
-    int y_base = info.ascent();
-    int y_height = info.lineSpacing();
-    int char_width = info.horizontalAdvance("0");
-
     for (int i = 0; i < m_tokens.size(); ++i)
     {
         const Token& tok = m_tokens[i];
         painter.setPen(tok.highlight ? Qt::red : pal.text().color());
         painter.drawText(tok.x * char_width, y_base + tok.y * y_height, tok.text);
     }
+}
+
+bool RegisterWidget::event(QEvent *event)
+{
+
+    if (event->type() == QEvent::ToolTip) {
+        QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
+        int index = -1;
+        for (int i = 0; i < m_tokens.size(); ++i)
+        {
+            const Token& tok = m_tokens[i];
+            int x = tok.x * char_width;
+            int y = 0 + tok.y * y_height;
+            int w = tok.text.size() * char_width;
+            int h = y_height;
+
+            if (QRect(x, y, w, h).contains(helpEvent->pos()))
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index != -1 && m_tokens[index].tooltip.size() != 0)
+        {
+            QToolTip::showText(helpEvent->globalPos(), m_tokens[index].tooltip);
+        }
+        else
+        {
+            QToolTip::hideText();
+            event->ignore();
+        }
+
+        return true;
+    }
+    return QWidget::event(event);
 }
 
 void RegisterWidget::connectChangedSlot()
@@ -105,7 +138,7 @@ void RegisterWidget::startStopDelayedSlot(int running)
     if (running)
     {
         m_tokens.clear();
-        AddToken(0, 0, tr("Running, Ctrl+R to break..."), false);
+        AddToken(0, 0, tr("Running, Ctrl+R to break..."), "", false);
         update();
     }
 }
@@ -143,7 +176,7 @@ void RegisterWidget::PopulateRegisters()
     m_tokens.clear();
     if (!m_pTargetModel->IsConnected())
     {
-        AddToken(0, 0, tr("Not connected."), false);
+        AddToken(0, 0, tr("Not connected."), "", false);
         update();
         return;
     }
@@ -161,7 +194,7 @@ void RegisterWidget::PopulateRegisters()
         if (sym.size() != 0)
             ref << "     ;" << sym;
 
-        AddToken(20, 0, disasmText, false);
+        AddToken(20, 0, disasmText, "", false);
     }
 
     AddReg16(0, 2, Registers::SR, m_prevRegs, regs);
@@ -180,7 +213,7 @@ void RegisterWidget::PopulateRegisters()
 
     uint32_t ex = GET_REG(regs, EX);
     if (ex != 0)
-        AddToken(0, 4, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), true);
+        AddToken(0, 4, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), "", true);
 
     for (int reg = 0; reg < 8; ++reg)
     {
@@ -188,9 +221,20 @@ void RegisterWidget::PopulateRegisters()
         AddReg32(0, y, Registers::D0 + reg, m_prevRegs, regs); AddReg32(14, y, Registers::A0 + reg, m_prevRegs, regs); AddSymbol(28, y, regs.m_value[Registers::A0 + reg] & 0xffffff);
     }
 
-    AddToken(1, 15, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(regs, VBL), GET_REG(regs, FrameCycles)), false);
-    AddToken(1, 16, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(regs, HBL), GET_REG(regs, LineCycles)), false);
+    AddToken(1, 15, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(regs, VBL), GET_REG(regs, FrameCycles)), "", false);
+    AddToken(1, 16, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(regs, HBL), GET_REG(regs, LineCycles)), "", false);
     update();
+}
+
+void RegisterWidget::UpdateFont()
+{
+    monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    QPainter painter(this);
+    painter.setFont(monoFont);
+    QFontMetrics info(painter.fontMetrics());
+    y_base = info.ascent();
+    y_height = info.lineSpacing();
+    char_width = info.horizontalAdvance("0");
 }
 
 QString RegisterWidget::FindSymbol(uint32_t addr)
@@ -205,14 +249,21 @@ QString RegisterWidget::FindSymbol(uint32_t addr)
     return QString::fromStdString(sym.name);
 }
 
-void RegisterWidget::AddToken(int x, int y, QString text, bool highlight)
+void RegisterWidget::AddToken(int x, int y, QString text, QString tooltip, bool highlight)
 {
     Token tok;
     tok.x = x;
     tok.y = y;
     tok.text = text;
+    tok.tooltip = tooltip;
     tok.highlight = highlight;
     m_tokens.push_back(tok);
+}
+
+static QString CreateTooltip(uint32_t value)
+{
+    return QString::asprintf(
+                "Hex: %x\nDec: %u", value, value);
 }
 
 void RegisterWidget::AddReg16(int x, int y, int regIndex, const Registers& prevRegs, const Registers& regs)
@@ -221,8 +272,8 @@ void RegisterWidget::AddReg16(int x, int y, int regIndex, const Registers& prevR
 
     QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
     QString value = QString::asprintf("%04x", regs.m_value[regIndex]);
-    AddToken(x, y, label, false);
-    AddToken(x + label.size() + 1, y, value, highlight);
+    AddToken(x, y, label, "", false);
+    AddToken(x + label.size() + 1, y, value, CreateTooltip(regs.m_value[regIndex]), highlight);
 }
 
 void RegisterWidget::AddReg32(int x, int y, int regIndex, const Registers& prevRegs, const Registers& regs)
@@ -231,8 +282,8 @@ void RegisterWidget::AddReg32(int x, int y, int regIndex, const Registers& prevR
 
     QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
     QString value = QString::asprintf("%08x", regs.m_value[regIndex]);
-    AddToken(x, y, label, false);
-    AddToken(x + label.size() + 1, y, value, highlight);
+    AddToken(x, y, label, "", false);
+    AddToken(x + label.size() + 1, y, value, CreateTooltip(regs.m_value[regIndex]), highlight);
 }
 
 void RegisterWidget::AddSR(int x, int y, const Registers& prevRegs, const Registers& regs, uint32_t bit, const char* pName)
@@ -242,7 +293,9 @@ void RegisterWidget::AddSR(int x, int y, const Registers& prevRegs, const Regist
     uint32_t valOld = prevRegs.m_value[Registers::SR] & mask;
     bool highlight = valNew != valOld;
     const char* text = valNew != 0 ? pName : ".";
-    AddToken(x, y, text, highlight);
+
+    QString tooltip = QString::asprintf("Flag: %s = %s", pName, valNew != 0 ? "TRUE" : "FALSE");
+    AddToken(x, y, text, tooltip, highlight);
 }
 
 void RegisterWidget::AddSymbol(int x, int y, uint32_t address)
@@ -251,7 +304,8 @@ void RegisterWidget::AddSymbol(int x, int y, uint32_t address)
     if (!symText.size())
         return;
 
-    AddToken(x, y, symText, false);
+    QString tooltip = QString::asprintf("Address: $%08X", address);
+    AddToken(x, y, symText, tooltip, false);
 }
 
 MainWindow::MainWindow(QWidget *parent)
