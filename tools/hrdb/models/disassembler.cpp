@@ -489,6 +489,7 @@ bool DisAnalyse::isTrap(const instruction &inst)
     switch (inst.opcode)
     {
         case Opcode::TRAP:
+            return true;
         default:
             break;
     }
