@@ -74,7 +74,7 @@ private:
     QLineEdit*      m_pLineEdit;
     QSpinBox*       m_pWidthSpinBox;
     QSpinBox*       m_pHeightSpinBox;
-    QCheckBox*      m_pFollowVideoCheckBox;
+    QCheckBox*      m_pLockToVideoCheckBox;
 
     NonAntiAliasImage*         m_pImageWidget;
 
@@ -87,7 +87,6 @@ private:
     int             m_width;
     int             m_height;
 
-    bool            m_bLockToVideo;
     uint64_t        m_requestIdBitmap;
     uint64_t        m_requestIdPalette;
 };

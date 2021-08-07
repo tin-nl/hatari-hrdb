@@ -76,7 +76,6 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_address(0U),
     m_width(20),
     m_height(200),
-    m_bLockToVideo(true),
     m_requestIdBitmap(0U),
     m_requestIdPalette(0U)
 {
@@ -103,7 +102,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_pHeightSpinBox = new QSpinBox(this);
     m_pHeightSpinBox->setRange(16, 256);
     m_pHeightSpinBox->setValue(m_height);
-    m_pFollowVideoCheckBox = new QCheckBox(tr("Follow Video Pointer"), this);
+    m_pLockToVideoCheckBox = new QCheckBox(tr("Follow Video Pointer"), this);
 
     auto pMainGroupBox = new QWidget(this);
 
@@ -118,12 +117,13 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
 
     QVBoxLayout *vlayout = new QVBoxLayout;
     vlayout->addWidget(pTopContainer);
-    vlayout->addWidget(m_pFollowVideoCheckBox);
+    vlayout->addWidget(m_pLockToVideoCheckBox);
     vlayout->addWidget(m_pImageWidget);
     vlayout->setAlignment(Qt::Alignment(Qt::AlignTop));
     pMainGroupBox->setLayout(vlayout);
 
     setWidget(pMainGroupBox);
+    m_pLockToVideoCheckBox->setChecked(true);
     loadSettings();
 
     connect(m_pTargetModel,  &TargetModel::connectChangedSignal,          this, &GraphicsInspectorWidget::connectChangedSlot);
@@ -132,7 +132,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     connect(m_pTargetModel,  &TargetModel::otherMemoryChanged,            this, &GraphicsInspectorWidget::otherMemoryChangedSlot);
 
     connect(m_pLineEdit,     &QLineEdit::returnPressed,                   this, &GraphicsInspectorWidget::textEditChangedSlot);
-    connect(m_pFollowVideoCheckBox,
+    connect(m_pLockToVideoCheckBox,
                              &QCheckBox::stateChanged,                    this, &GraphicsInspectorWidget::followVideoChangedSlot);
     connect(m_pWidthSpinBox, SIGNAL(valueChanged(int)),                   SLOT(widthChangedSlot(int)));
     connect(m_pHeightSpinBox,SIGNAL(valueChanged(int)),                   SLOT(heightChangedSlot(int)));
@@ -162,6 +162,7 @@ void GraphicsInspectorWidget::loadSettings()
     m_height = settings.value("height", QVariant(200)).toInt();
     m_pWidthSpinBox->setValue(m_width);
     m_pHeightSpinBox->setValue(m_height);
+    m_pLockToVideoCheckBox->setChecked(settings.value("lockToVideo", QVariant(true)).toBool());
     settings.endGroup();
 }
 
@@ -173,7 +174,7 @@ void GraphicsInspectorWidget::saveSettings()
     settings.setValue("geometry", saveGeometry());
     settings.setValue("width", m_width);
     settings.setValue("height", m_height);
-    settings.setValue("lockToVideo", m_bLockToVideo);
+    settings.setValue("lockToVideo", m_pLockToVideoCheckBox->isChecked());
     settings.endGroup();
 }
 
@@ -204,9 +205,10 @@ void GraphicsInspectorWidget::keyPressEvent(QKeyEvent* ev)
         else {
             m_address = 0;
         }
-        m_bLockToVideo = false;
+        m_pLockToVideoCheckBox->setChecked(false);
         RequestMemory();
         DisplayAddress();
+
         return;
     }
     QDockWidget::keyPressEvent(ev);
@@ -227,10 +229,8 @@ void GraphicsInspectorWidget::startStopChangedSlot()
     // Request new memory for the view
     if (!m_pTargetModel->IsRunning())
     {
-        if (m_bLockToVideo)
-        {
+        if (m_pLockToVideoCheckBox->isChecked())
             SetAddressFromVideo();
-        }
 
         // Just request what we had already.
         RequestMemory();
@@ -331,16 +331,16 @@ void GraphicsInspectorWidget::textEditChangedSlot()
         return;
     }
     m_address = addr;
-    m_bLockToVideo = false;
+    m_pLockToVideoCheckBox->setChecked(false);
     RequestMemory();
 }
 
 void GraphicsInspectorWidget::followVideoChangedSlot()
 {
-    m_bLockToVideo = m_pFollowVideoCheckBox->isChecked();
+    bool m_bLockToVideo = m_pLockToVideoCheckBox->isChecked();
     if (m_bLockToVideo)
     {
-        // ....
+        SetAddressFromVideo();
         RequestMemory();
     }
 }
@@ -406,5 +406,4 @@ void GraphicsInspectorWidget::DisplayAddress()
 
 void GraphicsInspectorWidget::UpdateCheckBoxes()
 {
-    m_pFollowVideoCheckBox->setChecked(m_bLockToVideo);
 }
