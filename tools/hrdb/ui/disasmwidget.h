@@ -119,25 +119,49 @@ private:
     void runToCursorRightClick();
     void toggleBreakpointRightClick();
     void nopRightClick();
-    void memoryViewAddrInst();
-    void memoryViewAddr0();
-    void memoryViewAddr1();
-    void disasmViewAddr0();
-    void disasmViewAddr1();
+
+    // Callbacks when the matching entry of m_pShowMemMenus is chosen
+    void showMemMenu0Shown();
+    void showMemMenu1Shown();
+    void showMemMenu2Shown();
+
+    // Callbacks when "show in Memory X" etc is selected
+    void disasmView1Trigger();
+    void disasmView2Trigger();
+    void memoryView1Trigger();
+    void memoryView2Trigger();
+
+    // Layout functions
     void RecalcRowCount();
     void GetLineHeight();
     void RecalcColums();
 
-    TargetModel*          m_pTargetModel;   // for inter-window
+    TargetModel*          m_pTargetModel;   // for inter-window comms
     Dispatcher*           m_pDispatcher;
 
-    // Actions
+    // Actions - top level rightclick
     QAction*              m_pRunUntilAction;
     QAction*              m_pBreakpointAction;
+    QMenu*                m_pEditMenu;        // "edit this instruction" menu
     QAction*              m_pNopAction;
 
-    QAction*              m_pMemViewAddress[3];
-    QAction*              m_pDisassembleAddress[2];
+    // "Show memory for $x" top-level menus:
+    // Show Instruction
+    // Show EA 0
+    // Show EA 1
+    QMenu *               m_pShowMemMenus[3];
+    uint32_t              m_showMenuAddresses[3];
+    uint32_t              m_rightClickActiveAddress;    // One of m_showMenuAddresses[] selected by triggering the menu
+
+    // Each top-level action has 4 sub-actions
+    // 0 show in Disasm 1
+    // 1 show in Disasm 2
+    // 2 show in Memory 1
+    // 3 show in Memory 2
+    // These actions are shared by *all* menus in m_pShowMemMenus.
+    // The "active" address, m_rightClickActiveAddress, is set when the relevant
+    // m_pShowMemMenus menu is about to be shown.
+    QAction*              m_pShowWindowActions[4];
 
     // Column layout
     bool                  m_bShowHex;
@@ -153,14 +177,10 @@ private:
         kComments,
         kNumColumns
     };
-    int                   m_columnLeft[kNumColumns + 1];    // Include +1 for RHS
+    int                   m_columnLeft[kNumColumns + 1];    // Left X position of each column. Include +1 in array for RHS
 
-    // Rightclick menu
-    QMenu                 m_rightClickMenu;
     // Remembers which row we right-clicked on
     int                   m_rightClickRow;
-    uint32_t              m_rightClickInstructionAddr;
-    uint32_t              m_rightClickAddr[2];
 
     // Selection state
     int                   m_cursorRow;
