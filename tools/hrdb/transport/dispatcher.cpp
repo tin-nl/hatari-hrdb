@@ -230,6 +230,12 @@ void Dispatcher::readyRead()
 
 uint64_t Dispatcher::SendCommandShared(MemorySlot slot, std::string command)
 {
+    if (!m_portConnected || m_waitingConnectionAck)
+    {
+        std::cerr << "WARNING: ditching command \"" << command << "\" since not connected" << std::endl;
+        return 0ULL;
+    }
+
     assert(m_portConnected && !m_waitingConnectionAck);
     RemoteCommand* pNewCmd = new RemoteCommand();
     pNewCmd->m_cmd = command;
