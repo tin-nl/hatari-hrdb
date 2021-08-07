@@ -56,13 +56,13 @@ DisasmWidget::DisasmWidget(QWidget *parent, TargetModel *pTargetModel, Dispatche
     m_pBreakpointAction = new QAction(tr("Toggle Breakpoint"), this);
     m_pNopAction = new QAction(tr("Replace with NOPs"), this);
 
+    m_pMemViewAddress[2] = new QAction(tr("Memory for this instruction"), this);
     m_pMemViewAddress[0] = new QAction("", this);
     m_pMemViewAddress[1] = new QAction("", this);
-    m_pMemViewAddress[2] = new QAction(tr("Show instruction memory"), this);
     m_pDisassembleAddress[0] = new QAction("", this);
     m_pDisassembleAddress[1] = new QAction("", this);
 
-    QMenu* pViewMenu = new QMenu("View", this);
+    QMenu* pViewMenu = new QMenu("Show", this);
     pViewMenu->addAction(m_pMemViewAddress[2]);
     pViewMenu->addAction(m_pMemViewAddress[0]);
     pViewMenu->addAction(m_pMemViewAddress[1]);
@@ -693,16 +693,16 @@ void DisasmWidget::contextMenuEvent(QContextMenuEvent *event)
     m_rightClickInstructionAddr = 0;
     bool vis = GetInstructionAddr(m_rightClickRow, m_rightClickInstructionAddr);
     m_pMemViewAddress[2]->setVisible(vis);
-    m_pMemViewAddress[2]->setText(QString::asprintf("Show Instruction Memory ($%x)", m_rightClickInstructionAddr));
+    m_pMemViewAddress[2]->setText(QString::asprintf("Memory for this instruction ($%x)", m_rightClickInstructionAddr));
 
     // Set up relevant menu items
     for (uint32_t op = 0; op < 2; ++op)
     {
         if (GetEA(m_rightClickRow, op, m_rightClickAddr[op]))
         {
-            m_pMemViewAddress[op]->setText(QString::asprintf("Show Memory at $%x", m_rightClickAddr[op]));
+            m_pMemViewAddress[op]->setText(QString::asprintf("Memory at $%x", m_rightClickAddr[op]));
             m_pMemViewAddress[op]->setVisible(true);
-            m_pDisassembleAddress[op]->setText(QString::asprintf("Disassemble at $%x", m_rightClickAddr[op]));
+            m_pDisassembleAddress[op]->setText(QString::asprintf("Disassembly at $%x", m_rightClickAddr[op]));
             m_pDisassembleAddress[op]->setVisible(true);
         }
         else
@@ -735,11 +735,13 @@ void DisasmWidget::nopRightClick()
 
 void DisasmWidget::memoryViewAddrInst()
 {
+    // Which memory view to use?
     emit m_pTargetModel->addressRequested(1, true, m_rightClickInstructionAddr);
 }
 
 void DisasmWidget::memoryViewAddr0()
 {
+    // Which memory view to use?
     emit m_pTargetModel->addressRequested(1, true, m_rightClickAddr[0]);
 }
 
@@ -750,12 +752,14 @@ void DisasmWidget::memoryViewAddr1()
 
 void DisasmWidget::disasmViewAddr0()
 {
-    emit m_pTargetModel->addressRequested(1, false, m_rightClickAddr[0]);
+    // Show in the "other" disasm window
+    emit m_pTargetModel->addressRequested(m_windowIndex ^ 1, false, m_rightClickAddr[0]);
 }
 
 void DisasmWidget::disasmViewAddr1()
 {
-    emit m_pTargetModel->addressRequested(1, false, m_rightClickAddr[1]);
+    // Show in the "other" disasm window
+    emit m_pTargetModel->addressRequested(m_windowIndex ^ 1, false, m_rightClickAddr[1]);
 }
 
 void DisasmWidget::runToCursor()
@@ -881,6 +885,7 @@ void DisasmWindow::requestAddress(int windowIndex, bool isMemory, uint32_t addre
     m_pDisasmWidget->SetFollowPC(false);
     m_pFollowPC->setChecked(false);
     setVisible(true);
+    this->keyFocus();
 }
 
 void DisasmWindow::keyFocus()
