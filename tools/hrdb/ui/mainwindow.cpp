@@ -62,6 +62,12 @@ static QString CreateNumberTooltip(uint32_t value, uint32_t prevValue)
     return final;
 }
 
+static QString CreateSRTooltip(uint32_t srRegValue, uint32_t registerBit)
+{
+    uint32_t valSet = (srRegValue >> registerBit) & 1;
+    return QString::asprintf("%s - %s", Registers::GetSRBitName(registerBit),
+                             valSet ? "1" : "0");
+}
 
 RegisterWidget::RegisterWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher *pDispatcher) :
     QWidget(parent),
@@ -322,18 +328,21 @@ void RegisterWidget::PopulateRegisters()
     }
 
     AddReg16(1, 2, Registers::SR, m_prevRegs, m_currRegs);
-    AddSR(10, 2, m_prevRegs, m_currRegs, 15, "T");
-    AddSR(11, 2, m_prevRegs, m_currRegs, 14, "T");
-    AddSR(12, 2, m_prevRegs, m_currRegs, 13, "S");
-    AddSR(15, 2, m_prevRegs, m_currRegs, 10, "2");
-    AddSR(16, 2, m_prevRegs, m_currRegs, 9, "1");
-    AddSR(17, 2, m_prevRegs, m_currRegs, 8, "0");
+    AddSR(10, 2, m_prevRegs, m_currRegs, Registers::SRBits::kTrace1, "T1");
+    AddSR(11, 2, m_prevRegs, m_currRegs, Registers::SRBits::kTrace0, "T0");
+    AddSR(12, 2, m_prevRegs, m_currRegs, Registers::SRBits::kSupervisor, "S");
+    AddSR(15, 2, m_prevRegs, m_currRegs, Registers::SRBits::kIPL2, "2");
+    AddSR(16, 2, m_prevRegs, m_currRegs, Registers::SRBits::kIPL1, "1");
+    AddSR(17, 2, m_prevRegs, m_currRegs, Registers::SRBits::kIPL0, "0");
 
-    AddSR(20, 2, m_prevRegs, m_currRegs, 4, "X");
-    AddSR(21, 2, m_prevRegs, m_currRegs, 3, "N");
-    AddSR(22, 2, m_prevRegs, m_currRegs, 2, "Z");
-    AddSR(23, 2, m_prevRegs, m_currRegs, 1, "V");
-    AddSR(24, 2, m_prevRegs, m_currRegs, 0, "C");
+    AddSR(20, 2, m_prevRegs, m_currRegs, Registers::SRBits::kX, "X");
+    AddSR(21, 2, m_prevRegs, m_currRegs, Registers::SRBits::kN, "N");
+    AddSR(22, 2, m_prevRegs, m_currRegs, Registers::SRBits::kZ, "Z");
+    AddSR(23, 2, m_prevRegs, m_currRegs, Registers::SRBits::kV, "V");
+    AddSR(24, 2, m_prevRegs, m_currRegs, Registers::SRBits::kC, "C");
+
+    QString iplLevel = QString::asprintf("IPL=%u", (m_currRegs.m_value[Registers::SR] >> 8 & 0x7));
+    AddToken(26, 2, iplLevel, TokenType::kNone, 0, false);
 
     uint32_t ex = GET_REG(m_currRegs, EX);
     if (ex != 0)
@@ -392,7 +401,7 @@ void RegisterWidget::AddReg16(int x, int y, uint32_t regIndex, const Registers& 
 
     QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
     QString value = QString::asprintf("%04x", regs.m_value[regIndex]);
-    AddToken(x, y, label, TokenType::kNone, 0, false);
+    AddToken(x, y, label, TokenType::kRegister, regIndex, false);
     AddToken(x + label.size() + 1, y, value, TokenType::kRegister, regIndex, highlight);
 }
 
@@ -402,7 +411,7 @@ void RegisterWidget::AddReg32(int x, int y, uint32_t regIndex, const Registers& 
 
     QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
     QString value = QString::asprintf("%08x", regs.m_value[regIndex]);
-    AddToken(x, y, label, TokenType::kNone, 0, false);
+    AddToken(x, y, label, TokenType::kRegister, regIndex, false);
     AddToken(x + label.size() + 1, y, value, TokenType::kRegister, regIndex, highlight);
 }
 
@@ -412,9 +421,9 @@ void RegisterWidget::AddSR(int x, int y, const Registers& prevRegs, const Regist
     uint32_t valNew = regs.m_value[Registers::SR] & mask;
     uint32_t valOld = prevRegs.m_value[Registers::SR] & mask;
     bool highlight = valNew != valOld;
-    const char* text = valNew != 0 ? pName : ".";
+    char text = valNew != 0 ? pName[0] : '.';
 
-    AddToken(x, y, text, TokenType::kNone, 0, highlight);
+    AddToken(x, y, QString(text), TokenType::kStatusRegisterBit, bit, highlight);
 }
 
 void RegisterWidget::AddSymbol(int x, int y, uint32_t address)
@@ -434,11 +443,12 @@ QString RegisterWidget::GetTooltipText(const RegisterWidget::Token& token)
         {
             uint32_t value = m_currRegs.Get(token.subIndex);
             uint32_t prevValue = m_prevRegs.Get(token.subIndex);
-
             return CreateNumberTooltip(value, prevValue);
         }
     case TokenType::kSymbol:
         return QString::asprintf("Original address: $%08x", token.subIndex);
+    case TokenType::kStatusRegisterBit:
+         return CreateSRTooltip(m_currRegs.Get(Registers::SR), token.subIndex);
     default:
         break;
     }

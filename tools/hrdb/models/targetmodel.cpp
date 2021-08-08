@@ -3,48 +3,6 @@
 #include <iostream>
 #include <QTimer>
 
-//-----------------------------------------------------------------------------
-const char* Registers::s_names[] =
-{
-	"D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7",
-	"A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7",
-	"PC", "SR", 
-	"USP", "ISP",
-	"EX",
-    // Vars
-    "AesOpcode",
-    "Basepage",
-    "BiosOpcode",
-    "BSS",
-    "CpuInstr",
-    "CpuOpcodeType",
-    "CycleCounter",
-    "DATA",
-    "DspInstr",
-    "DspOpcodeType",
-    "FrameCycles",
-    "GemdosOpcode",
-    "HBL",
-    "LineAOpcode",
-    "LineCycles",
-    "LineFOpcode",
-    "NextPC",
-    "OsCallParam",
-    "TEXT",
-    "TEXTEnd",
-    "VBL",
-    "VdiOpcode",
-    "XbiosOpcode",
-    nullptr
-};
-
-Registers::Registers()
-{
-	for (int i = 0; i < Registers::REG_COUNT; ++i)
-		m_value[i] = 0;
-}
-
-
 void TargetChangedFlags::Clear()
 {
     for (int i = 0; i < kChangedStateCount; ++i)

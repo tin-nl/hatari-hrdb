@@ -38,7 +38,8 @@ SOURCES += \
     ui/memoryviewwidget.cpp \
     ui/rundialog.cpp \
     ui/consolewindow.cpp \
-    models/session.cpp
+    models/session.cpp \
+    models/registers.cpp
 
 HEADERS += \
     hopper/buffer.h \

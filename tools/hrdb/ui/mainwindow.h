@@ -64,6 +64,7 @@ private:
     {
         kRegister,
         kSymbol,
+        kStatusRegisterBit,
         kNone,
     };
 
