@@ -131,7 +131,12 @@ void RegisterWidget::paintEvent(QPaintEvent * ev)
         int h = m_yRowHeight;
         tok.rect.setRect(x, y, w, h);
 
-        painter.setPen(tok.highlight ? Qt::red : pal.text().color());
+        if (tok.colour == TokenColour::kNormal)
+            painter.setPen(pal.text().color());
+        else if (tok.colour == TokenColour::kChanged)
+            painter.setPen(Qt::red);
+        else if (tok.colour == TokenColour::kInactive)
+            painter.setPen(pal.light().color());
 
         if (i == m_tokenUnderMouseIndex && tok.type != TokenType::kNone)
         {
@@ -245,7 +250,7 @@ void RegisterWidget::startStopDelayedSlot(int running)
     if (running)
     {
         m_tokens.clear();
-        AddToken(1, 1, tr("Running, Ctrl+R to break..."), TokenType::kNone, 0, false);
+        AddToken(1, 1, tr("Running, Ctrl+R to break..."), TokenType::kNone, 0);
         update();
     }
 }
@@ -295,7 +300,7 @@ void RegisterWidget::PopulateRegisters()
     m_tokens.clear();
     if (!m_pTargetModel->IsConnected())
     {
-        AddToken(1, 1, tr("Not connected."), TokenType::kNone, 0, false);
+        AddToken(1, 1, tr("Not connected."), TokenType::kNone, 0);
         update();
         return;
     }
@@ -324,7 +329,7 @@ void RegisterWidget::PopulateRegisters()
         if (sym.size() != 0)
             ref << "     ;" << sym;
 
-        AddToken(21, 0, disasmText, TokenType::kNone, 0, false);
+        AddToken(21, 0, disasmText, TokenType::kNone, 0);
     }
 
     AddReg16(1, 2, Registers::SR, m_prevRegs, m_currRegs);
@@ -342,11 +347,11 @@ void RegisterWidget::PopulateRegisters()
     AddSR(24, 2, m_prevRegs, m_currRegs, Registers::SRBits::kC, "C");
 
     QString iplLevel = QString::asprintf("IPL=%u", (m_currRegs.m_value[Registers::SR] >> 8 & 0x7));
-    AddToken(26, 2, iplLevel, TokenType::kNone, 0, false);
+    AddToken(26, 2, iplLevel, TokenType::kNone);
 
     uint32_t ex = GET_REG(m_currRegs, EX);
     if (ex != 0)
-        AddToken(1, 3, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), TokenType::kNone, 0, true);
+        AddToken(1, 3, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), TokenType::kNone, 0, TokenColour::kChanged);
 
     for (uint32_t reg = 0; reg < 8; ++reg)
     {
@@ -357,8 +362,8 @@ void RegisterWidget::PopulateRegisters()
     AddReg32(14, 13, Registers::ISP, m_prevRegs, m_currRegs); AddSymbol(29, 13, m_currRegs.m_value[Registers::ISP]);
 
     // Sundry info
-    AddToken(1, 15, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(m_currRegs, VBL), GET_REG(m_currRegs, FrameCycles)), TokenType::kNone, 0, false);
-    AddToken(1, 16, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(m_currRegs, HBL), GET_REG(m_currRegs, LineCycles)), TokenType::kNone, 0, false);
+    AddToken(1, 15, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(m_currRegs, VBL), GET_REG(m_currRegs, FrameCycles)), TokenType::kNone);
+    AddToken(1, 16, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(m_currRegs, HBL), GET_REG(m_currRegs, LineCycles)), TokenType::kNone);
     update();
 }
 
@@ -383,7 +388,7 @@ QString RegisterWidget::FindSymbol(uint32_t addr)
     return QString::fromStdString(sym.name);
 }
 
-void RegisterWidget::AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex, bool highlight)
+void RegisterWidget::AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex, TokenColour colour)
 {
     Token tok;
     tok.x = x;
@@ -391,27 +396,27 @@ void RegisterWidget::AddToken(int x, int y, QString text, TokenType type, uint32
     tok.text = text;
     tok.type = type;
     tok.subIndex = subIndex;
-    tok.highlight = highlight;
+    tok.colour = colour;
     m_tokens.push_back(tok);
 }
 
 void RegisterWidget::AddReg16(int x, int y, uint32_t regIndex, const Registers& prevRegs, const Registers& regs)
 {
-    bool highlight = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]);
+    TokenColour highlight = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]) ? kChanged : kNormal;
 
     QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
     QString value = QString::asprintf("%04x", regs.m_value[regIndex]);
-    AddToken(x, y, label, TokenType::kRegister, regIndex, false);
+    AddToken(x, y, label, TokenType::kRegister, regIndex, TokenColour::kNormal);
     AddToken(x + label.size() + 1, y, value, TokenType::kRegister, regIndex, highlight);
 }
 
 void RegisterWidget::AddReg32(int x, int y, uint32_t regIndex, const Registers& prevRegs, const Registers& regs)
 {
-    bool highlight = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]);
+    TokenColour highlight = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]) ? kChanged : kNormal;
 
     QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
     QString value = QString::asprintf("%08x", regs.m_value[regIndex]);
-    AddToken(x, y, label, TokenType::kRegister, regIndex, false);
+    AddToken(x, y, label, TokenType::kRegister, regIndex, TokenColour::kNormal);
     AddToken(x + label.size() + 1, y, value, TokenType::kRegister, regIndex, highlight);
 }
 
@@ -419,9 +424,10 @@ void RegisterWidget::AddSR(int x, int y, const Registers& prevRegs, const Regist
 {
     uint32_t mask = 1U << bit;
     uint32_t valNew = regs.m_value[Registers::SR] & mask;
-    uint32_t valOld = prevRegs.m_value[Registers::SR] & mask;
-    bool highlight = valNew != valOld;
-    char text = valNew != 0 ? pName[0] : '.';
+//    uint32_t valOld = prevRegs.m_value[Registers::SR] & mask;
+    TokenColour highlight = valNew ? TokenColour::kNormal : TokenColour::kInactive;
+//    char text = valNew != 0 ? pName[0] : '.';
+    char text = pName[0];
 
     AddToken(x, y, QString(text), TokenType::kStatusRegisterBit, bit, highlight);
 }
@@ -432,7 +438,7 @@ void RegisterWidget::AddSymbol(int x, int y, uint32_t address)
     if (!symText.size())
         return;
 
-    AddToken(x, y, symText, TokenType::kSymbol, address, false);
+    AddToken(x, y, symText, TokenType::kSymbol, address);
 }
 
 QString RegisterWidget::GetTooltipText(const RegisterWidget::Token& token)

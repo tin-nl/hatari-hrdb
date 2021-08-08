@@ -68,6 +68,13 @@ private:
         kNone,
     };
 
+    enum TokenColour
+    {
+        kNormal,
+        kChanged,
+        kInactive
+    };
+
     struct Token
     {
         int x;
@@ -76,14 +83,14 @@ private:
 
         TokenType type;
         uint32_t subIndex;      // subIndex e.g "4" for D4, 0x12345 for symbol address, bitnumber for SR field
-        bool highlight;
+        TokenColour colour;     // how to draw it
 
-        QRectF rect;             // bounding rectangle, updated when rendered
+        QRectF rect;            // bounding rectangle, updated when rendered
     };
 
     QString FindSymbol(uint32_t addr);
 
-    void AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex, bool highlight);
+    void AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex = 0, TokenColour colour = TokenColour::kNormal);
     void AddReg16(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &m_currRegs);
     void AddReg32(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &m_currRegs);
 
