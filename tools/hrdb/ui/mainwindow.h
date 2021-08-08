@@ -51,6 +51,10 @@ private slots:
     void symbolTableChangedSlot(uint64_t commandId);
     void startStopDelayedSlot(int running);
 
+    // Callbacks when "show in Memory X" etc is selected
+    void disasmViewTrigger(int windowIndex);
+    void memoryViewTrigger(int windowIndex);
+
 private:
     void PopulateRegisters();
     void UpdateFont();
@@ -87,6 +91,10 @@ private:
 
     QString GetTooltipText(const Token& token);
     void UpdateTokenUnderMouse(const QPointF& pos);
+
+    // UI Elements
+    QAction*                    m_pShowDisasmWindowActions[kNumDisasmViews];
+    QAction*                    m_pShowMemoryWindowActions[kNumMemoryViews];
 
     Dispatcher*             	m_pDispatcher;
     TargetModel*                m_pTargetModel;
@@ -172,10 +180,8 @@ private:
     RunDialog*          m_pRunDialog;
 
     // Docking windows
-    DisasmWindow*           m_pDisasmWidget0;
-    DisasmWindow*           m_pDisasmWidget1;
-    MemoryWindow*           m_pMemoryViewWidget0;
-    MemoryWindow*           m_pMemoryViewWidget1;
+    DisasmWindow*               m_pDisasmWidgets[kNumDisasmViews];
+    MemoryWindow*               m_pMemoryViewWidgets[kNumMemoryViews];
     GraphicsInspectorWidget*    m_pGraphicsInspector;
     BreakpointsWindow*          m_pBreakpointsWidget;
     ConsoleWindow*              m_pConsoleWindow;
@@ -204,10 +210,8 @@ private:
 
     QAction *exceptionsAct;
 
-    QAction *disasmWindowAct0;
-    QAction *disasmWindowAct1;
-    QAction *memoryWindowAct0;
-    QAction *memoryWindowAct1;
+    QAction *disasmWindowActs[kNumDisasmViews];
+    QAction *memoryWindowActs[kNumMemoryViews];
     QAction *graphicsInspectorAct;
     QAction *breakpointsWindowAct;
     QAction *consoleWindowAct;
