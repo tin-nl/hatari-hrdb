@@ -379,15 +379,18 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
     int char_width = info.horizontalAdvance("0");
     int y_base = info.ascent();
 
+    // Highlight the mouse
+    if (m_mouseRow != -1)
     {
-        if (m_mouseRow != -1)
-        {
-            painter.setPen(Qt::PenStyle::DashLine);
-            painter.setBrush(Qt::BrushStyle::NoBrush);
-            painter.drawRect(0, m_mouseRow * m_lineHeight, rect().width(), m_lineHeight);
-        }
+        painter.setPen(Qt::PenStyle::DashLine);
+        painter.setBrush(Qt::BrushStyle::NoBrush);
+        painter.drawRect(0, m_mouseRow * m_lineHeight, rect().width(), m_lineHeight);
+    }
 
-        int y_curs = m_cursorRow * m_lineHeight;       // compensate for descenders TODO use ascent()
+    // Highlight the cursor row
+    if (m_cursorRow != -1)
+    {
+        int y_curs = m_cursorRow * m_lineHeight;
         painter.setPen(Qt::PenStyle::NoPen);
         painter.setBrush(pal.highlight());
         painter.drawRect(0, y_curs, rect().width(), m_lineHeight);
@@ -402,14 +405,16 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
         painter.setClipRect(x, 0, x2 - x, height());
         for (int row = 0; row < m_rowTexts.size(); ++row)
         {
+            const RowText& t = m_rowTexts[row];
             if (row == m_cursorRow)
                 painter.setPen(pal.highlightedText().color());
+            else if (t.isPc)
+                painter.setPen(Qt::darkGreen);
             else
                 painter.setPen(pal.text().color());
 
             int row_top_y = row * m_lineHeight;
             int text_y = y_base + row * m_lineHeight;
-            const RowText& t = m_rowTexts[row];
 
             switch (col)
             {
