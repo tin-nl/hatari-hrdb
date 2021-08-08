@@ -59,7 +59,8 @@ static QString CreateNumberTooltip(uint32_t value)
 RegisterWidget::RegisterWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher *pDispatcher) :
     QWidget(parent),
     m_pDispatcher(pDispatcher),
-    m_pTargetModel(pTargetModel)
+    m_pTargetModel(pTargetModel),
+    m_tokenUnderMouseIndex(-1)
 {
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
@@ -86,7 +87,7 @@ void RegisterWidget::paintEvent(QPaintEvent * ev)
     QWidget::paintEvent(ev);
 
     QPainter painter(this);
-    painter.setFont(monoFont);
+    painter.setFont(m_monoFont);
     QFontMetrics info(painter.fontMetrics());
     const QPalette& pal = this->palette();
 
@@ -98,46 +99,83 @@ void RegisterWidget::paintEvent(QPaintEvent * ev)
     for (int i = 0; i < m_tokens.size(); ++i)
     {
         Token& tok = m_tokens[i];
-        painter.setPen(tok.highlight ? Qt::red : pal.text().color());
-        painter.drawText(tok.x * char_width, y_base + tok.y * y_height, tok.text);
-
-        int x = tok.x * char_width;
-        int y = 0 + tok.y * y_height;
+        int x = tok.x * m_charWidth;
+        int y = 0 + tok.y * m_yRowHeight;
         int w = info.horizontalAdvance(tok.text);
-        int h = y_height;
+        int h = m_yRowHeight;
         tok.rect.setRect(x, y, w, h);
+
+        painter.setPen(tok.highlight ? Qt::red : pal.text().color());
+
+        if (i == m_tokenUnderMouseIndex && tok.type != TokenType::kNone)
+        {
+            painter.setBrush(pal.highlight());
+            painter.setPen(Qt::NoPen);
+            painter.drawRect(tok.rect);
+            painter.setPen(pal.highlightedText().color());
+        }
+
+        painter.drawText(tok.x * m_charWidth, m_yTextBase + tok.y * m_yRowHeight, tok.text);
     }
+}
+
+void RegisterWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    UpdateTokenUnderMouse(event->localPos());
+    QWidget::mouseMoveEvent(event);
+    update();
+}
+
+void RegisterWidget::contextMenuEvent(QContextMenuEvent *event)
+{
+    if (m_tokenUnderMouseIndex == -1)
+        return;
+
+    // Right click menus are instantiated on demand, so we can
+    // dynamically add to them
+    QMenu menu(this);
+
+    // Add the default actions
+    if (m_tokenUnderMouse.type == TokenType::kRegister)
+    {
+        QMenu* pAddressMenu = new QMenu("", &menu);
+        pAddressMenu->setTitle(QString::asprintf("Address $%08x", regs.Get(m_tokenUnderMouse.subIndex)));
+        menu.addMenu(pAddressMenu);
+    }
+
+    // Run it
+    menu.exec(event->globalPos());
 }
 
 bool RegisterWidget::event(QEvent *event)
 {
-
     if (event->type() == QEvent::ToolTip) {
-        QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
-        int index = -1;
-        for (int i = 0; i < m_tokens.size(); ++i)
-        {
-            const Token& tok = m_tokens[i];
-            if (tok.rect.contains(helpEvent->pos()))
-            {
-                index = i;
-                break;
-            }
-        }
 
+        QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
+        int index = m_tokenUnderMouseIndex;
+        QString text;
         if (index != -1)
-        {
-            QString text = GetTooltipText(m_tokens[index]);
-            if (text.size() != 0)
-                QToolTip::showText(helpEvent->globalPos(), text);
-        }
+            text = GetTooltipText(m_tokens[index]);
+
+        if (text.size() != 0)
+            QToolTip::showText(helpEvent->globalPos(), text);
         else
         {
             QToolTip::hideText();
             event->ignore();
         }
-
         return true;
+    }
+    else if (event->type() == QEvent::Leave)
+    {
+        m_tokenUnderMouseIndex = -1;
+        update();
+    }
+    else if (event->type() == QEvent::Enter)
+    {
+        QEnterEvent* pEnterEvent = static_cast<QEnterEvent* >(event);
+        UpdateTokenUnderMouse(pEnterEvent->localPos());
+        update();
     }
     return QWidget::event(event);
 }
@@ -278,11 +316,11 @@ void RegisterWidget::PopulateRegisters()
 
 void RegisterWidget::UpdateFont()
 {
-    monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    QFontMetrics info(monoFont);
-    y_base = info.ascent();
-    y_height = info.lineSpacing();
-    char_width = info.horizontalAdvance("0");
+    m_monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    QFontMetrics info(m_monoFont);
+    m_yTextBase = info.ascent();
+    m_yRowHeight = info.lineSpacing();
+    m_charWidth = info.horizontalAdvance("0");
 }
 
 QString RegisterWidget::FindSymbol(uint32_t addr)
@@ -364,6 +402,22 @@ QString RegisterWidget::GetTooltipText(const RegisterWidget::Token& token)
         break;
     }
     return "";
+}
+
+void RegisterWidget::UpdateTokenUnderMouse(const QPointF& mousePos)
+{
+    // Update the token
+    m_tokenUnderMouseIndex = -1;
+    for (int i = 0; i < m_tokens.size(); ++i)
+    {
+        const Token& tok = m_tokens[i];
+        if (tok.rect.contains(mousePos))
+        {
+            m_tokenUnderMouseIndex = i;
+            m_tokenUnderMouse = tok;
+            break;
+        }
+    }
 }
 
 MainWindow::MainWindow(QWidget *parent)
