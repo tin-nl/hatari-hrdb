@@ -37,7 +37,9 @@ public:
     RegisterWidget(QWidget* parent, TargetModel* pTargetModel, Dispatcher* pDispatcher);
     virtual ~RegisterWidget() override;
 
+protected:
     virtual void paintEvent(QPaintEvent*) override;
+    virtual void mouseMoveEvent(QMouseEvent *event);
     virtual bool event(QEvent *event) override;
 
 private slots:
@@ -70,7 +72,7 @@ private:
         uint32_t subIndex;      // subIndex e.g "4" for D4, 0x12345 for symbol address, bitnumber for SR field
         bool highlight;
 
-        QRect rect;             // bounding rectangle, updated when rendered
+        QRectF rect;             // bounding rectangle, updated when rendered
     };
 
     QString FindSymbol(uint32_t addr);
@@ -94,11 +96,15 @@ private:
 
     QVector<Token>              m_tokens;
 
+    // Mouse data
+    QPointF                     m_mousePos;
+    int                         m_tokenUnderMouse;      // -1 for none
+
     // Render info
-    QFont monoFont;
-    int y_base;
-    int y_height;
-    int char_width;
+    QFont                       m_monoFont;
+    int                         m_yTextBase;
+    int                         m_yRowHeight;
+    int                         m_charWidth;
 };
 
 class MainWindow : public QMainWindow
