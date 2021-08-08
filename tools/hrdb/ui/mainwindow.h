@@ -83,10 +83,10 @@ private:
     QString FindSymbol(uint32_t addr);
 
     void AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex, bool highlight);
-    void AddReg16(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &regs);
-    void AddReg32(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &regs);
+    void AddReg16(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &m_currRegs);
+    void AddReg32(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &m_currRegs);
 
-    void AddSR(int x, int y, const Registers &prevRegs, const Registers &regs, uint32_t bit, const char *pName);
+    void AddSR(int x, int y, const Registers &prevRegs, const Registers &m_currRegs, uint32_t bit, const char *pName);
     void AddSymbol(int x, int y, uint32_t address);
 
     QString GetTooltipText(const Token& token);
@@ -100,7 +100,7 @@ private:
     TargetModel*                m_pTargetModel;
 
     // Shown data
-    Registers                   regs;           // current regs
+    Registers                   m_currRegs;           // current regs
     Registers                   m_prevRegs;     // regs when PC started
     Disassembler::disassembly   m_disasm;
 

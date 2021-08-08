@@ -18,7 +18,7 @@
 #include "exceptiondialog.h"
 #include "rundialog.h"
 
-static QString CreateNumberTooltip(uint32_t value)
+static QString CreateNumberTooltip(uint32_t value, uint32_t prevValue)
 {
     uint16_t word = value & 0xffff;
     uint16_t byte = value & 0xff;
@@ -26,20 +26,27 @@ static QString CreateNumberTooltip(uint32_t value)
     QString final;
     QTextStream ref(&final);
 
-    if (value & 0x80000000)
-        ref << QString::asprintf("LONG %u (%d)\n", value, static_cast<int32_t>(value));
-    else
-        ref << QString::asprintf("LONG %u\n", value);
-    if (value & 0x8000)
-        ref << QString::asprintf("WORD %u (%d)\n", word, static_cast<int16_t>(word));
-    else
-        ref << QString::asprintf("WORD %u\n", word);
-    if (value & 0x80)
-        ref << QString::asprintf("BYTE %u (%d)\n", byte, static_cast<int8_t>(byte));
-    else
-        ref << QString::asprintf("BYTE %u\n", byte);
+    if (value != prevValue)
+    {
+        ref << QString::asprintf("Previous value: $%x (%d)\n", prevValue, static_cast<int32_t>(prevValue));
+        uint32_t delta = value - prevValue;
+        ref << QString::asprintf("Difference from previous: $%x (%d)\n", delta, static_cast<int32_t>(delta));
+    }
 
-    ref << "BINARY ";
+    if (value & 0x80000000)
+        ref << QString::asprintf("Long: %u (%d)\n", value, static_cast<int32_t>(value));
+    else
+        ref << QString::asprintf("Long: %u\n", value);
+    if (value & 0x8000)
+        ref << QString::asprintf("Word: %u (%d)\n", word, static_cast<int16_t>(word));
+    else
+        ref << QString::asprintf("Word: %u\n", word);
+    if (value & 0x80)
+        ref << QString::asprintf("Byte: %u (%d)\n", byte, static_cast<int8_t>(byte));
+    else
+        ref << QString::asprintf("Byte: %u\n", byte);
+
+    ref << "Binary: ";
     for (int bit = 31; bit >= 0; --bit)
         ref << ((value & (1U << bit)) ? "1" : "0");
     ref << "\n";
@@ -152,7 +159,7 @@ void RegisterWidget::contextMenuEvent(QContextMenuEvent *event)
     if (m_tokenUnderMouse.type == TokenType::kRegister)
     {
         QMenu* pAddressMenu = new QMenu("", &menu);
-        pAddressMenu->setTitle(QString::asprintf("Address $%08x", regs.Get(m_tokenUnderMouse.subIndex)));
+        pAddressMenu->setTitle(QString::asprintf("Address $%08x", m_currRegs.Get(m_tokenUnderMouse.subIndex)));
         for (int i = 0; i < kNumDisasmViews; ++i)
             pAddressMenu->addAction(m_pShowDisasmWindowActions[i]);
 
@@ -266,13 +273,13 @@ void RegisterWidget::symbolTableChangedSlot(uint64_t /*commandId*/)
 
 void RegisterWidget::disasmViewTrigger(int windowIndex)
 {
-    uint32_t regValue = regs.Get(m_tokenUnderMouse.subIndex);
+    uint32_t regValue = m_currRegs.Get(m_tokenUnderMouse.subIndex);
     emit m_pTargetModel->addressRequested(windowIndex, false, regValue);
 }
 
 void RegisterWidget::memoryViewTrigger(int windowIndex)
 {
-    uint32_t regValue = regs.Get(m_tokenUnderMouse.subIndex);
+    uint32_t regValue = m_currRegs.Get(m_tokenUnderMouse.subIndex);
     emit m_pTargetModel->addressRequested(windowIndex, true, regValue);
 }
 
@@ -288,19 +295,19 @@ void RegisterWidget::PopulateRegisters()
     }
 
     // Build up the text area
-    regs = m_pTargetModel->GetRegs();
+    m_currRegs = m_pTargetModel->GetRegs();
 
-    AddReg32(1, 0, Registers::PC, m_prevRegs, regs);
+    AddReg32(1, 0, Registers::PC, m_prevRegs, m_currRegs);
     QString disasmText;
     QTextStream ref(&disasmText);
     if (m_disasm.lines.size() > 0)
     {
         const instruction& inst = m_disasm.lines[0].inst;
         Disassembler::print(inst, m_disasm.lines[0].address, ref);
-        QString sym = FindSymbol(GET_REG(regs, PC) & 0xffffff);
+        QString sym = FindSymbol(GET_REG(m_currRegs, PC) & 0xffffff);
 
         bool branchTaken;
-        if (DisAnalyse::isBranch(inst, regs, branchTaken))
+        if (DisAnalyse::isBranch(inst, m_currRegs, branchTaken))
         {
             if (branchTaken)
                 ref << " [TAKEN]";
@@ -314,35 +321,35 @@ void RegisterWidget::PopulateRegisters()
         AddToken(21, 0, disasmText, TokenType::kNone, 0, false);
     }
 
-    AddReg16(1, 2, Registers::SR, m_prevRegs, regs);
-    AddSR(10, 2, m_prevRegs, regs, 15, "T");
-    AddSR(11, 2, m_prevRegs, regs, 14, "T");
-    AddSR(12, 2, m_prevRegs, regs, 13, "S");
-    AddSR(15, 2, m_prevRegs, regs, 10, "2");
-    AddSR(16, 2, m_prevRegs, regs, 9, "1");
-    AddSR(17, 2, m_prevRegs, regs, 8, "0");
+    AddReg16(1, 2, Registers::SR, m_prevRegs, m_currRegs);
+    AddSR(10, 2, m_prevRegs, m_currRegs, 15, "T");
+    AddSR(11, 2, m_prevRegs, m_currRegs, 14, "T");
+    AddSR(12, 2, m_prevRegs, m_currRegs, 13, "S");
+    AddSR(15, 2, m_prevRegs, m_currRegs, 10, "2");
+    AddSR(16, 2, m_prevRegs, m_currRegs, 9, "1");
+    AddSR(17, 2, m_prevRegs, m_currRegs, 8, "0");
 
-    AddSR(20, 2, m_prevRegs, regs, 4, "X");
-    AddSR(21, 2, m_prevRegs, regs, 3, "N");
-    AddSR(22, 2, m_prevRegs, regs, 2, "Z");
-    AddSR(23, 2, m_prevRegs, regs, 1, "V");
-    AddSR(24, 2, m_prevRegs, regs, 0, "C");
+    AddSR(20, 2, m_prevRegs, m_currRegs, 4, "X");
+    AddSR(21, 2, m_prevRegs, m_currRegs, 3, "N");
+    AddSR(22, 2, m_prevRegs, m_currRegs, 2, "Z");
+    AddSR(23, 2, m_prevRegs, m_currRegs, 1, "V");
+    AddSR(24, 2, m_prevRegs, m_currRegs, 0, "C");
 
-    uint32_t ex = GET_REG(regs, EX);
+    uint32_t ex = GET_REG(m_currRegs, EX);
     if (ex != 0)
         AddToken(1, 3, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), TokenType::kNone, 0, true);
 
     for (uint32_t reg = 0; reg < 8; ++reg)
     {
         int32_t y = 4 + static_cast<int>(reg);
-        AddReg32(1, y, Registers::D0 + reg, m_prevRegs, regs); AddReg32(15, y, Registers::A0 + reg, m_prevRegs, regs); AddSymbol(29, y, regs.m_value[Registers::A0 + reg]);
+        AddReg32(1, y, Registers::D0 + reg, m_prevRegs, m_currRegs); AddReg32(15, y, Registers::A0 + reg, m_prevRegs, m_currRegs); AddSymbol(29, y, m_currRegs.m_value[Registers::A0 + reg]);
     }
-    AddReg32(14, 12, Registers::USP, m_prevRegs, regs); AddSymbol(29, 12, regs.m_value[Registers::USP]);
-    AddReg32(14, 13, Registers::ISP, m_prevRegs, regs); AddSymbol(29, 13, regs.m_value[Registers::ISP]);
+    AddReg32(14, 12, Registers::USP, m_prevRegs, m_currRegs); AddSymbol(29, 12, m_currRegs.m_value[Registers::USP]);
+    AddReg32(14, 13, Registers::ISP, m_prevRegs, m_currRegs); AddSymbol(29, 13, m_currRegs.m_value[Registers::ISP]);
 
     // Sundry info
-    AddToken(1, 15, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(regs, VBL), GET_REG(regs, FrameCycles)), TokenType::kNone, 0, false);
-    AddToken(1, 16, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(regs, HBL), GET_REG(regs, LineCycles)), TokenType::kNone, 0, false);
+    AddToken(1, 15, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(m_currRegs, VBL), GET_REG(m_currRegs, FrameCycles)), TokenType::kNone, 0, false);
+    AddToken(1, 16, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(m_currRegs, HBL), GET_REG(m_currRegs, LineCycles)), TokenType::kNone, 0, false);
     update();
 }
 
@@ -425,8 +432,10 @@ QString RegisterWidget::GetTooltipText(const RegisterWidget::Token& token)
     {
     case TokenType::kRegister:
         {
-            uint32_t value = regs.Get(token.subIndex);
-            return CreateNumberTooltip(value);
+            uint32_t value = m_currRegs.Get(token.subIndex);
+            uint32_t prevValue = m_prevRegs.Get(token.subIndex);
+
+            return CreateNumberTooltip(value, prevValue);
         }
     case TokenType::kSymbol:
         return QString::asprintf("Original address: $%08x", token.subIndex);
