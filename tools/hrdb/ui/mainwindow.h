@@ -63,7 +63,7 @@ private:
     enum TokenType
     {
         kRegister,
-        kSymbol,
+        kSymbol,                // aka an arbitray "address"
         kStatusRegisterBit,
         kNone,
     };
@@ -72,7 +72,8 @@ private:
     {
         kNormal,
         kChanged,
-        kInactive
+        kInactive,
+        kCode
     };
 
     struct Token
@@ -117,6 +118,7 @@ private:
     // Mouse data
     int                         m_tokenUnderMouseIndex;      // -1 for none
     Token                       m_tokenUnderMouse;           // copy of relevant token (for menus etc)
+    uint32_t                    m_addressUnderMouse;
 
     // Render info
     QFont                       m_monoFont;

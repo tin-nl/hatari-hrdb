@@ -69,6 +69,11 @@ static QString CreateSRTooltip(uint32_t srRegValue, uint32_t registerBit)
                              valSet ? "TRUE" : "False");
 }
 
+static QString MakeBracket(QString str)
+{
+    return QString("(") + str + ")";
+}
+
 RegisterWidget::RegisterWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher *pDispatcher) :
     QWidget(parent),
     m_pDispatcher(pDispatcher),
@@ -137,6 +142,8 @@ void RegisterWidget::paintEvent(QPaintEvent * ev)
             painter.setPen(Qt::red);
         else if (tok.colour == TokenColour::kInactive)
             painter.setPen(pal.light().color());
+        else if (tok.colour == TokenColour::kCode)
+            painter.setPen(Qt::darkGreen);
 
         if (i == m_tokenUnderMouseIndex && tok.type != TokenType::kNone)
         {
@@ -167,10 +174,22 @@ void RegisterWidget::contextMenuEvent(QContextMenuEvent *event)
     QMenu menu(this);
 
     // Add the default actions
+    QMenu* pAddressMenu = nullptr;
     if (m_tokenUnderMouse.type == TokenType::kRegister)
     {
-        QMenu* pAddressMenu = new QMenu("", &menu);
-        pAddressMenu->setTitle(QString::asprintf("Address $%08x", m_currRegs.Get(m_tokenUnderMouse.subIndex)));
+        m_addressUnderMouse = m_currRegs.Get(m_tokenUnderMouse.subIndex);
+        pAddressMenu = new QMenu("", &menu);
+        pAddressMenu->setTitle(QString::asprintf("Address $%08x", m_addressUnderMouse));
+    }
+    else if (m_tokenUnderMouse.type == TokenType::kSymbol)
+    {
+        m_addressUnderMouse = m_tokenUnderMouse.subIndex;
+        pAddressMenu = new QMenu("", &menu);
+        pAddressMenu->setTitle(QString::asprintf("Address $%08x", m_addressUnderMouse));
+    }
+
+    if (pAddressMenu)
+    {
         for (int i = 0; i < kNumDisasmViews; ++i)
             pAddressMenu->addAction(m_pShowDisasmWindowActions[i]);
 
@@ -284,16 +303,13 @@ void RegisterWidget::symbolTableChangedSlot(uint64_t /*commandId*/)
 
 void RegisterWidget::disasmViewTrigger(int windowIndex)
 {
-    uint32_t regValue = m_currRegs.Get(m_tokenUnderMouse.subIndex);
-    emit m_pTargetModel->addressRequested(windowIndex, false, regValue);
+    emit m_pTargetModel->addressRequested(windowIndex, false, m_addressUnderMouse);
 }
 
 void RegisterWidget::memoryViewTrigger(int windowIndex)
 {
-    uint32_t regValue = m_currRegs.Get(m_tokenUnderMouse.subIndex);
-    emit m_pTargetModel->addressRequested(windowIndex, true, regValue);
+    emit m_pTargetModel->addressRequested(windowIndex, true, m_addressUnderMouse);
 }
-
 
 void RegisterWidget::PopulateRegisters()
 {
@@ -305,17 +321,28 @@ void RegisterWidget::PopulateRegisters()
         return;
     }
 
+    // Precalc EAs
+    const Registers& regs = m_pTargetModel->GetRegs();
     // Build up the text area
     m_currRegs = m_pTargetModel->GetRegs();
 
-    AddReg32(1, 0, Registers::PC, m_prevRegs, m_currRegs);
-    QString disasmText;
+    // Row 0 -- PC, and symbol if applicable
+    int row = 0;
+
+    AddReg32(1, row, Registers::PC, m_prevRegs, m_currRegs);
+    QString sym = FindSymbol(GET_REG(m_currRegs, PC) & 0xffffff);
+    if (sym.size() != 0)
+        AddToken(14, row, MakeBracket(sym), TokenType::kSymbol, GET_REG(m_currRegs, PC));
+
+    row += 2;
+
+    // Row 1 -- instruction and analysis
+    QString disasmText = ">> ";
     QTextStream ref(&disasmText);
     if (m_disasm.lines.size() > 0)
     {
         const instruction& inst = m_disasm.lines[0].inst;
-        Disassembler::print(inst, m_disasm.lines[0].address, ref);
-        QString sym = FindSymbol(GET_REG(m_currRegs, PC) & 0xffffff);
+        Disassembler::print_terse(inst, m_disasm.lines[0].address, ref);
 
         bool branchTaken;
         if (DisAnalyse::isBranch(inst, m_currRegs, branchTaken))
@@ -326,43 +353,98 @@ void RegisterWidget::PopulateRegisters()
                 ref << " [NOT TAKEN]";
         }
 
-        if (sym.size() != 0)
-            ref << "     ;" << sym;
+        // Comments
+        QString eaText = "// ";
+        QTextStream eaRef(&eaText);
+        if (m_disasm.lines.size() != 0)
+        {
+            int i = 0;
+            const instruction& inst = m_disasm.lines[i].inst;
+            bool prevValid = false;
+            for (int opIndex = 0; opIndex < 2; ++opIndex)
+            {
+                const operand& op = opIndex == 0 ? inst.op0 : inst.op1;
+                uint32_t finalEA;
 
-        AddToken(21, 0, disasmText, TokenType::kNone, 0);
+                if (op.type != OpType::INVALID)
+                {
+                    // Separate info
+                    if (prevValid)
+                        eaRef << " | ";
+
+                    prevValid = false;
+                    switch (op.type)
+                    {
+                    case OpType::D_DIRECT:
+                        eaRef << QString::asprintf("D%d=$%x", op.d_register.reg, regs.GetDReg(op.d_register.reg));
+                        prevValid = true;
+                        break;
+                    case OpType::A_DIRECT:
+                        eaRef << QString::asprintf("A%d=$%x", op.a_register.reg, regs.GetAReg(op.a_register.reg));
+                        prevValid = true;
+                        break;
+                    default:
+                        break;
+                    }
+
+                    bool valid = Disassembler::calc_fixed_ea(op, true, regs, m_disasm.lines[i].address, finalEA);
+                    if (valid)
+                    {
+                        // Show the calculated EA
+                        eaRef << QString::asprintf(" $%x", finalEA);
+                        QString sym = FindSymbol(finalEA & 0xffffff);
+                        if (sym.size() != 0)
+                            eaRef << " (" << sym << ")";
+                        prevValid = true;
+                    }
+                }
+            }
+        }
+
+
+        // Add EA analysis
+        ref << "   " << eaText;
     }
+    AddToken(1, row, disasmText, TokenType::kNone, 0, TokenColour::kCode);
 
-    AddReg16(1, 2, Registers::SR, m_prevRegs, m_currRegs);
-    AddSR(10, 2, m_prevRegs, m_currRegs, Registers::SRBits::kTrace1, "T1");
-    AddSR(12, 2, m_prevRegs, m_currRegs, Registers::SRBits::kSupervisor, "S");
-    AddSR(15, 2, m_prevRegs, m_currRegs, Registers::SRBits::kIPL2, "2");
-    AddSR(16, 2, m_prevRegs, m_currRegs, Registers::SRBits::kIPL1, "1");
-    AddSR(17, 2, m_prevRegs, m_currRegs, Registers::SRBits::kIPL0, "0");
+    row += 2;
+    AddReg16(1, row, Registers::SR, m_prevRegs, m_currRegs);
+    AddSR(10, row, m_prevRegs, m_currRegs, Registers::SRBits::kTrace1, "T1");
+    AddSR(12, row, m_prevRegs, m_currRegs, Registers::SRBits::kSupervisor, "S");
+    AddSR(15, row, m_prevRegs, m_currRegs, Registers::SRBits::kIPL2, "2");
+    AddSR(16, row, m_prevRegs, m_currRegs, Registers::SRBits::kIPL1, "1");
+    AddSR(17, row, m_prevRegs, m_currRegs, Registers::SRBits::kIPL0, "0");
 
-    AddSR(20, 2, m_prevRegs, m_currRegs, Registers::SRBits::kX, "X");
-    AddSR(21, 2, m_prevRegs, m_currRegs, Registers::SRBits::kN, "N");
-    AddSR(22, 2, m_prevRegs, m_currRegs, Registers::SRBits::kZ, "Z");
-    AddSR(23, 2, m_prevRegs, m_currRegs, Registers::SRBits::kV, "V");
-    AddSR(24, 2, m_prevRegs, m_currRegs, Registers::SRBits::kC, "C");
-
+    AddSR(20, row, m_prevRegs, m_currRegs, Registers::SRBits::kX, "X");
+    AddSR(21, row, m_prevRegs, m_currRegs, Registers::SRBits::kN, "N");
+    AddSR(22, row, m_prevRegs, m_currRegs, Registers::SRBits::kZ, "Z");
+    AddSR(23, row, m_prevRegs, m_currRegs, Registers::SRBits::kV, "V");
+    AddSR(24, row, m_prevRegs, m_currRegs, Registers::SRBits::kC, "C");
     QString iplLevel = QString::asprintf("IPL=%u", (m_currRegs.m_value[Registers::SR] >> 8 & 0x7));
-    AddToken(26, 2, iplLevel, TokenType::kNone);
+    AddToken(26, row, iplLevel, TokenType::kNone);
+    row += 1;
 
     uint32_t ex = GET_REG(m_currRegs, EX);
     if (ex != 0)
-        AddToken(1, 3, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), TokenType::kNone, 0, TokenColour::kChanged);
+        AddToken(1, row, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), TokenType::kNone, 0, TokenColour::kChanged);
 
+    // D-regs // A-regs
+    row++;
     for (uint32_t reg = 0; reg < 8; ++reg)
     {
-        int32_t y = 4 + static_cast<int>(reg);
-        AddReg32(1, y, Registers::D0 + reg, m_prevRegs, m_currRegs); AddReg32(15, y, Registers::A0 + reg, m_prevRegs, m_currRegs); AddSymbol(29, y, m_currRegs.m_value[Registers::A0 + reg]);
+        AddReg32(1, row, Registers::D0 + reg, m_prevRegs, m_currRegs); AddReg32(15, row, Registers::A0 + reg, m_prevRegs, m_currRegs); AddSymbol(28, row, m_currRegs.m_value[Registers::A0 + reg]);
+        row++;
     }
-    AddReg32(14, 12, Registers::USP, m_prevRegs, m_currRegs); AddSymbol(29, 12, m_currRegs.m_value[Registers::USP]);
-    AddReg32(14, 13, Registers::ISP, m_prevRegs, m_currRegs); AddSymbol(29, 13, m_currRegs.m_value[Registers::ISP]);
+    AddReg32(14, row, Registers::USP, m_prevRegs, m_currRegs); AddSymbol(28, row, m_currRegs.m_value[Registers::USP]);
+    row++;
+    AddReg32(14, row, Registers::ISP, m_prevRegs, m_currRegs); AddSymbol(28, row, m_currRegs.m_value[Registers::ISP]);
+    row++;
 
     // Sundry info
-    AddToken(1, 15, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(m_currRegs, VBL), GET_REG(m_currRegs, FrameCycles)), TokenType::kNone);
-    AddToken(1, 16, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(m_currRegs, HBL), GET_REG(m_currRegs, LineCycles)), TokenType::kNone);
+    AddToken(1, row, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(m_currRegs, VBL), GET_REG(m_currRegs, FrameCycles)), TokenType::kNone);
+    row++;
+    AddToken(1, row, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(m_currRegs, HBL), GET_REG(m_currRegs, LineCycles)), TokenType::kNone);
+    row++;
     update();
 }
 
@@ -437,7 +519,7 @@ void RegisterWidget::AddSymbol(int x, int y, uint32_t address)
     if (!symText.size())
         return;
 
-    AddToken(x, y, symText, TokenType::kSymbol, address);
+    AddToken(x, y, MakeBracket(symText), TokenType::kSymbol, address);
 }
 
 QString RegisterWidget::GetTooltipText(const RegisterWidget::Token& token)

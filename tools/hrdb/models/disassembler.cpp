@@ -379,6 +379,43 @@ void Disassembler::print(const instruction& inst, /*const symbols& symbols, */ u
     }
 }
 
+// ----------------------------------------------------------------------------
+void Disassembler::print_terse(const instruction& inst, /*const symbols& symbols, */ uint32_t inst_address, QTextStream& ref)
+{
+    if (inst.opcode == Opcode::NONE)
+    {
+        ref << "dc.w " << to_hex32(inst.header);
+        return;
+    }
+    QString opcode = instruction_names[inst.opcode];
+    switch (inst.suffix)
+    {
+        case Suffix::BYTE:
+            opcode += ".b"; break;
+        case Suffix::WORD:
+            opcode += ".w"; break;
+        case Suffix::LONG:
+            opcode += ".l"; break;
+        case Suffix::SHORT:
+            opcode += ".s"; break;
+        default:
+            break;
+    }
+    ref << opcode;
+
+    if (inst.op0.type != OpType::INVALID)
+    {
+        ref << " ";
+        ::print(inst.op0, /*symbols,*/ inst_address, ref);
+    }
+
+    if (inst.op1.type != OpType::INVALID)
+    {
+        ref << ",";
+        ::print(inst.op1, /*symbols,*/ inst_address, ref);
+    }
+}
+
 bool Disassembler::calc_fixed_ea(const operand &operand, bool useRegs, const Registers& regs, uint32_t inst_address, uint32_t& ea)
 {
     switch (operand.type)
