@@ -65,8 +65,8 @@ static QString CreateNumberTooltip(uint32_t value, uint32_t prevValue)
 static QString CreateSRTooltip(uint32_t srRegValue, uint32_t registerBit)
 {
     uint32_t valSet = (srRegValue >> registerBit) & 1;
-    return QString::asprintf("%s - %s", Registers::GetSRBitName(registerBit),
-                             valSet ? "1" : "0");
+    return QString::asprintf("%s = %s", Registers::GetSRBitName(registerBit),
+                             valSet ? "TRUE" : "False");
 }
 
 RegisterWidget::RegisterWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher *pDispatcher) :
@@ -334,7 +334,6 @@ void RegisterWidget::PopulateRegisters()
 
     AddReg16(1, 2, Registers::SR, m_prevRegs, m_currRegs);
     AddSR(10, 2, m_prevRegs, m_currRegs, Registers::SRBits::kTrace1, "T1");
-    AddSR(11, 2, m_prevRegs, m_currRegs, Registers::SRBits::kTrace0, "T0");
     AddSR(12, 2, m_prevRegs, m_currRegs, Registers::SRBits::kSupervisor, "S");
     AddSR(15, 2, m_prevRegs, m_currRegs, Registers::SRBits::kIPL2, "2");
     AddSR(16, 2, m_prevRegs, m_currRegs, Registers::SRBits::kIPL1, "1");

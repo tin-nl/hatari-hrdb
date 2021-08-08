@@ -51,11 +51,11 @@ const char *Registers::GetSRBitName(uint32_t bit)
     case kIPL2: return "Interrupt Priority 2";
     case kIPL1: return "Interrupt Priority 1";
     case kIPL0: return "Interrupt Priority 0";
-    case kX: return "X - Extended Flag";
-    case kN: return "N - Negative Flag";
-    case kZ: return "Z - Zero Flag";
-    case kV: return "V - Overflow Flag";
-    case kC: return "C - Carry Flag";
+    case kX: return "eXtended Flag";
+    case kN: return "Negative Flag";
+    case kZ: return "Zero Flag";
+    case kV: return "oVerflow Flag";
+    case kC: return "Carry Flag";
     }
     return "";
 }
