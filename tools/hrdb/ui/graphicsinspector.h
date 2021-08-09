@@ -21,22 +21,27 @@ class NonAntiAliasImage : public QWidget
     Q_OBJECT
     Q_DISABLE_COPY(NonAntiAliasImage)
 public:
+    virtual ~NonAntiAliasImage() override;
+
     explicit NonAntiAliasImage(QWidget* parent = Q_NULLPTR);
-    const QPixmap& pixmap() const
-    {
-        return m_pixmap;
-    }
-    void setPixmap(const QPixmap& px)
-    {
-        m_pixmap = px;
-        update();
-    }
+
+    void setPixmap(int width, int height);
+
+    uint8_t* AllocBitmap(int size);
+
+    QVector<QRgb>   m_colours;
+
 protected:
     virtual void paintEvent(QPaintEvent*) override;
     virtual void mouseMoveEvent(QMouseEvent *event) override;
 private:
     QPixmap m_pixmap;
     QPointF m_mousePos;
+
+    // Underlying bitmap data
+    uint8_t* m_pBitmap;
+    int m_bitmapSize;
+
 };
 
 
@@ -93,7 +98,6 @@ private:
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
     QAbstractItemModel* m_pSymbolTableModel;
-    QVector<QRgb>   m_colours;
 
     Mode            m_mode;
     uint32_t        m_address;

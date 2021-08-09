@@ -22,10 +22,37 @@
 #include "../models/stringparsers.h"
 
 NonAntiAliasImage::NonAntiAliasImage(QWidget *parent)
-    : QWidget(parent)
+    : QWidget(parent),
+      m_pBitmap(nullptr),
+      m_bitmapSize(0)
 {
     setMouseTracking(true);
     setFocusPolicy(Qt::FocusPolicy::StrongFocus);
+}
+
+void NonAntiAliasImage::setPixmap(int width, int height)
+{
+    QImage img(m_pBitmap, width * 16, height, QImage::Format_Indexed8);
+    img.setColorTable(m_colours);
+    QPixmap pm = QPixmap::fromImage(img);
+    m_pixmap = pm;
+    update();
+}
+
+NonAntiAliasImage::~NonAntiAliasImage()
+{
+    delete [] m_pBitmap;
+}
+
+uint8_t* NonAntiAliasImage::AllocBitmap(int size)
+{
+    if (size == m_bitmapSize)
+        return m_pBitmap;
+
+    delete [] m_pBitmap;
+    m_pBitmap = new uint8_t[size];
+    m_bitmapSize = size;
+    return m_pBitmap;
 }
 
 void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
@@ -49,11 +76,17 @@ void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
             double x_pix = x_frac * m_pixmap.width();
             double y_pix = y_frac * m_pixmap.height();
 
+            int x = static_cast<int>(x_pix);
+            int y = static_cast<int>(y_pix);
             painter.setFont(monoFont);
-            painter.drawText(10, 10,
-                  QString::asprintf("X:%d Y:%d\n",
-                                    static_cast<int>(x_pix),
-                                    static_cast<int>(y_pix)));
+            painter.drawText(10, 10, QString::asprintf("X:%d Y:%d\n", x, y));
+
+            if (x < m_pixmap.width() && y < m_pixmap.height() &&
+                m_pBitmap)
+            {
+                uint8_t pixelValue = m_pBitmap[y * m_pixmap.width() + x];
+                painter.drawText(10, 20, QString::asprintf("Pixel value = :%u", pixelValue));
+            }
         }
     }
     else {
@@ -243,8 +276,7 @@ void GraphicsInspectorWidget::connectChangedSlot()
 {
     if (!m_pTargetModel->IsConnected())
     {
-        QPixmap empty;
-        m_pImageWidget->setPixmap(empty);
+        m_pImageWidget->setPixmap(0, 0);
     }
 }
 
@@ -278,11 +310,10 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         if (pMemOrig->GetSize() < required)
             return;
 
-        // Need to redraw here
-        uint8_t* pBitmap = new uint8_t[m_width * 16 * m_height];
-
+        int bitmapSize = m_width * 16 * m_height;
+        uint8_t* pDestPixels = m_pImageWidget->AllocBitmap(bitmapSize);
+        uint8_t* pDestPixelsStart = pDestPixels;
         const uint8_t* pChunk = pMemOrig->GetData();
-        uint8_t* pDestPixels = pBitmap;
 
         if (m_mode == k4Bitplane)
         {
@@ -350,12 +381,8 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         }
 
         // Update image in the widget
-        QImage img(pBitmap, m_width * 16, m_height, QImage::Format_Indexed8);
-        img.setColorTable(m_colours);
-        QPixmap pm = QPixmap::fromImage(img);
-        m_pImageWidget->setPixmap(pm);
+        m_pImageWidget->setPixmap(m_width, m_height);
 
-        delete [] pBitmap;
         m_requestIdBitmap = 0;
         return;
     }
@@ -369,7 +396,7 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
             return;
 
         // Colours are ARGB
-        m_colours.clear();
+        m_pImageWidget->m_colours.clear();
 
         static const uint32_t stToRgb[16] =
         {
@@ -396,7 +423,7 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
             colour |= pPalette[r] << 16;
             colour |= pPalette[g] << 8;
             colour |= pPalette[b] << 0;
-            m_colours.append(colour);
+            m_pImageWidget->m_colours.append(colour);
         }
         m_requestIdPalette = 0;
     }
