@@ -288,7 +288,7 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         {
             for (int i = 0; i < m_width * m_height; ++i)
             {
-                uint16_t pSrc[4];
+                int32_t pSrc[4];    // top 16 bits never used
                 pSrc[3] = (pChunk[0] << 8) | pChunk[1];
                 pSrc[2] = (pChunk[2] << 8) | pChunk[3];
                 pSrc[1] = (pChunk[4] << 8) | pChunk[5];
@@ -315,7 +315,7 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         {
             for (int i = 0; i < m_width * m_height; ++i)
             {
-                uint16_t pSrc[2];
+                int32_t pSrc[2];
                 pSrc[1] = (pChunk[0] << 8) | pChunk[1];
                 pSrc[0] = (pChunk[2] << 8) | pChunk[3];
                 for (int pix = 15; pix >= 0; --pix)
@@ -335,7 +335,7 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         {
             for (int i = 0; i < m_width * m_height; ++i)
             {
-                uint16_t pSrc[1];
+                int32_t pSrc[1];
                 pSrc[0] = (pChunk[0] << 8) | pChunk[1];
                 for (int pix = 15; pix >= 0; --pix)
                 {
@@ -372,8 +372,8 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         m_colours.clear();
         for (int i = 0; i < 16; ++i)
         {
-            uint8_t  r = pMemOrig->GetData()[i * 2];
-            uint8_t gb = pMemOrig->GetData()[i * 2 + 1];
+            uint32_t  r = pMemOrig->GetData()[i * 2];
+            uint32_t gb = pMemOrig->GetData()[i * 2 + 1];
 
             uint32_t colour = 0U;
             colour |= ( r & 0x07) << (24 - 3);
