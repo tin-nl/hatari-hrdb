@@ -18,6 +18,7 @@
 #include "../models/targetmodel.h"
 #include "../models/stringparsers.h"
 #include "../models/symboltablemodel.h"
+#include "../models/session.h"
 
 MemoryWidget::MemoryWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher,
                                            int windowIndex) :
@@ -69,6 +70,9 @@ void MemoryWidget::SetAddress(uint32_t address)
 
 void MemoryWidget::SetRowCount(uint32_t rowCount)
 {
+    // Handle awkward cases by always having at least one row
+    if (rowCount < 1)
+        rowCount = 1;
     if (rowCount != m_rowCount)
     {
         m_rowCount = rowCount;
@@ -392,50 +396,51 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     if (m_rows.size() == 0)
         return;
 
-    int y_base = info.ascent();
+    // Compensate for text descenders
+    int y_ascent = info.ascent();
     int char_width = info.horizontalAdvance("0");
 
     // Set up the rendering info
     m_charWidth = char_width;
 
     painter.setPen(pal.text().color());
-    for (size_t row = 0; row < m_rows.size(); ++row)
+    for (int row = 0; row < m_rows.size(); ++row)
     {
         const Row& r = m_rows[row];
 
         // Draw address string
         painter.setPen(pal.text().color());
-        int y = y_base + row * m_lineHeight;       // compensate for descenders TODO use ascent()
+        int text_y = GetPixelFromRow(row) + y_ascent;
         QString addr = QString::asprintf("%08x", r.m_address);
-        painter.drawText(GetAddrX(), y, addr);
+        painter.drawText(GetAddrX(), text_y, addr);
 
         // Now hex
         // We write out the values per-nybble
-        for (size_t col = 0; col < m_columnPositions.size(); ++col)
+        for (int col = 0; col < m_columnPositions.size(); ++col)
         {
-            size_t byteOffset = col / 2;
+            int byteOffset = col / 2;
             bool changed = r.m_byteChanged[byteOffset];
             painter.setPen(changed ? Qt::red : pal.text().color());
 
             int x = GetHexCharX(col);
             QChar st = r.m_hexText.at(col);
-            painter.drawText(x, y, st);
+            painter.drawText(x, text_y, st);
         }
 
-        for (size_t col = 0; col < r.m_asciiText.size(); ++col)
+        for (int col = 0; col < r.m_asciiText.size(); ++col)
         {
             int x_ascii = GetAsciiCharX(col);
             bool changed = r.m_byteChanged[col];
             painter.setPen(changed ? Qt::red : pal.text().color());
             QString t = r.m_asciiText.at(col);
-            painter.drawText(x_ascii, y, t);
+            painter.drawText(x_ascii, text_y, t);
         }
     }
 
     // Draw highlight/cursor area in the hex
     if (m_cursorRow >= 0 && m_cursorRow < m_rows.size())
     {
-        int y_curs = m_cursorRow * m_lineHeight;       // compensate for descenders TODO use ascent()
+        int y_curs = GetPixelFromRow(m_cursorRow);
         int x_curs = GetHexCharX(m_cursorCol);
 
         painter.setBrush(pal.highlight());
@@ -443,7 +448,7 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
 
         QChar st = m_rows[m_cursorRow].m_hexText.at(m_cursorCol);
         painter.setPen(pal.highlightedText().color());
-        painter.drawText(x_curs, y_base + y_curs, st);
+        painter.drawText(x_curs, y_ascent + y_curs, st);
     }
 }
 
@@ -487,8 +492,8 @@ void MemoryWidget::mousePressEvent(QMouseEvent *event)
         int x = (int)event->localPos().x();
         int y = (int)event->localPos().y();
 
-        int row = y / m_lineHeight;
-        if (row < m_rows.size())
+        int row = GetRowFromPixel(y);
+        if (row > 0 && row < m_rows.size())
         {
             // Find the X char that might fit
             for (int col = 0; col < m_columnPositions.size(); ++col)
@@ -524,10 +529,12 @@ void MemoryWidget::RecalcRowCount()
 {
     // It seems that viewport is updated without this even being called,
     // which means that on startup, "h" == 0.
-    int h = this->size().height();
+    int h = this->size().height() - (Session::kWidgetBorderY * 2);
     int rowh = m_lineHeight;
+    int count = 0;
     if (rowh != 0)
-        this->SetRowCount(h / rowh);
+        count = h / rowh;
+    SetRowCount(count);
 
     if (m_cursorRow >= m_rowCount)
     {
@@ -545,7 +552,19 @@ void MemoryWidget::RecalcSizes()
 // Position in pixels of address column
 int MemoryWidget::GetAddrX() const
 {
-    return 10;
+    return Session::kWidgetBorderX;
+}
+
+int MemoryWidget::GetPixelFromRow(int row) const
+{
+    return Session::kWidgetBorderY + row * m_lineHeight;
+}
+
+int MemoryWidget::GetRowFromPixel(int y) const
+{
+    if (!m_lineHeight)
+        return 0;
+    return (y - Session::kWidgetBorderY) / m_lineHeight;
 }
 
 int MemoryWidget::GetHexCharX(int column) const
@@ -556,7 +575,7 @@ int MemoryWidget::GetHexCharX(int column) const
 
 int MemoryWidget::GetAsciiCharX(int column) const
 {
-    uint32_t lastCharX = m_columnPositions.back();
+    int32_t lastCharX = m_columnPositions.back();
     return GetAddrX() + (10 + lastCharX + 3 + column) * m_charWidth;
 }
 

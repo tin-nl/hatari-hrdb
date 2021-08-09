@@ -110,7 +110,6 @@ RegisterWidget::RegisterWidget(QWidget *parent, TargetModel *pTargetModel, Dispa
 
 RegisterWidget::~RegisterWidget()
 {
-
 }
 
 void RegisterWidget::paintEvent(QPaintEvent * ev)
@@ -130,10 +129,11 @@ void RegisterWidget::paintEvent(QPaintEvent * ev)
     for (int i = 0; i < m_tokens.size(); ++i)
     {
         Token& tok = m_tokens[i];
-        int x = tok.x * m_charWidth;
-        int y = 0 + tok.y * m_yRowHeight;
+
+        int x = Session::kWidgetBorderX + tok.x * m_charWidth;
+        int y = GetPixelFromRow(tok.y);
         int w = info.horizontalAdvance(tok.text);
-        int h = m_yRowHeight;
+        int h = m_lineHeight;
         tok.rect.setRect(x, y, w, h);
 
         if (tok.colour == TokenColour::kNormal)
@@ -153,7 +153,7 @@ void RegisterWidget::paintEvent(QPaintEvent * ev)
             painter.setPen(pal.highlightedText().color());
         }
 
-        painter.drawText(tok.x * m_charWidth, m_yTextBase + tok.y * m_yRowHeight, tok.text);
+        painter.drawText(x, m_yAscent + y, tok.text);
     }
 }
 
@@ -331,7 +331,7 @@ void RegisterWidget::PopulateRegisters()
     // Row 0 -- PC, and symbol if applicable
     int row = 0;
 
-    AddReg32(1, row, Registers::PC, m_prevRegs, m_currRegs);
+    AddReg32(0, row, Registers::PC, m_prevRegs, m_currRegs);
     QString sym = FindSymbol(GET_REG(m_currRegs, PC) & 0xffffff);
     if (sym.size() != 0)
         AddToken(14, row, MakeBracket(sym), TokenType::kSymbol, GET_REG(m_currRegs, PC));
@@ -356,7 +356,7 @@ void RegisterWidget::PopulateRegisters()
                 ref << " [NOT TAKEN]";
         }
 
-        int col = AddToken(1, row, disasmText, TokenType::kNone, 0, TokenColour::kCode) + 5;
+        int col = AddToken(0, row, disasmText, TokenType::kNone, 0, TokenColour::kCode) + 5;
 
         // Comments
         if (m_disasm.lines.size() != 0)
@@ -431,7 +431,7 @@ void RegisterWidget::PopulateRegisters()
     }
 
     row += 2;
-    AddReg16(1, row, Registers::SR, m_prevRegs, m_currRegs);
+    AddReg16(0, row, Registers::SR, m_prevRegs, m_currRegs);
     AddSR(10, row, m_prevRegs, m_currRegs, Registers::SRBits::kTrace1, "T1");
     AddSR(12, row, m_prevRegs, m_currRegs, Registers::SRBits::kSupervisor, "S");
     AddSR(15, row, m_prevRegs, m_currRegs, Registers::SRBits::kIPL2, "2");
@@ -449,13 +449,13 @@ void RegisterWidget::PopulateRegisters()
 
     uint32_t ex = GET_REG(m_currRegs, EX);
     if (ex != 0)
-        AddToken(1, row, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), TokenType::kNone, 0, TokenColour::kChanged);
+        AddToken(0, row, QString::asprintf("EXCEPTION: %s", ExceptionMask::GetName(ex)), TokenType::kNone, 0, TokenColour::kChanged);
 
     // D-regs // A-regs
     row++;
     for (uint32_t reg = 0; reg < 8; ++reg)
     {
-        AddReg32(1, row, Registers::D0 + reg, m_prevRegs, m_currRegs); AddReg32(15, row, Registers::A0 + reg, m_prevRegs, m_currRegs); AddSymbol(28, row, m_currRegs.m_value[Registers::A0 + reg]);
+        AddReg32(0, row, Registers::D0 + reg, m_prevRegs, m_currRegs); AddReg32(15, row, Registers::A0 + reg, m_prevRegs, m_currRegs); AddSymbol(28, row, m_currRegs.m_value[Registers::A0 + reg]);
         row++;
     }
     AddReg32(14, row, Registers::USP, m_prevRegs, m_currRegs); AddSymbol(28, row, m_currRegs.m_value[Registers::USP]);
@@ -464,9 +464,9 @@ void RegisterWidget::PopulateRegisters()
     row++;
 
     // Sundry info
-    AddToken(1, row, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(m_currRegs, VBL), GET_REG(m_currRegs, FrameCycles)), TokenType::kNone);
+    AddToken(0, row, QString::asprintf("VBL: %10u Frame Cycles: %6u", GET_REG(m_currRegs, VBL), GET_REG(m_currRegs, FrameCycles)), TokenType::kNone);
     row++;
-    AddToken(1, row, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(m_currRegs, HBL), GET_REG(m_currRegs, LineCycles)), TokenType::kNone);
+    AddToken(0, row, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(m_currRegs, HBL), GET_REG(m_currRegs, LineCycles)), TokenType::kNone);
     row++;
 
     // Tokens have moved, so check again
@@ -478,8 +478,8 @@ void RegisterWidget::UpdateFont()
 {
     m_monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     QFontMetrics info(m_monoFont);
-    m_yTextBase = info.ascent();
-    m_yRowHeight = info.lineSpacing();
+    m_yAscent = info.ascent();
+    m_lineHeight = info.lineSpacing();
     m_charWidth = info.horizontalAdvance("0");
 }
 
@@ -584,6 +584,18 @@ void RegisterWidget::UpdateTokenUnderMouse()
             break;
         }
     }
+}
+
+int RegisterWidget::GetPixelFromRow(int row) const
+{
+    return Session::kWidgetBorderY + row * m_lineHeight;
+}
+
+int RegisterWidget::GetRowFromPixel(int y) const
+{
+    if (!m_lineHeight)
+        return 0;
+    return (y - Session::kWidgetBorderY) / m_lineHeight;
 }
 
 MainWindow::MainWindow(QWidget *parent)

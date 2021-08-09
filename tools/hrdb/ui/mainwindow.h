@@ -101,6 +101,12 @@ private:
     QString GetTooltipText(const Token& token);
     void UpdateTokenUnderMouse();
 
+    // Convert from row ID to a pixel Y (top pixel in the drawn row)
+    int GetPixelFromRow(int row) const;
+
+    // Convert from pixel Y to a row ID
+    int GetRowFromPixel(int y) const;
+
     // UI Elements
     QAction*                    m_pShowDisasmWindowActions[kNumDisasmViews];
     QAction*                    m_pShowMemoryWindowActions[kNumMemoryViews];
@@ -109,7 +115,7 @@ private:
     TargetModel*                m_pTargetModel;
 
     // Shown data
-    Registers                   m_currRegs;           // current regs
+    Registers                   m_currRegs;     // current regs
     Registers                   m_prevRegs;     // regs when PC started
     Disassembler::disassembly   m_disasm;
 
@@ -123,8 +129,8 @@ private:
 
     // Render info
     QFont                       m_monoFont;
-    int                         m_yTextBase;
-    int                         m_yRowHeight;
+    int                         m_yAscent;        // Font ascent (offset from top for drawing)
+    int                         m_lineHeight;
     int                         m_charWidth;
 };
 

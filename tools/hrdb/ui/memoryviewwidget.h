@@ -70,6 +70,12 @@ private:
     int GetHexCharX(int column) const;
     int GetAsciiCharX(int column) const;
 
+    // Convert from row ID to a pixel Y (top pixel in the drawn row)
+    int GetPixelFromRow(int row) const;
+
+    // Convert from pixel Y to a row ID
+    int GetRowFromPixel(int y) const;
+
     void GetCursorInfo(uint32_t& address, bool& bottomNybble);
     void SetRowCount(uint32_t rowCount);
 
@@ -81,15 +87,15 @@ private:
     {
         uint32_t m_address;
 
-        std::vector<uint8_t> m_rawBytes;
-        std::vector<bool> m_byteChanged;
+        QVector<uint8_t> m_rawBytes;
+        QVector<bool> m_byteChanged;
         QString m_hexText;
         QString m_asciiText;
     };
 
-    std::vector<Row> m_rows;
+    QVector<Row> m_rows;
     // Positions of each column (need to multiply by m_charWidth for pixel position)
-    std::vector<uint32_t> m_columnPositions;
+    QVector<int32_t> m_columnPositions;
 
     std::string m_addressExpression;
     bool    m_isLocked;

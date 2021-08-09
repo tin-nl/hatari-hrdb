@@ -134,6 +134,12 @@ private:
     void GetLineHeight();
     void RecalcColums();
 
+    // Convert from row ID to a pixel Y (top pixel in the drawn row)
+    int GetPixelFromRow(int row) const;
+
+    // Convert from pixel Y to a row ID
+    int GetRowFromPixel(int y) const;
+
     TargetModel*          m_pTargetModel;   // for inter-window comms
     Dispatcher*           m_pDispatcher;
 
