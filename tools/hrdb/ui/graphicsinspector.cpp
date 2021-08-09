@@ -35,16 +35,25 @@ void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
     const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     if (m_pixmap.width() != 0)
     {
-        painter.setRenderHint(QPainter::Antialiasing, false);
-        style()->drawItemPixmap(&painter, rect(), Qt::AlignCenter, m_pixmap.scaled(rect().size()));
+        const QRect& r = rect();
 
+        painter.setRenderHint(QPainter::Antialiasing, false);
+        style()->drawItemPixmap(&painter, r, Qt::AlignCenter, m_pixmap.scaled(r.size()));
+
+        // We need to work out the dimensions here
         if (this->underMouse())
         {
+            double x_frac = (m_mousePos.x() - r.x()) / r.width();
+            double y_frac = (m_mousePos.y() - r.y()) / r.height();
+
+            double x_pix = x_frac * m_pixmap.width();
+            double y_pix = y_frac * m_pixmap.height();
+
             painter.setFont(monoFont);
             painter.drawText(10, 10,
                   QString::asprintf("X:%d Y:%d\n",
-                                (int) m_mousePos.x(),
-                                (int) m_mousePos.y()));
+                                    static_cast<int>(x_pix),
+                                    static_cast<int>(y_pix)));
         }
     }
     else {
