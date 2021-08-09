@@ -244,6 +244,13 @@ void DisasmWidget::MoveDown()
 
 void DisasmWidget::PageUp()
 {
+    if (m_cursorRow != 0)
+    {
+        m_cursorRow = 0;
+        update();
+        return;
+    }
+
     if (m_requestId != 0)
         return; // not up to date
 
@@ -256,6 +263,14 @@ void DisasmWidget::PageUp()
 
 void DisasmWidget::PageDown()
 {
+    if (m_rowCount > 0 && m_cursorRow < m_rowCount - 1)
+    {
+        // Just move to the bottom row
+        m_cursorRow = m_rowCount - 1;
+        update();
+        return;
+    }
+
     if (m_requestId != 0)
         return; // not up to date
 
