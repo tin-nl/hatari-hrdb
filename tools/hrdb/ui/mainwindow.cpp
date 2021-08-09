@@ -159,7 +159,8 @@ void RegisterWidget::paintEvent(QPaintEvent * ev)
 
 void RegisterWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    UpdateTokenUnderMouse(event->localPos());
+    m_mousePos = event->localPos();
+    UpdateTokenUnderMouse();
     QWidget::mouseMoveEvent(event);
     update();
 }
@@ -230,7 +231,8 @@ bool RegisterWidget::event(QEvent *event)
     else if (event->type() == QEvent::Enter)
     {
         QEnterEvent* pEnterEvent = static_cast<QEnterEvent* >(event);
-        UpdateTokenUnderMouse(pEnterEvent->localPos());
+        m_mousePos = pEnterEvent->localPos();
+        UpdateTokenUnderMouse();
         update();
     }
     return QWidget::event(event);
@@ -337,10 +339,11 @@ void RegisterWidget::PopulateRegisters()
     row += 2;
 
     // Row 1 -- instruction and analysis
-    QString disasmText = ">> ";
-    QTextStream ref(&disasmText);
     if (m_disasm.lines.size() > 0)
     {
+        QString disasmText = ">> ";
+        QTextStream ref(&disasmText);
+
         const instruction& inst = m_disasm.lines[0].inst;
         Disassembler::print_terse(inst, m_disasm.lines[0].address, ref);
 
@@ -353,9 +356,9 @@ void RegisterWidget::PopulateRegisters()
                 ref << " [NOT TAKEN]";
         }
 
+        int col = AddToken(1, row, disasmText, TokenType::kNone, 0, TokenColour::kCode) + 5;
+
         // Comments
-        QString eaText = "// ";
-        QTextStream eaRef(&eaText);
         if (m_disasm.lines.size() != 0)
         {
             int i = 0;
@@ -364,48 +367,68 @@ void RegisterWidget::PopulateRegisters()
             for (int opIndex = 0; opIndex < 2; ++opIndex)
             {
                 const operand& op = opIndex == 0 ? inst.op0 : inst.op1;
-                uint32_t finalEA;
-
                 if (op.type != OpType::INVALID)
                 {
+                    QString eaText = "";
+                    QTextStream eaRef(&eaText);
+
                     // Separate info
                     if (prevValid)
-                        eaRef << " | ";
+                        col = AddToken(col, row, " | ", TokenType::kNone, 0, TokenColour::kNormal) + 1;
 
+                    // Operand values
                     prevValid = false;
                     switch (op.type)
                     {
                     case OpType::D_DIRECT:
                         eaRef << QString::asprintf("D%d=$%x", op.d_register.reg, regs.GetDReg(op.d_register.reg));
+                        col = AddToken(col, row, eaText, TokenType::kRegister, Registers::D0 + op.d_register.reg, TokenColour::kCode) + 1;
                         prevValid = true;
                         break;
                     case OpType::A_DIRECT:
                         eaRef << QString::asprintf("A%d=$%x", op.a_register.reg, regs.GetAReg(op.a_register.reg));
+                        col = AddToken(col, row, eaText, TokenType::kRegister, Registers::A0 + op.a_register.reg, TokenColour::kCode) + 1;
+                        prevValid = true;
+                        break;
+                    case OpType::SR:
+                        eaRef << QString::asprintf("SR=$%x", regs.Get(Registers::SR));
+                        col = AddToken(col, row, eaText, TokenType::kRegister, Registers::SR, TokenColour::kCode) + 1;
+                        prevValid = true;
+                        break;
+                    case OpType::USP:
+                        eaRef << QString::asprintf("USP=$%x", regs.Get(Registers::USP));
+                        col = AddToken(col, row, eaText, TokenType::kRegister, Registers::USP, TokenColour::kCode) + 1;
+                        prevValid = true;
+                        break;
+                    case OpType::CCR:
+                        eaRef << QString::asprintf("CCR=$%x", regs.Get(Registers::SR));
+                        // Todo: can we fix this?
+                        col = AddToken(col, row, eaText, TokenType::kRegister, Registers::SR, TokenColour::kCode) + 1;
                         prevValid = true;
                         break;
                     default:
                         break;
                     }
 
+                    uint32_t finalEA;
                     bool valid = Disassembler::calc_fixed_ea(op, true, regs, m_disasm.lines[i].address, finalEA);
                     if (valid)
                     {
                         // Show the calculated EA
-                        eaRef << QString::asprintf(" $%x", finalEA);
+                        QString eaAddrText = QString::asprintf("$%x", finalEA);
                         QString sym = FindSymbol(finalEA & 0xffffff);
                         if (sym.size() != 0)
-                            eaRef << " (" << sym << ")";
+                            eaAddrText = eaAddrText + " (" + sym + ")";
+                        col = AddToken(col, row, eaAddrText, TokenType::kSymbol, finalEA, TokenColour::kCode) + 1;
                         prevValid = true;
                     }
                 }
             }
         }
 
-
         // Add EA analysis
-        ref << "   " << eaText;
+//        ref << "   " << eaText;
     }
-    AddToken(1, row, disasmText, TokenType::kNone, 0, TokenColour::kCode);
 
     row += 2;
     AddReg16(1, row, Registers::SR, m_prevRegs, m_currRegs);
@@ -445,6 +468,9 @@ void RegisterWidget::PopulateRegisters()
     row++;
     AddToken(1, row, QString::asprintf("HBL: %10u Line Cycles:  %6u", GET_REG(m_currRegs, HBL), GET_REG(m_currRegs, LineCycles)), TokenType::kNone);
     row++;
+
+    // Tokens have moved, so check again
+    UpdateTokenUnderMouse();
     update();
 }
 
@@ -469,7 +495,7 @@ QString RegisterWidget::FindSymbol(uint32_t addr)
     return QString::fromStdString(sym.name);
 }
 
-void RegisterWidget::AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex, TokenColour colour)
+int RegisterWidget::AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex, TokenColour colour)
 {
     Token tok;
     tok.x = x;
@@ -479,29 +505,31 @@ void RegisterWidget::AddToken(int x, int y, QString text, TokenType type, uint32
     tok.subIndex = subIndex;
     tok.colour = colour;
     m_tokens.push_back(tok);
+    // Return X position
+    return tok.x + text.size();
 }
 
-void RegisterWidget::AddReg16(int x, int y, uint32_t regIndex, const Registers& prevRegs, const Registers& regs)
+int RegisterWidget::AddReg16(int x, int y, uint32_t regIndex, const Registers& prevRegs, const Registers& regs)
 {
     TokenColour highlight = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]) ? kChanged : kNormal;
 
     QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
     QString value = QString::asprintf("%04x", regs.m_value[regIndex]);
     AddToken(x, y, label, TokenType::kRegister, regIndex, TokenColour::kNormal);
-    AddToken(x + label.size() + 1, y, value, TokenType::kRegister, regIndex, highlight);
+    return AddToken(x + label.size() + 1, y, value, TokenType::kRegister, regIndex, highlight);
 }
 
-void RegisterWidget::AddReg32(int x, int y, uint32_t regIndex, const Registers& prevRegs, const Registers& regs)
+int RegisterWidget::AddReg32(int x, int y, uint32_t regIndex, const Registers& prevRegs, const Registers& regs)
 {
     TokenColour highlight = (regs.m_value[regIndex] != prevRegs.m_value[regIndex]) ? kChanged : kNormal;
 
     QString label = QString::asprintf("%s:",  Registers::s_names[regIndex]);
     QString value = QString::asprintf("%08x", regs.m_value[regIndex]);
     AddToken(x, y, label, TokenType::kRegister, regIndex, TokenColour::kNormal);
-    AddToken(x + label.size() + 1, y, value, TokenType::kRegister, regIndex, highlight);
+    return AddToken(x + label.size() + 1, y, value, TokenType::kRegister, regIndex, highlight);
 }
 
-void RegisterWidget::AddSR(int x, int y, const Registers& prevRegs, const Registers& regs, uint32_t bit, const char* pName)
+int RegisterWidget::AddSR(int x, int y, const Registers& prevRegs, const Registers& regs, uint32_t bit, const char* pName)
 {
     uint32_t mask = 1U << bit;
     uint32_t valNew = regs.m_value[Registers::SR] & mask;
@@ -510,16 +538,16 @@ void RegisterWidget::AddSR(int x, int y, const Registers& prevRegs, const Regist
 //    char text = valNew != 0 ? pName[0] : '.';
     char text = pName[0];
 
-    AddToken(x, y, QString(text), TokenType::kStatusRegisterBit, bit, highlight);
+    return AddToken(x, y, QString(text), TokenType::kStatusRegisterBit, bit, highlight);
 }
 
-void RegisterWidget::AddSymbol(int x, int y, uint32_t address)
+int RegisterWidget::AddSymbol(int x, int y, uint32_t address)
 {
     QString symText = FindSymbol(address & 0xffffff);
     if (!symText.size())
-        return;
+        return x;
 
-    AddToken(x, y, MakeBracket(symText), TokenType::kSymbol, address);
+    return AddToken(x, y, MakeBracket(symText), TokenType::kSymbol, address);
 }
 
 QString RegisterWidget::GetTooltipText(const RegisterWidget::Token& token)
@@ -542,14 +570,14 @@ QString RegisterWidget::GetTooltipText(const RegisterWidget::Token& token)
     return "";
 }
 
-void RegisterWidget::UpdateTokenUnderMouse(const QPointF& mousePos)
+void RegisterWidget::UpdateTokenUnderMouse()
 {
     // Update the token
     m_tokenUnderMouseIndex = -1;
     for (int i = 0; i < m_tokens.size(); ++i)
     {
         const Token& tok = m_tokens[i];
-        if (tok.rect.contains(mousePos))
+        if (tok.rect.contains(m_mousePos))
         {
             m_tokenUnderMouseIndex = i;
             m_tokenUnderMouse = tok;

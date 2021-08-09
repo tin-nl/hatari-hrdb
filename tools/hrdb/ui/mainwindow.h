@@ -91,15 +91,15 @@ private:
 
     QString FindSymbol(uint32_t addr);
 
-    void AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex = 0, TokenColour colour = TokenColour::kNormal);
-    void AddReg16(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &m_currRegs);
-    void AddReg32(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &m_currRegs);
+    int AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex = 0, TokenColour colour = TokenColour::kNormal);
+    int AddReg16(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &m_currRegs);
+    int AddReg32(int x, int y, uint32_t regIndex, const Registers &prevRegs, const Registers &m_currRegs);
 
-    void AddSR(int x, int y, const Registers &prevRegs, const Registers &m_currRegs, uint32_t bit, const char *pName);
-    void AddSymbol(int x, int y, uint32_t address);
+    int AddSR(int x, int y, const Registers &prevRegs, const Registers &m_currRegs, uint32_t bit, const char *pName);
+    int AddSymbol(int x, int y, uint32_t address);
 
     QString GetTooltipText(const Token& token);
-    void UpdateTokenUnderMouse(const QPointF& pos);
+    void UpdateTokenUnderMouse();
 
     // UI Elements
     QAction*                    m_pShowDisasmWindowActions[kNumDisasmViews];
@@ -116,6 +116,7 @@ private:
     QVector<Token>              m_tokens;
 
     // Mouse data
+    QPointF                     m_mousePos;                  // last updated position
     int                         m_tokenUnderMouseIndex;      // -1 for none
     Token                       m_tokenUnderMouse;           // copy of relevant token (for menus etc)
     uint32_t                    m_addressUnderMouse;
