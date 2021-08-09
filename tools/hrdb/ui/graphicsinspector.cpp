@@ -370,16 +370,32 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
 
         // Colours are ARGB
         m_colours.clear();
+
+        static const uint32_t stToRgb[16] =
+        {
+            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
+            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee
+        };
+        static const uint32_t steToRgb[16] =
+        {
+            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
+            0x11, 0x33, 0x55, 0x77, 0x99, 0xbb, 0xdd, 0xff
+        };
+
+        bool isST = (m_pTargetModel->GetMachineType() == MACHINE_ST) ||
+                (m_pTargetModel->GetMachineType() == MACHINE_MEGA_ST);
+        const uint32_t* pPalette = isST ? stToRgb : steToRgb;
+
         for (int i = 0; i < 16; ++i)
         {
-            uint32_t  r = pMemOrig->GetData()[i * 2];
-            uint32_t gb = pMemOrig->GetData()[i * 2 + 1];
+            uint32_t  r = pMemOrig->GetData()[i * 2] & 0xf;
+            uint32_t  g = pMemOrig->GetData()[i * 2 + 1] >> 4;
+            uint32_t  b = pMemOrig->GetData()[i * 2 + 1] & 0xf;
 
-            uint32_t colour = 0U;
-            colour |= ( r & 0x07) << (24 - 3);
-            colour |= (gb & 0x70) << (16 - 4 - 3);
-            colour |= (gb & 0x07) << (8 - 3);
-            colour |= 0xff000000;
+            uint32_t colour = 0xff000000U;
+            colour |= pPalette[r] << 16;
+            colour |= pPalette[g] << 8;
+            colour |= pPalette[b] << 0;
             m_colours.append(colour);
         }
         m_requestIdPalette = 0;
