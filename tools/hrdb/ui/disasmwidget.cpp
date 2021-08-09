@@ -125,14 +125,14 @@ void DisasmWidget::RequestMemory()
 {
     uint32_t addr = m_logicalAddr;
     uint32_t lowAddr = (addr > 100) ? addr - 100 : 0;
-    uint32_t size = ((m_rowCount * 10) + 100);
+    uint32_t size = static_cast<uint32_t>((m_rowCount * 10) + 100);
     if (m_pTargetModel->IsConnected())
     {
         m_requestId = m_pDispatcher->RequestMemory(m_memSlot, lowAddr, size);
     }
 }
 
-bool DisasmWidget::GetEA(uint32_t row, int operandIndex, uint32_t &addr)
+bool DisasmWidget::GetEA(int row, int operandIndex, uint32_t &addr)
 {
     if (row >= m_opAddresses.size())
         return false;
@@ -228,7 +228,7 @@ void DisasmWidget::MoveDown()
     if (m_disasm.lines.size() > 0)
     {
         // Find our current line in disassembly
-        for (size_t i = 0; i < m_disasm.lines.size(); ++i)
+        for (int i = 0; i < m_disasm.lines.size(); ++i)
         {
             if (m_disasm.lines[i].address == m_logicalAddr)
             {
@@ -352,7 +352,7 @@ void DisasmWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
 {
     // Do a re-request if our memory is touched
     uint32_t ourAddr = m_logicalAddr;
-    uint32_t ourSize = ((m_rowCount * 10) + 100);
+    uint32_t ourSize = static_cast<uint32_t>((m_rowCount * 10) + 100);
     if (Overlaps(ourAddr, ourSize, address, size))
         RequestMemory();
 }
@@ -519,7 +519,7 @@ void DisasmWidget::CalcDisasm()
 
     // Recalc Text (which depends on e.g. symbols
     m_rowTexts.clear();
-    for (size_t row = 0; row < m_disasm.lines.size(); ++row)
+    for (int row = 0; row < m_disasm.lines.size(); ++row)
     {
         RowText t;
         Disassembler::line& line = m_disasm.lines[row];
@@ -586,7 +586,7 @@ void DisasmWidget::CalcOpAddresses()
     m_opAddresses.clear();
     m_opAddresses.resize(m_disasm.lines.size());
     const Registers& regs = m_pTargetModel->GetRegs();
-    for (size_t i = 0; i < m_disasm.lines.size(); ++i)
+    for (int i = 0; i < m_disasm.lines.size(); ++i)
     {
         const instruction& inst = m_disasm.lines[i].inst;
         OpAddresses& addrs = m_opAddresses[i];

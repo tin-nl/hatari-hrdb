@@ -77,7 +77,7 @@ private:
     int GetRowFromPixel(int y) const;
 
     void GetCursorInfo(uint32_t& address, bool& bottomNybble);
-    void SetRowCount(uint32_t rowCount);
+    void SetRowCount(int rowCount);
 
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
@@ -98,28 +98,27 @@ private:
     QVector<int32_t> m_columnPositions;
 
     std::string m_addressExpression;
-    bool    m_isLocked;
-    uint32_t m_address;
+    bool        m_isLocked;
+    uint32_t    m_address;
 
-    uint32_t m_bytesPerRow;
-    Mode     m_mode;
+    int         m_bytesPerRow;
+    Mode        m_mode;
 
-    uint32_t m_rowCount;
-    uint64_t m_requestId;
-    int      m_windowIndex;        // e.g. "memory 0", "memory 1"
+    int         m_rowCount;
+    uint64_t    m_requestId;
+    int         m_windowIndex;        // e.g. "memory 0", "memory 1"
     MemorySlot  m_memSlot;
 
-    Memory  m_previousMemory;       // Copy before we restarted the CPU
+    Memory      m_previousMemory;       // Copy before we restarted the CPU
 
     // Cursor
-    int     m_cursorRow;
-    int     m_cursorCol;
-
+    int         m_cursorRow;
+    int         m_cursorCol;
 
     // rendering info
-    int     m_charWidth;            // font width in pixels
-    int     m_lineHeight;           // font height in pixels
-    QFont   monoFont;
+    int         m_charWidth;            // font width in pixels
+    int         m_lineHeight;           // font height in pixels
+    QFont       monoFont;
 };
 
 class MemoryWindow : public QDockWidget

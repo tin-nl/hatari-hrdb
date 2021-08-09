@@ -1,7 +1,7 @@
 #ifndef DISASSEMBLER_H
 #define DISASSEMBLER_H
 
-#include <vector>
+#include <QVector>
 #include <QTextStream>
 
 #include "hopper/instruction.h"
@@ -32,14 +32,14 @@ public:
     class disassembly
     {
     public:
-        std::vector<line>    lines;
+        QVector<line>    lines;
     };
 
     // Try to decode a single instruction
     static int decode_inst(buffer_reader &buf, instruction &inst);
 
     // Decode a block of instructions
-    static int decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t address, uint32_t maxLines);
+    static int decode_buf(buffer_reader& buf, disassembly& disasm, uint32_t address, int32_t maxLines);
 
     // Format a single instruction and its arguments
     static void print(const instruction& inst, /*const symbols& symbols, */ uint32_t inst_address, QTextStream& ref);
