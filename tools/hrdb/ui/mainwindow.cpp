@@ -273,6 +273,7 @@ void RegisterWidget::startStopDelayedSlot(int running)
     if (running)
     {
         m_tokens.clear();
+        m_tokenUnderMouseIndex = -1;
         AddToken(1, 1, tr("Running, Ctrl+R to break..."), TokenType::kNone, 0);
         update();
     }
@@ -320,6 +321,7 @@ void RegisterWidget::PopulateRegisters()
     m_tokens.clear();
     if (!m_pTargetModel->IsConnected())
     {
+        m_tokenUnderMouseIndex = -1;
         AddToken(1, 1, tr("Not connected."), TokenType::kNone, 0);
         update();
         return;
