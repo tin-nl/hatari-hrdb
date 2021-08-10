@@ -271,10 +271,12 @@ void GraphicsInspectorWidget::keyPressEvent(QKeyEvent* ev)
     int32_t width = GetEffectiveWidth();
     int32_t height = GetEffectiveHeight();
 
+    bool shift = (ev->modifiers().testFlag(Qt::KeyboardModifier::ShiftModifier));
+
     if (ev->key() == Qt::Key::Key_Up)
-        offset = -width * bytes;
+        offset = shift ? -8 * width * bytes : -width * bytes;
     else if (ev->key() == Qt::Key::Key_Down)
-        offset = +width * bytes;
+        offset = shift ? 8 * +width * bytes : +width * bytes;
     else if (ev->key() == Qt::Key::Key_PageUp)
         offset = height * -width * bytes;
     else if (ev->key() == Qt::Key::Key_PageDown)
