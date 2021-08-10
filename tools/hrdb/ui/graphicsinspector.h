@@ -64,6 +64,7 @@ public:
 private:
     void connectChangedSlot();
     void startStopChangedSlot();
+    void startStopDelayedChangedSlot();
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void otherMemoryChangedSlot(uint32_t address, uint32_t size);
     void textEditChangedSlot();

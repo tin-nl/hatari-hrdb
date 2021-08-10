@@ -202,7 +202,8 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_pLockToVideoCheckBox->setChecked(true);
 
     connect(m_pTargetModel,  &TargetModel::connectChangedSignal,          this, &GraphicsInspectorWidget::connectChangedSlot);
-    connect(m_pTargetModel,  &TargetModel::startStopChangedSignalDelayed, this, &GraphicsInspectorWidget::startStopChangedSlot);
+    connect(m_pTargetModel,  &TargetModel::startStopChangedSignal,        this, &GraphicsInspectorWidget::startStopChangedSlot);
+    connect(m_pTargetModel,  &TargetModel::startStopChangedSignalDelayed, this, &GraphicsInspectorWidget::startStopDelayedChangedSlot);
     connect(m_pTargetModel,  &TargetModel::memoryChangedSignal,           this, &GraphicsInspectorWidget::memoryChangedSlot);
     connect(m_pTargetModel,  &TargetModel::otherMemoryChanged,            this, &GraphicsInspectorWidget::otherMemoryChangedSlot);
 
@@ -316,10 +317,20 @@ void GraphicsInspectorWidget::startStopChangedSlot()
     // Request new memory for the view
     if (!m_pTargetModel->IsRunning())
     {
+        // Trigger a full refresh of registers
+        m_requestIdVideoRegs = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspectorVideoRegs, HardwareST::VIDEO_REGS_BASE, 0x70);
+    }
+}
+
+void GraphicsInspectorWidget::startStopDelayedChangedSlot()
+{
+    // Request new memory for the view
+    if (!m_pTargetModel->IsRunning())
+    {
+        // We should have registers now, so use them
         if (m_pLockToVideoCheckBox->isChecked())
             SetAddressFromVideo();
 
-        // Just request what we had already.
         RequestMemory();
     }
 }
@@ -436,10 +447,6 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         m_height = height;
         m_mode = mode;
         UpdateUIElements();
-
-        // Request video memory area
-        int size = height * width * BytesPerMode(mode);
-        m_requestIdBitmap = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspector, m_address, size);
         m_requestIdVideoRegs = 0;
 
         // Now update palette
@@ -541,8 +548,12 @@ void GraphicsInspectorWidget::RequestMemory()
         return;
 
     // Video data first. Once that has returned we request the necessary amount of memory
-    m_requestIdBitmap = -1;
-    m_requestIdVideoRegs = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspectorVideoRegs, HardwareST::VIDEO_REGS_BASE, 0x70);
+    // Request video memory area
+    Mode mode = GetEffectiveMode();
+    int width = GetEffectiveWidth();
+    int height = GetEffectiveHeight();
+    int size = height * width * BytesPerMode(mode);
+    m_requestIdBitmap = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspector, m_address, size);
 }
 
 bool GraphicsInspectorWidget::SetAddressFromVideo()
