@@ -179,6 +179,10 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_pHeightSpinBox->setValue(m_height);
 
     // Third line
+    m_pPaletteComboBox = new QComboBox(this);
+    m_pPaletteComboBox->addItem(tr("Greyscale"), kGreyscale);
+    m_pPaletteComboBox->addItem(tr("Contrast1"), kContrast1);
+
     m_pLockPaletteToVideoCheckBox = new QCheckBox(tr("Use Registers"), this);
     m_pInfoLabel = new QLabel(this);
 
@@ -215,6 +219,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     SetMargins(hlayout3);
     hlayout3->setAlignment(Qt::AlignLeft);
     hlayout3->addWidget(new QLabel(tr("Palette:"), this));
+    hlayout3->addWidget(m_pPaletteComboBox);
     hlayout3->addWidget(m_pLockPaletteToVideoCheckBox);
     hlayout3->addWidget(m_pInfoLabel);
     QWidget* pContainer3 = new QWidget(this);
@@ -247,6 +252,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     connect(m_pLockPaletteToVideoCheckBox,  &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockPaletteToVideoChangedSlot);
 
     connect(m_pModeComboBox, SIGNAL(currentIndexChanged(int)),            SLOT(modeChangedSlot(int)));
+    connect(m_pPaletteComboBox,SIGNAL(currentIndexChanged(int)),          SLOT(paletteChangedSlot(int)));
     connect(m_pWidthSpinBox, SIGNAL(valueChanged(int)),                   SLOT(widthChangedSlot(int)));
     connect(m_pHeightSpinBox,SIGNAL(valueChanged(int)),                   SLOT(heightChangedSlot(int)));
 
@@ -277,13 +283,16 @@ void GraphicsInspectorWidget::loadSettings()
     m_width = settings.value("width", QVariant(20)).toInt();
     m_height = settings.value("height", QVariant(200)).toInt();
     m_mode = static_cast<Mode>(settings.value("mode", QVariant((int)Mode::k4Bitplane)).toInt());
+    m_pModeComboBox->setCurrentIndex(m_mode);
 
     m_pWidthSpinBox->setValue(m_width);
     m_pHeightSpinBox->setValue(m_height);
     m_pLockAddressToVideoCheckBox->setChecked(settings.value("lockAddress", QVariant(true)).toBool());
     m_pLockFormatToVideoCheckBox->setChecked(settings.value("lockFormat", QVariant(true)).toBool());
-    m_pLockPaletteToVideoCheckBox->setChecked(settings.value("lockPalete", QVariant(true)).toBool());
-    m_pModeComboBox->setCurrentIndex(m_mode);
+    m_pLockPaletteToVideoCheckBox->setChecked(settings.value("lockPalette", QVariant(true)).toBool());
+
+    int palette = settings.value("palette", QVariant((int)Palette::kGreyscale)).toInt();
+    m_pPaletteComboBox->setCurrentIndex(palette);
     settings.endGroup();
 }
 
@@ -299,6 +308,7 @@ void GraphicsInspectorWidget::saveSettings()
     settings.setValue("lockFormat", m_pLockFormatToVideoCheckBox->isChecked());
     settings.setValue("lockPalette", m_pLockPaletteToVideoCheckBox->isChecked());
     settings.setValue("mode", static_cast<int>(m_mode));
+    settings.setValue("palette", m_pPaletteComboBox->currentIndex());
     settings.endGroup();
 }
 
@@ -476,7 +486,7 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         }
 
         // Update image in the widget
-        UpdateAddressFromSettings();
+        UpdatePaletteFromSettings();
 
         // Clear the running mask, but only if we're really stopped
         if (!m_pTargetModel->IsRunning())
@@ -539,7 +549,7 @@ void GraphicsInspectorWidget::lockFormatToVideoChangedSlot()
 
 void GraphicsInspectorWidget::lockPaletteToVideoChangedSlot()
 {
-    UpdateAddressFromSettings();
+    UpdatePaletteFromSettings();
 
     // Ensure pixmap is updated
     m_pImageWidget->setPixmap(GetEffectiveWidth(), GetEffectiveHeight());
@@ -547,11 +557,19 @@ void GraphicsInspectorWidget::lockPaletteToVideoChangedSlot()
     UpdateUIElements();
 }
 
-
 void GraphicsInspectorWidget::modeChangedSlot(int index)
 {
     m_mode = static_cast<Mode>(index);
     RequestMemory();
+}
+
+void GraphicsInspectorWidget::paletteChangedSlot(int index)
+{
+    UpdatePaletteFromSettings();
+    // Ensure pixmap is updated
+    m_pImageWidget->setPixmap(GetEffectiveWidth(), GetEffectiveHeight());
+
+    UpdateUIElements();
 }
 
 void GraphicsInspectorWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
@@ -619,7 +637,7 @@ void GraphicsInspectorWidget::DisplayAddress()
     m_pAddressLineEdit->setText(QString::asprintf("$%x", m_address));
 }
 
-void GraphicsInspectorWidget::UpdateAddressFromSettings()
+void GraphicsInspectorWidget::UpdatePaletteFromSettings()
 {
     // Colours are ARGB
     m_pImageWidget->m_colours.clear();
@@ -660,9 +678,41 @@ void GraphicsInspectorWidget::UpdateAddressFromSettings()
         }
     }
     else {
-        for (uint i = 0; i < 16; ++i)
+        switch (m_pPaletteComboBox->currentIndex())
         {
-            m_pImageWidget->m_colours.append(0xff000000 + i * 0x101010);
+        case kGreyscale:
+            for (uint i = 0; i < 16; ++i)
+            {
+                m_pImageWidget->m_colours.append(0xff000000 + i * 0x101010);
+            }
+            break;
+        case kContrast1:
+        {
+            // This palette is derived from one of the bitplane palettes in "44"
+            uint32_t col0 = 0x500000*2;
+            uint32_t col1 = 0x224400*2;
+            uint32_t col2 = 0x003322*2;
+            uint32_t col3 = 0x000055*2;
+            m_pImageWidget->m_colours.append(0xff000000 +0                   );
+            m_pImageWidget->m_colours.append(0xff000000 +0	      +col3      );
+            m_pImageWidget->m_colours.append(0xff000000 +         +col2      );
+            m_pImageWidget->m_colours.append(0xff000000 +         +col2+col3 );
+            m_pImageWidget->m_colours.append(0xff000000 +     col1           );
+            m_pImageWidget->m_colours.append(0xff000000 +     col1     +col3 );
+            m_pImageWidget->m_colours.append(0xff000000 +     col1+col2      );
+            m_pImageWidget->m_colours.append(0xff000000 +     col1+col2+col3 );
+            m_pImageWidget->m_colours.append(0xff000000 +col0                );
+            m_pImageWidget->m_colours.append(0xff000000 +col0	      +col3  );
+            m_pImageWidget->m_colours.append(0xff000000 +0	 +col2           );
+            m_pImageWidget->m_colours.append(0xff000000 +col0	 +col2+col3  );
+            m_pImageWidget->m_colours.append(0xff000000 +col0+col1           );
+            m_pImageWidget->m_colours.append(0xff000000 +col0+col1     +col3 );
+            m_pImageWidget->m_colours.append(0xff000000 +col0+col1+col2      );
+            m_pImageWidget->m_colours.append(0xff000000 +col0+col1+col2+col3 );
+        }
+            break;
+        default:
+            break;
         }
     }
 }
@@ -691,6 +741,8 @@ void GraphicsInspectorWidget::UpdateUIElements()
     m_pWidthSpinBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
     m_pHeightSpinBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
     m_pModeComboBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
+
+    m_pPaletteComboBox->setEnabled(!m_pLockPaletteToVideoCheckBox->isChecked());
 }
 
 GraphicsInspectorWidget::Mode GraphicsInspectorWidget::GetEffectiveMode() const
@@ -712,7 +764,7 @@ GraphicsInspectorWidget::Mode GraphicsInspectorWidget::GetEffectiveMode() const
 
 int GraphicsInspectorWidget::GetEffectiveWidth() const
 {
-    if (!m_pLockAddressToVideoCheckBox->isChecked())
+    if (!m_pLockFormatToVideoCheckBox->isChecked())
         return m_width;
 
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
@@ -728,7 +780,7 @@ int GraphicsInspectorWidget::GetEffectiveWidth() const
 
 int GraphicsInspectorWidget::GetEffectiveHeight() const
 {
-    if (!m_pLockAddressToVideoCheckBox->isChecked())
+    if (!m_pLockFormatToVideoCheckBox->isChecked())
         return m_height;
 
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);

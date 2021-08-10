@@ -76,6 +76,7 @@ private:
 
 private slots:
     void modeChangedSlot(int index);
+    void paletteChangedSlot(int index);
     void widthChangedSlot(int width);
     void heightChangedSlot(int height);
     void StringChangedSlot();
@@ -90,6 +91,12 @@ private:
         k1Bitplane,
     };
 
+    enum Palette
+    {
+        kGreyscale,
+        kContrast1
+    };
+
     void UpdateUIElements();
     void RequestMemory();
 
@@ -97,7 +104,7 @@ private:
     void DisplayAddress();
 
     // Either copy from registers, or use the user settings
-    void UpdateAddressFromSettings();
+    void UpdatePaletteFromSettings();
 
     // Copy format from video regs if required
     void UpdateFormatFromSettings();
@@ -117,6 +124,7 @@ private:
     QCheckBox*      m_pLockAddressToVideoCheckBox;
     QCheckBox*      m_pLockFormatToVideoCheckBox;
     QCheckBox*      m_pLockPaletteToVideoCheckBox;
+    QComboBox*      m_pPaletteComboBox;
     QLabel*         m_pInfoLabel;
 
     NonAntiAliasImage*         m_pImageWidget;
