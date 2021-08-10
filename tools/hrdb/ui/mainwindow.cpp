@@ -659,6 +659,7 @@ MainWindow::MainWindow(QWidget *parent)
     auto pMainGroupBox = new QGroupBox(this);
 
     SetMargins(hlayout);
+    hlayout->setAlignment(Qt::AlignLeft);
     hlayout->addWidget(m_pRunningSquare);
     hlayout->addWidget(m_pStartStopButton);
     hlayout->addWidget(m_pStepIntoButton);
