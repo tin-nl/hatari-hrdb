@@ -15,6 +15,7 @@
 #include <QStyle>
 #include <QFontDatabase>
 #include <QSettings>
+#include <QDebug>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -36,6 +37,8 @@ void NonAntiAliasImage::setPixmap(int width, int height)
     img.setColorTable(m_colours);
     QPixmap pm = QPixmap::fromImage(img);
     m_pixmap = pm;
+    UpdateString();
+    emit StringChanged();
     update();
 }
 
@@ -63,31 +66,8 @@ void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
     if (m_pixmap.width() != 0)
     {
         const QRect& r = rect();
-
         painter.setRenderHint(QPainter::Antialiasing, false);
         style()->drawItemPixmap(&painter, r, Qt::AlignCenter, m_pixmap.scaled(r.size()));
-
-        // We need to work out the dimensions here
-        if (this->underMouse())
-        {
-            double x_frac = (m_mousePos.x() - r.x()) / r.width();
-            double y_frac = (m_mousePos.y() - r.y()) / r.height();
-
-            double x_pix = x_frac * m_pixmap.width();
-            double y_pix = y_frac * m_pixmap.height();
-
-            int x = static_cast<int>(x_pix);
-            int y = static_cast<int>(y_pix);
-            painter.setFont(monoFont);
-            painter.drawText(10, 10, QString::asprintf("X:%d Y:%d\n", x, y));
-
-            if (x < m_pixmap.width() && y < m_pixmap.height() &&
-                m_pBitmap)
-            {
-                uint8_t pixelValue = m_pBitmap[y * m_pixmap.width() + x];
-                painter.drawText(10, 20, QString::asprintf("Pixel value = :%u", pixelValue));
-            }
-        }
     }
     else {
         painter.setFont(monoFont);
@@ -105,11 +85,43 @@ void NonAntiAliasImage::mouseMoveEvent(QMouseEvent *event)
 {
     m_mousePos = event->localPos();
     if (this->underMouse())
-        update();
-
+    {
+        UpdateString();
+        emit StringChanged();
+    }
     QWidget::mouseMoveEvent(event);
 }
 
+void NonAntiAliasImage::UpdateString()
+{
+    m_infoString.clear();
+    if (m_pixmap.width() == 0)
+        return;
+
+    // We need to work out the dimensions here
+    if (this->underMouse())
+    {
+        const QRect& r = rect();
+        double x_frac = (m_mousePos.x() - r.x()) / r.width();
+        double y_frac = (m_mousePos.y() - r.y()) / r.height();
+
+        double x_pix = x_frac * m_pixmap.width();
+        double y_pix = y_frac * m_pixmap.height();
+
+        int x = static_cast<int>(x_pix);
+        int y = static_cast<int>(y_pix);
+        m_infoString = QString::asprintf("X:%d Y:%d", x, y);
+
+        if (x < m_pixmap.width() && y < m_pixmap.height() &&
+            m_pBitmap)
+        {
+            uint8_t pixelValue = m_pBitmap[y * m_pixmap.width() + x];
+            m_infoString += QString::asprintf(" Pixel value: %u", pixelValue);
+        }
+
+        qDebug() << m_infoString;
+    }
+}
 
 GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
                                                  TargetModel* pTargetModel, Dispatcher* pDispatcher) :
@@ -121,37 +133,40 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_width(20),
     m_height(200),
     m_requestIdBitmap(0U),
-    m_requestIdPalette(0U)
+    m_requestIdVideoRegs(0U)
 {
     QString name("GraphicsInspector");
     this->setObjectName(name);
     this->setWindowTitle(name);
     this->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
+    m_pLockToVideoCheckBox = new QCheckBox(tr("Lock to Video Regs"), this);
+    m_pInfoLabel = new QLabel(this);
+
+    // Do these in tab order
+    m_pLineEdit = new QLineEdit(this);
+    m_pModeComboBox = new QComboBox(this);
+    m_pWidthSpinBox = new QSpinBox(this);
+    m_pHeightSpinBox = new QSpinBox(this);
 
     m_pImageWidget = new NonAntiAliasImage(this);
     m_pImageWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     //m_pPictureLabel->setFixedSize(640, 400);
     //m_pPictureLabel->setScaledContents(true);
 
-    m_pLineEdit = new QLineEdit(this);
     m_pSymbolTableModel = new SymbolTableModel(this, m_pTargetModel->GetSymbolTable());
     QCompleter* pCompl = new QCompleter(m_pSymbolTableModel, this);
     pCompl->setCaseSensitivity(Qt::CaseSensitivity::CaseInsensitive);
     m_pLineEdit->setCompleter(pCompl);
 
-    m_pModeComboBox = new QComboBox(this);
     m_pModeComboBox->addItem(tr("4 Plane"), Mode::k4Bitplane);
     m_pModeComboBox->addItem(tr("2 Plane"), Mode::k2Bitplane);
     m_pModeComboBox->addItem(tr("1 Plane"), Mode::k1Bitplane);
 
-    m_pWidthSpinBox = new QSpinBox(this);
-    m_pWidthSpinBox->setRange(1, 32);
+    m_pWidthSpinBox->setRange(1, 40);
     m_pWidthSpinBox->setValue(m_width);
 
-    m_pHeightSpinBox = new QSpinBox(this);
     m_pHeightSpinBox->setRange(16, 256);
     m_pHeightSpinBox->setValue(m_height);
-    m_pLockToVideoCheckBox = new QCheckBox(tr("Follow Video Pointer"), this);
 
     auto pMainGroupBox = new QWidget(this);
 
@@ -165,9 +180,15 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     QWidget* pTopContainer = new QWidget(this);
     pTopContainer->setLayout(hlayout);
 
+    QHBoxLayout *hlayout2 = new QHBoxLayout();
+    hlayout2->addWidget(m_pLockToVideoCheckBox);
+    hlayout2->addWidget(m_pInfoLabel);
+    QWidget* pTopContainer2 = new QWidget(this);
+    pTopContainer2->setLayout(hlayout2);
+
     QVBoxLayout *vlayout = new QVBoxLayout;
     vlayout->addWidget(pTopContainer);
-    vlayout->addWidget(m_pLockToVideoCheckBox);
+    vlayout->addWidget(pTopContainer2);
     vlayout->addWidget(m_pImageWidget);
     vlayout->setAlignment(Qt::Alignment(Qt::AlignTop));
     pMainGroupBox->setLayout(vlayout);
@@ -188,8 +209,10 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     connect(m_pWidthSpinBox, SIGNAL(valueChanged(int)),                   SLOT(widthChangedSlot(int)));
     connect(m_pHeightSpinBox,SIGNAL(valueChanged(int)),                   SLOT(heightChangedSlot(int)));
 
+    connect(m_pImageWidget,  &NonAntiAliasImage::StringChanged,           this, &GraphicsInspectorWidget::StringChangedSlot);
+
     loadSettings();
-    UpdateCheckBoxes();
+    UpdateUIElements();
     DisplayAddress();
 }
 
@@ -237,16 +260,19 @@ void GraphicsInspectorWidget::saveSettings()
 void GraphicsInspectorWidget::keyPressEvent(QKeyEvent* ev)
 {
     int offset = 0;
-    int32_t bytes = BytesPerMode(m_mode);
+
+    int32_t bytes = BytesPerMode(GetEffectiveMode());
+    int32_t width = GetEffectiveWidth();
+    int32_t height = GetEffectiveHeight();
 
     if (ev->key() == Qt::Key::Key_Up)
-        offset = -m_width * bytes;
+        offset = -width * bytes;
     else if (ev->key() == Qt::Key::Key_Down)
-        offset = +m_width * bytes;
+        offset = +width * bytes;
     else if (ev->key() == Qt::Key::Key_PageUp)
-        offset = m_height * -m_width * bytes;
+        offset = height * -width * bytes;
     else if (ev->key() == Qt::Key::Key_PageDown)
-        offset = m_height * m_width * bytes;
+        offset = height * width * bytes;
     else if (ev->key() == Qt::Key::Key_Left)
         offset = -2;
     else if (ev->key() == Qt::Key::Key_Right)
@@ -302,22 +328,25 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         if (!pMemOrig)
             return;
 
-        int32_t bytesPerChunk = BytesPerMode(m_mode);
+        Mode mode = GetEffectiveMode();
+        int width = GetEffectiveWidth();
+        int height = GetEffectiveHeight();
+        int32_t bytesPerChunk = BytesPerMode(mode);
         // Uncompress
-        int required = m_width * bytesPerChunk * m_height;
+        int required = width * bytesPerChunk * height;
 
         // Ensure we have the right size memory
         if (pMemOrig->GetSize() < required)
             return;
 
-        int bitmapSize = m_width * 16 * m_height;
+        int bitmapSize = width * 16 * height;
         uint8_t* pDestPixels = m_pImageWidget->AllocBitmap(bitmapSize);
         uint8_t* pDestPixelsStart = pDestPixels;
         const uint8_t* pChunk = pMemOrig->GetData();
 
-        if (m_mode == k4Bitplane)
+        if (mode == k4Bitplane)
         {
-            for (int i = 0; i < m_width * m_height; ++i)
+            for (int i = 0; i < width * height; ++i)
             {
                 int32_t pSrc[4];    // top 16 bits never used
                 pSrc[3] = (pChunk[0] << 8) | pChunk[1];
@@ -342,9 +371,9 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
                 pDestPixels += 16;
             }
         }
-        else if (m_mode == k2Bitplane)
+        else if (mode == k2Bitplane)
         {
-            for (int i = 0; i < m_width * m_height; ++i)
+            for (int i = 0; i < width * height; ++i)
             {
                 int32_t pSrc[2];
                 pSrc[1] = (pChunk[0] << 8) | pChunk[1];
@@ -353,7 +382,7 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
                 {
                     uint8_t val;
                     val  = (pSrc[0] & 1); val <<= 1;
-                    val |= (pSrc[1] & 1); val <<= 1;
+                    val |= (pSrc[1] & 1);
                     pDestPixels[pix] = val;
                     pSrc[0] >>= 1;
                     pSrc[1] >>= 1;
@@ -362,16 +391,16 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
                 pDestPixels += 16;
             }
         }
-        else if (m_mode == k1Bitplane)
+        else if (mode == k1Bitplane)
         {
-            for (int i = 0; i < m_width * m_height; ++i)
+            for (int i = 0; i < width * height; ++i)
             {
                 int32_t pSrc[1];
                 pSrc[0] = (pChunk[0] << 8) | pChunk[1];
                 for (int pix = 15; pix >= 0; --pix)
                 {
                     uint8_t val;
-                    val  = (pSrc[0] & 1); val <<= 1;
+                    val  = (pSrc[0] & 1);
                     pDestPixels[pix] = val;
                     pSrc[0] >>= 1;
                 }
@@ -381,23 +410,34 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         }
 
         // Update image in the widget
-        m_pImageWidget->setPixmap(m_width, m_height);
-
+        m_pImageWidget->setPixmap(width, height);
         m_requestIdBitmap = 0;
         return;
     }
-    else if (commandId == m_requestIdPalette)
+    else if (commandId == m_requestIdVideoRegs)
     {
-        const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorPalette);
+        const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
         if (!pMemOrig)
             return;
 
-        if (pMemOrig->GetSize() != 32)
-            return;
+        // Now we have the registers, we can now video dimensions.
+        int width = GetEffectiveWidth();
+        int height = GetEffectiveHeight();
+        Mode mode = GetEffectiveMode();
 
-        // Colours are ARGB
-        m_pImageWidget->m_colours.clear();
+        // Set these as current values, so that if we scroll around,
+        // they are not lost
+        m_width = width;
+        m_height = height;
+        m_mode = mode;
+        UpdateUIElements();
 
+        // Request video memory area
+        int size = height * width * BytesPerMode(mode);
+        m_requestIdBitmap = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspector, m_address, size);
+        m_requestIdVideoRegs = 0;
+
+        // Now update palette
         static const uint32_t stToRgb[16] =
         {
             0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
@@ -413,11 +453,15 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
                 (m_pTargetModel->GetMachineType() == MACHINE_MEGA_ST);
         const uint32_t* pPalette = isST ? stToRgb : steToRgb;
 
-        for (int i = 0; i < 16; ++i)
+        // Colours are ARGB
+        m_pImageWidget->m_colours.clear();
+
+        for (uint i = 0; i < 16; ++i)
         {
-            uint32_t  r = pMemOrig->GetData()[i * 2] & 0xf;
-            uint32_t  g = pMemOrig->GetData()[i * 2 + 1] >> 4;
-            uint32_t  b = pMemOrig->GetData()[i * 2 + 1] & 0xf;
+            uint32_t addr = 0xff8240 + i*2;
+            uint32_t  r = pMemOrig->ReadAddressByte(addr + 0) & 0xf;
+            uint32_t  g = pMemOrig->ReadAddressByte(addr + 1) >> 4;
+            uint32_t  b = pMemOrig->ReadAddressByte(addr + 1) & 0xf;
 
             uint32_t colour = 0xff000000U;
             colour |= pPalette[r] << 16;
@@ -425,7 +469,6 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
             colour |= pPalette[b] << 0;
             m_pImageWidget->m_colours.append(colour);
         }
-        m_requestIdPalette = 0;
     }
 }
 
@@ -452,18 +495,19 @@ void GraphicsInspectorWidget::followVideoChangedSlot()
         SetAddressFromVideo();
         RequestMemory();
     }
+    UpdateUIElements();
 }
 
 void GraphicsInspectorWidget::modeChangedSlot(int index)
 {
-    m_mode = static_cast<Mode>(m_pModeComboBox->currentIndex());
+    m_mode = static_cast<Mode>(index);
     RequestMemory();
 }
 
 void GraphicsInspectorWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
 {
     // Do a re-request if our memory is touched
-    uint32_t ourSize = m_height * m_width * BytesPerMode(m_mode);
+    uint32_t ourSize = GetEffectiveHeight() * GetEffectiveWidth() * BytesPerMode(m_mode);
     if (Overlaps(m_address, ourSize, address, size))
         RequestMemory();
 }
@@ -480,17 +524,20 @@ void GraphicsInspectorWidget::heightChangedSlot(int value)
     RequestMemory();
 }
 
+void GraphicsInspectorWidget::StringChangedSlot()
+{
+    m_pInfoLabel->setText(m_pImageWidget->GetString());
+}
+
 // Request enough memory based on m_rowCount and m_logicalAddr
 void GraphicsInspectorWidget::RequestMemory()
 {
     if (!m_pTargetModel->IsConnected())
         return;
 
-    // Palette first
-    m_requestIdPalette = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspectorPalette, 0xff8240, 32);
-
-    int size = m_height * m_width * BytesPerMode(m_mode);
-    m_requestIdBitmap = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspector, m_address, size);
+    // Video data first. Once that has returned we request the necessary amount of memory
+    m_requestIdBitmap = -1;
+    m_requestIdVideoRegs = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspectorVideoRegs, 0xff8240, 0x70);
 }
 
 bool GraphicsInspectorWidget::SetAddressFromVideo()
@@ -519,8 +566,64 @@ void GraphicsInspectorWidget::DisplayAddress()
     m_pLineEdit->setText(QString::asprintf("$%x", m_address));
 }
 
-void GraphicsInspectorWidget::UpdateCheckBoxes()
+void GraphicsInspectorWidget::UpdateUIElements()
 {
+    m_pWidthSpinBox->setValue(m_width);
+    m_pHeightSpinBox->setValue(m_height);
+    m_pModeComboBox->setCurrentIndex(m_mode);
+
+    m_pWidthSpinBox->setEnabled(!m_pLockToVideoCheckBox->isChecked());
+    m_pHeightSpinBox->setEnabled(!m_pLockToVideoCheckBox->isChecked());
+    m_pModeComboBox->setEnabled(!m_pLockToVideoCheckBox->isChecked());
+}
+
+GraphicsInspectorWidget::Mode GraphicsInspectorWidget::GetEffectiveMode() const
+{
+    if (!m_pLockToVideoCheckBox->isChecked())
+        return m_mode;
+
+    const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
+    if (!pMem)
+        return Mode::k4Bitplane;
+    uint8_t modeReg = pMem->ReadAddressByte(0xff8260) & 3;
+    if (modeReg == 0)
+        return Mode::k4Bitplane;
+    else if (modeReg == 1)
+        return Mode::k2Bitplane;
+
+    return Mode::k1Bitplane;
+}
+
+int GraphicsInspectorWidget::GetEffectiveWidth() const
+{
+    if (!m_pLockToVideoCheckBox->isChecked())
+        return m_width;
+
+    const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
+    if (!pMem)
+        return Mode::k4Bitplane;
+    uint8_t modeReg = pMem->ReadAddressByte(0xff8260) & 3;
+    if (modeReg == 0)
+        return 20;
+    else if (modeReg == 1)
+        return 40;
+    return 40;
+}
+
+int GraphicsInspectorWidget::GetEffectiveHeight() const
+{
+    if (!m_pLockToVideoCheckBox->isChecked())
+        return m_height;
+
+    const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
+    if (!pMem)
+        return Mode::k4Bitplane;
+    uint8_t modeReg = pMem->ReadAddressByte(0xff8260) & 3;
+    if (modeReg == 0)
+        return 200;
+    else if (modeReg == 1)
+        return 200;
+    return 400;
 }
 
 int32_t GraphicsInspectorWidget::BytesPerMode(GraphicsInspectorWidget::Mode mode)
