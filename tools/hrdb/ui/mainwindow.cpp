@@ -18,6 +18,7 @@
 #include "addbreakpointdialog.h"
 #include "exceptiondialog.h"
 #include "rundialog.h"
+#include "quicklayout.h"
 
 static QString CreateNumberTooltip(uint32_t value, uint32_t prevValue)
 {
@@ -657,6 +658,7 @@ MainWindow::MainWindow(QWidget *parent)
     auto pTopGroupBox = new QWidget(this);
     auto pMainGroupBox = new QGroupBox(this);
 
+    SetMargins(hlayout);
     hlayout->addWidget(m_pRunningSquare);
     hlayout->addWidget(m_pStartStopButton);
     hlayout->addWidget(m_pStepIntoButton);
@@ -667,6 +669,7 @@ MainWindow::MainWindow(QWidget *parent)
     //hlayout->setAlignment(m_pRunToCombo, Qt::Align);
     pTopGroupBox->setLayout(hlayout);
 
+    SetMargins(vlayout);
     vlayout->addWidget(pTopGroupBox);
     vlayout->addWidget(m_pRegisterWidget);
     vlayout->setAlignment(Qt::Alignment(Qt::AlignTop));

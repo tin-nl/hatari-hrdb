@@ -22,6 +22,7 @@
 #include "../models/symboltablemodel.h"
 #include "../models/stringparsers.h"
 #include "../hardware/hardware_st.h"
+#include "quicklayout.h"
 
 NonAntiAliasImage::NonAntiAliasImage(QWidget *parent)
     : QWidget(parent),
@@ -172,6 +173,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     auto pMainGroupBox = new QWidget(this);
 
     QHBoxLayout *hlayout = new QHBoxLayout();
+    SetMargins(hlayout);
     hlayout->addWidget(m_pLineEdit);
     hlayout->addWidget(m_pModeComboBox);
     hlayout->addWidget(new QLabel(tr("Width"), this));
@@ -182,12 +184,14 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     pTopContainer->setLayout(hlayout);
 
     QHBoxLayout *hlayout2 = new QHBoxLayout();
+    SetMargins(hlayout2);
     hlayout2->addWidget(m_pLockToVideoCheckBox);
     hlayout2->addWidget(m_pInfoLabel);
     QWidget* pTopContainer2 = new QWidget(this);
     pTopContainer2->setLayout(hlayout2);
 
     QVBoxLayout *vlayout = new QVBoxLayout;
+    SetMargins(vlayout);
     vlayout->addWidget(pTopContainer);
     vlayout->addWidget(pTopContainer2);
     vlayout->addWidget(m_pImageWidget);

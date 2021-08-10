@@ -19,6 +19,7 @@
 #include "../models/stringparsers.h"
 #include "../models/symboltablemodel.h"
 #include "../models/session.h"
+#include "quicklayout.h"
 
 MemoryWidget::MemoryWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher,
                                            int windowIndex) :
@@ -625,10 +626,12 @@ MemoryWindow::MemoryWindow(QWidget *parent, TargetModel* pTargetModel, Dispatche
     auto pMainRegion = new QWidget(this);   // whole panel
     auto pTopRegion = new QWidget(this);      // top buttons/edits
 
+    SetMargins(pTopLayout);
     pTopLayout->addWidget(m_pLineEdit);
     pTopLayout->addWidget(m_pLockCheckBox);
     pTopLayout->addWidget(m_pComboBox);
 
+    SetMargins(pMainLayout);
     pMainLayout->addWidget(pTopRegion);
     pMainLayout->addWidget(m_pMemoryWidget);
 

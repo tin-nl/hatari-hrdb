@@ -20,6 +20,7 @@
 #include "../models/symboltablemodel.h"
 #include "../models/memory.h"
 #include "../models/session.h"
+#include "quicklayout.h"
 
 DisasmWidget::DisasmWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher, int windowIndex):
     QWidget(parent),
@@ -883,10 +884,12 @@ DisasmWindow::DisasmWindow(QWidget *parent, TargetModel* pTargetModel, Dispatche
     auto pTopRegion = new QWidget(this);    // top buttons/edits
     //pMainGroupBox->setFlat(true);
 
+    SetMargins(pTopLayout);
     pTopLayout->addWidget(m_pLineEdit);
     pTopLayout->addWidget(m_pShowHex);
     pTopLayout->addWidget(m_pFollowPC);
 
+    SetMargins(pMainLayout);
     pMainLayout->addWidget(pTopRegion);
     pMainLayout->addWidget(m_pDisasmWidget);
     pMainLayout->setAlignment(Qt::Alignment(Qt::AlignTop));
