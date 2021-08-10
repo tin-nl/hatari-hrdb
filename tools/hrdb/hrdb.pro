@@ -67,7 +67,8 @@ HEADERS += \
     ui/memoryviewwidget.h \
     ui/quicklayout.h \
     ui/rundialog.h \
-    ui/consolewindow.h
+    ui/consolewindow.h \
+    hardware/hardware_st.h
 
 RESOURCES     = hrdb.qrc    
 

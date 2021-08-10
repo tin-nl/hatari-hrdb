@@ -67,7 +67,7 @@ private:
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void otherMemoryChangedSlot(uint32_t address, uint32_t size);
     void textEditChangedSlot();
-    void followVideoChangedSlot();
+    void lockToVideoChangedSlot();
 
 private slots:
     void modeChangedSlot(int index);
@@ -90,6 +90,8 @@ private:
     bool SetAddressFromVideo();
     void DisplayAddress();
 
+    // Get the effective data by checking the "lock to" flags and
+    // using them if necessary.
     GraphicsInspectorWidget::Mode GetEffectiveMode() const;
     int GetEffectiveWidth() const;
     int GetEffectiveHeight() const;
