@@ -92,12 +92,15 @@ private:
 
     void UpdateUIElements();
     void RequestMemory();
+
     bool SetAddressFromVideo();
     void DisplayAddress();
-    void UpdatePaletteFromVideo();
+
+    // Either copy from registers, or use the user settings
+    void UpdateAddressFromSettings();
 
     // Copy format from video regs if required
-    void UpdateFormatFromVideo();
+    void UpdateFormatFromSettings();
 
     // Get the effective data by checking the "lock to" flags and
     // using them if necessary.

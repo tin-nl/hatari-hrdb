@@ -280,7 +280,9 @@ void GraphicsInspectorWidget::loadSettings()
 
     m_pWidthSpinBox->setValue(m_width);
     m_pHeightSpinBox->setValue(m_height);
-    m_pLockAddressToVideoCheckBox->setChecked(settings.value("lockToVideo", QVariant(true)).toBool());
+    m_pLockAddressToVideoCheckBox->setChecked(settings.value("lockAddress", QVariant(true)).toBool());
+    m_pLockFormatToVideoCheckBox->setChecked(settings.value("lockFormat", QVariant(true)).toBool());
+    m_pLockPaletteToVideoCheckBox->setChecked(settings.value("lockPalete", QVariant(true)).toBool());
     m_pModeComboBox->setCurrentIndex(m_mode);
     settings.endGroup();
 }
@@ -293,7 +295,9 @@ void GraphicsInspectorWidget::saveSettings()
     settings.setValue("geometry", saveGeometry());
     settings.setValue("width", m_width);
     settings.setValue("height", m_height);
-    settings.setValue("lockToVideo", m_pLockAddressToVideoCheckBox->isChecked());
+    settings.setValue("lockAddress", m_pLockAddressToVideoCheckBox->isChecked());
+    settings.setValue("lockFormat", m_pLockFormatToVideoCheckBox->isChecked());
+    settings.setValue("lockPalette", m_pLockPaletteToVideoCheckBox->isChecked());
     settings.setValue("mode", static_cast<int>(m_mode));
     settings.endGroup();
 }
@@ -472,7 +476,7 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         }
 
         // Update image in the widget
-        UpdatePaletteFromVideo();
+        UpdateAddressFromSettings();
 
         // Clear the running mask, but only if we're really stopped
         if (!m_pTargetModel->IsRunning())
@@ -489,7 +493,7 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         if (!pMemOrig)
             return;
 
-        UpdateFormatFromVideo();
+        UpdateFormatFromSettings();
         UpdateUIElements();
         m_requestIdVideoRegs = 0;
     }
@@ -527,7 +531,7 @@ void GraphicsInspectorWidget::lockFormatToVideoChangedSlot()
     bool m_bLockToVideo = m_pLockFormatToVideoCheckBox->isChecked();
     if (m_bLockToVideo)
     {
-        UpdateFormatFromVideo();
+        UpdateFormatFromSettings();
         RequestMemory();
     }
     UpdateUIElements();
@@ -535,7 +539,7 @@ void GraphicsInspectorWidget::lockFormatToVideoChangedSlot()
 
 void GraphicsInspectorWidget::lockPaletteToVideoChangedSlot()
 {
-    UpdatePaletteFromVideo();
+    UpdateAddressFromSettings();
 
     // Ensure pixmap is updated
     m_pImageWidget->setPixmap(GetEffectiveWidth(), GetEffectiveHeight());
@@ -615,7 +619,7 @@ void GraphicsInspectorWidget::DisplayAddress()
     m_pAddressLineEdit->setText(QString::asprintf("$%x", m_address));
 }
 
-void GraphicsInspectorWidget::UpdatePaletteFromVideo()
+void GraphicsInspectorWidget::UpdateAddressFromSettings()
 {
     // Colours are ARGB
     m_pImageWidget->m_colours.clear();
@@ -663,7 +667,7 @@ void GraphicsInspectorWidget::UpdatePaletteFromVideo()
     }
 }
 
-void GraphicsInspectorWidget::UpdateFormatFromVideo()
+void GraphicsInspectorWidget::UpdateFormatFromSettings()
 {
     // Now we have the registers, we can now video dimensions.
     int width = GetEffectiveWidth();
