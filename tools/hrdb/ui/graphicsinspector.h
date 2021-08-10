@@ -21,11 +21,12 @@ class NonAntiAliasImage : public QWidget
     Q_OBJECT
     Q_DISABLE_COPY(NonAntiAliasImage)
 public:
+    explicit NonAntiAliasImage(QWidget* parent);
     virtual ~NonAntiAliasImage() override;
 
-    explicit NonAntiAliasImage(QWidget* parent = Q_NULLPTR);
     void setPixmap(int width, int height);
     uint8_t* AllocBitmap(int size);
+    void SetRunning(bool runFlag);
 
     QVector<QRgb>   m_colours;
 
@@ -39,14 +40,15 @@ protected:
 private:
     void UpdateString();
 
-    QPixmap m_pixmap;
-    QPointF m_mousePos;
+    QPixmap         m_pixmap;
+    QPointF         m_mousePos;
 
     // Underlying bitmap data
-    uint8_t* m_pBitmap;
-    int m_bitmapSize;
-    QString m_infoString;
+    uint8_t*        m_pBitmap;
+    int             m_bitmapSize;
 
+    QString         m_infoString;
+    bool            m_bRunningMask;
 };
 
 class GraphicsInspectorWidget : public QDockWidget
@@ -68,7 +70,9 @@ private:
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void otherMemoryChangedSlot(uint32_t address, uint32_t size);
     void textEditChangedSlot();
-    void lockToVideoChangedSlot();
+    void lockAddressToVideoChangedSlot();
+    void lockFormatToVideoChangedSlot();
+    void lockPaletteToVideoChangedSlot();
 
 private slots:
     void modeChangedSlot(int index);
@@ -90,6 +94,10 @@ private:
     void RequestMemory();
     bool SetAddressFromVideo();
     void DisplayAddress();
+    void UpdatePaletteFromVideo();
+
+    // Copy format from video regs if required
+    void UpdateFormatFromVideo();
 
     // Get the effective data by checking the "lock to" flags and
     // using them if necessary.
@@ -99,11 +107,13 @@ private:
 
     static int32_t BytesPerMode(Mode mode);
 
-    QLineEdit*      m_pLineEdit;
+    QLineEdit*      m_pAddressLineEdit;
     QComboBox*      m_pModeComboBox;
     QSpinBox*       m_pWidthSpinBox;
     QSpinBox*       m_pHeightSpinBox;
-    QCheckBox*      m_pLockToVideoCheckBox;
+    QCheckBox*      m_pLockAddressToVideoCheckBox;
+    QCheckBox*      m_pLockFormatToVideoCheckBox;
+    QCheckBox*      m_pLockPaletteToVideoCheckBox;
     QLabel*         m_pInfoLabel;
 
     NonAntiAliasImage*         m_pImageWidget;

@@ -27,7 +27,8 @@
 NonAntiAliasImage::NonAntiAliasImage(QWidget *parent)
     : QWidget(parent),
       m_pBitmap(nullptr),
-      m_bitmapSize(0)
+      m_bitmapSize(0),
+      m_bRunningMask(false)
 {
     setMouseTracking(true);
     setFocusPolicy(Qt::FocusPolicy::StrongFocus);
@@ -60,14 +61,20 @@ uint8_t* NonAntiAliasImage::AllocBitmap(int size)
     return m_pBitmap;
 }
 
+void NonAntiAliasImage::SetRunning(bool runFlag)
+{
+    m_bRunningMask = runFlag;
+    update();
+}
+
 void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
 {
     QPainter painter(this);
+    const QRect& r = rect();
 
     const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     if (m_pixmap.width() != 0)
     {
-        const QRect& r = rect();
         painter.setRenderHint(QPainter::Antialiasing, false);
         style()->drawItemPixmap(&painter, r, Qt::AlignCenter, m_pixmap.scaled(r.size()));
     }
@@ -77,9 +84,18 @@ void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
     }
     const QPalette& pal = this->palette();
 
-    painter.setPen(QPen(pal.dark(), hasFocus() ? 6 : 2));
-    painter.drawRect(this->rect());
+    if (m_bRunningMask)
+    {
+        painter.setBrush(QBrush(QColor(0, 0, 0, 128)));
+        painter.drawRect(r);
 
+        painter.setPen(Qt::magenta);
+        painter.setBrush(Qt::NoBrush);
+        painter.drawText(r, Qt::AlignCenter, "Running...");
+    }
+
+    painter.setPen(QPen(pal.dark(), hasFocus() ? 6 : 2));
+    painter.drawRect(r);
     QWidget::paintEvent(ev);
 }
 
@@ -118,10 +134,8 @@ void NonAntiAliasImage::UpdateString()
             m_pBitmap)
         {
             uint8_t pixelValue = m_pBitmap[y * m_pixmap.width() + x];
-            m_infoString += QString::asprintf(" Pixel value: %u", pixelValue);
+            m_infoString += QString::asprintf(", Pixel value: %u", pixelValue);
         }
-
-        qDebug() << m_infoString;
     }
 }
 
@@ -141,65 +155,84 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     this->setObjectName(name);
     this->setWindowTitle(name);
     this->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
-    m_pLockToVideoCheckBox = new QCheckBox(tr("Lock to Video Regs"), this);
-    m_pInfoLabel = new QLabel(this);
 
-    // Do these in tab order
-    m_pLineEdit = new QLineEdit(this);
-    m_pModeComboBox = new QComboBox(this);
-    m_pWidthSpinBox = new QSpinBox(this);
-    m_pHeightSpinBox = new QSpinBox(this);
-
-    m_pImageWidget = new NonAntiAliasImage(this);
-    m_pImageWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
-    //m_pPictureLabel->setFixedSize(640, 400);
-    //m_pPictureLabel->setScaledContents(true);
-
+    // top line
+    m_pAddressLineEdit = new QLineEdit(this);
+    m_pLockAddressToVideoCheckBox = new QCheckBox(tr("Use Registers"), this);
     m_pSymbolTableModel = new SymbolTableModel(this, m_pTargetModel->GetSymbolTable());
     QCompleter* pCompl = new QCompleter(m_pSymbolTableModel, this);
     pCompl->setCaseSensitivity(Qt::CaseSensitivity::CaseInsensitive);
-    m_pLineEdit->setCompleter(pCompl);
+    m_pAddressLineEdit->setCompleter(pCompl);
+
+    // Second line
+    m_pModeComboBox = new QComboBox(this);
+    m_pWidthSpinBox = new QSpinBox(this);
+    m_pHeightSpinBox = new QSpinBox(this);
+    m_pLockFormatToVideoCheckBox = new QCheckBox(tr("Use Registers"), this);
 
     m_pModeComboBox->addItem(tr("4 Plane"), Mode::k4Bitplane);
     m_pModeComboBox->addItem(tr("2 Plane"), Mode::k2Bitplane);
     m_pModeComboBox->addItem(tr("1 Plane"), Mode::k1Bitplane);
-
     m_pWidthSpinBox->setRange(1, 40);
     m_pWidthSpinBox->setValue(m_width);
-
     m_pHeightSpinBox->setRange(16, 256);
     m_pHeightSpinBox->setValue(m_height);
 
-    auto pMainGroupBox = new QWidget(this);
+    // Third line
+    m_pLockPaletteToVideoCheckBox = new QCheckBox(tr("Use Registers"), this);
+    m_pInfoLabel = new QLabel(this);
 
-    QHBoxLayout *hlayout = new QHBoxLayout();
-    SetMargins(hlayout);
-    hlayout->addWidget(m_pLineEdit);
-    hlayout->addWidget(m_pModeComboBox);
-    hlayout->addWidget(new QLabel(tr("Width"), this));
-    hlayout->addWidget(m_pWidthSpinBox);
-    hlayout->addWidget(new QLabel(tr("Height"), this));
-    hlayout->addWidget(m_pHeightSpinBox);
-    QWidget* pTopContainer = new QWidget(this);
-    pTopContainer->setLayout(hlayout);
+    // Bottom
+    m_pImageWidget = new NonAntiAliasImage(this);
+    m_pImageWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
 
+    // Layout First line
+    QHBoxLayout *hlayout1 = new QHBoxLayout();
+    SetMargins(hlayout1);
+    hlayout1->setAlignment(Qt::AlignLeft);
+    hlayout1->addWidget(new QLabel(tr("Address:"), this));
+    hlayout1->addWidget(m_pAddressLineEdit);
+    hlayout1->addWidget(m_pLockAddressToVideoCheckBox);
+    QWidget* pContainer1 = new QWidget(this);
+    pContainer1->setLayout(hlayout1);
+
+    // Layout Second line
     QHBoxLayout *hlayout2 = new QHBoxLayout();
     SetMargins(hlayout2);
-    hlayout2->addWidget(m_pLockToVideoCheckBox);
-    hlayout2->addWidget(m_pInfoLabel);
-    QWidget* pTopContainer2 = new QWidget(this);
-    pTopContainer2->setLayout(hlayout2);
+    hlayout2->setAlignment(Qt::AlignLeft);
+    hlayout2->addWidget(new QLabel(tr("Format:"), this));
+    hlayout2->addWidget(m_pModeComboBox);
+    hlayout2->addWidget(new QLabel(tr("Width:"), this));
+    hlayout2->addWidget(m_pWidthSpinBox);
+    hlayout2->addWidget(new QLabel(tr("Height:"), this));
+    hlayout2->addWidget(m_pHeightSpinBox);
+    hlayout2->addWidget(m_pLockFormatToVideoCheckBox);
+    QWidget* pContainer2 = new QWidget(this);
+    pContainer2->setLayout(hlayout2);
 
+    // Layout Third line
+    QHBoxLayout *hlayout3 = new QHBoxLayout();
+    SetMargins(hlayout3);
+    hlayout3->setAlignment(Qt::AlignLeft);
+    hlayout3->addWidget(new QLabel(tr("Palette:"), this));
+    hlayout3->addWidget(m_pLockPaletteToVideoCheckBox);
+    hlayout3->addWidget(m_pInfoLabel);
+    QWidget* pContainer3 = new QWidget(this);
+    pContainer3->setLayout(hlayout3);
+
+    auto pMainGroupBox = new QWidget(this);
     QVBoxLayout *vlayout = new QVBoxLayout;
     SetMargins(vlayout);
-    vlayout->addWidget(pTopContainer);
-    vlayout->addWidget(pTopContainer2);
+    vlayout->addWidget(pContainer1);
+    vlayout->addWidget(pContainer2);
+    vlayout->addWidget(pContainer3);
     vlayout->addWidget(m_pImageWidget);
     vlayout->setAlignment(Qt::Alignment(Qt::AlignTop));
     pMainGroupBox->setLayout(vlayout);
 
     setWidget(pMainGroupBox);
-    m_pLockToVideoCheckBox->setChecked(true);
+    m_pLockAddressToVideoCheckBox->setChecked(true);
+    m_pLockFormatToVideoCheckBox->setChecked(true);
 
     connect(m_pTargetModel,  &TargetModel::connectChangedSignal,          this, &GraphicsInspectorWidget::connectChangedSlot);
     connect(m_pTargetModel,  &TargetModel::startStopChangedSignal,        this, &GraphicsInspectorWidget::startStopChangedSlot);
@@ -207,9 +240,11 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     connect(m_pTargetModel,  &TargetModel::memoryChangedSignal,           this, &GraphicsInspectorWidget::memoryChangedSlot);
     connect(m_pTargetModel,  &TargetModel::otherMemoryChanged,            this, &GraphicsInspectorWidget::otherMemoryChangedSlot);
 
-    connect(m_pLineEdit,     &QLineEdit::returnPressed,                   this, &GraphicsInspectorWidget::textEditChangedSlot);
-    connect(m_pLockToVideoCheckBox,
-                             &QCheckBox::stateChanged,                    this, &GraphicsInspectorWidget::lockToVideoChangedSlot);
+    connect(m_pAddressLineEdit,             &QLineEdit::returnPressed,    this, &GraphicsInspectorWidget::textEditChangedSlot);
+    connect(m_pLockAddressToVideoCheckBox,  &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockAddressToVideoChangedSlot);
+    connect(m_pLockFormatToVideoCheckBox,   &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockFormatToVideoChangedSlot);
+    connect(m_pLockAddressToVideoCheckBox,  &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockAddressToVideoChangedSlot);
+    connect(m_pLockPaletteToVideoCheckBox,  &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockPaletteToVideoChangedSlot);
 
     connect(m_pModeComboBox, SIGNAL(currentIndexChanged(int)),            SLOT(modeChangedSlot(int)));
     connect(m_pWidthSpinBox, SIGNAL(valueChanged(int)),                   SLOT(widthChangedSlot(int)));
@@ -245,7 +280,7 @@ void GraphicsInspectorWidget::loadSettings()
 
     m_pWidthSpinBox->setValue(m_width);
     m_pHeightSpinBox->setValue(m_height);
-    m_pLockToVideoCheckBox->setChecked(settings.value("lockToVideo", QVariant(true)).toBool());
+    m_pLockAddressToVideoCheckBox->setChecked(settings.value("lockToVideo", QVariant(true)).toBool());
     m_pModeComboBox->setCurrentIndex(m_mode);
     settings.endGroup();
 }
@@ -258,7 +293,7 @@ void GraphicsInspectorWidget::saveSettings()
     settings.setValue("geometry", saveGeometry());
     settings.setValue("width", m_width);
     settings.setValue("height", m_height);
-    settings.setValue("lockToVideo", m_pLockToVideoCheckBox->isChecked());
+    settings.setValue("lockToVideo", m_pLockAddressToVideoCheckBox->isChecked());
     settings.setValue("mode", static_cast<int>(m_mode));
     settings.endGroup();
 }
@@ -296,7 +331,7 @@ void GraphicsInspectorWidget::keyPressEvent(QKeyEvent* ev)
         else {
             m_address = 0;
         }
-        m_pLockToVideoCheckBox->setChecked(false);
+        m_pLockAddressToVideoCheckBox->setChecked(false);
         RequestMemory();
         DisplayAddress();
 
@@ -322,6 +357,10 @@ void GraphicsInspectorWidget::startStopChangedSlot()
         // Trigger a full refresh of registers
         m_requestIdVideoRegs = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspectorVideoRegs, HardwareST::VIDEO_REGS_BASE, 0x70);
     }
+    else
+    {
+    }
+    update();
 }
 
 void GraphicsInspectorWidget::startStopDelayedChangedSlot()
@@ -330,10 +369,15 @@ void GraphicsInspectorWidget::startStopDelayedChangedSlot()
     if (!m_pTargetModel->IsRunning())
     {
         // We should have registers now, so use them
-        if (m_pLockToVideoCheckBox->isChecked())
+        if (m_pLockAddressToVideoCheckBox->isChecked())
             SetAddressFromVideo();
 
         RequestMemory();
+        // Don't clear the Running flag for the widget, do that when the memory arrives
+    }
+    else {
+        // Turn on the running mask slowly
+        m_pImageWidget->SetRunning(true);
     }
 }
 
@@ -428,7 +472,14 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         }
 
         // Update image in the widget
+        UpdatePaletteFromVideo();
+
+        // Clear the running mask, but only if we're really stopped
+        if (!m_pTargetModel->IsRunning())
+            m_pImageWidget->SetRunning(false);
+
         m_pImageWidget->setPixmap(width, height);
+
         m_requestIdBitmap = 0;
         return;
     }
@@ -438,56 +489,15 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
         if (!pMemOrig)
             return;
 
-        // Now we have the registers, we can now video dimensions.
-        int width = GetEffectiveWidth();
-        int height = GetEffectiveHeight();
-        Mode mode = GetEffectiveMode();
-
-        // Set these as current values, so that if we scroll around,
-        // they are not lost
-        m_width = width;
-        m_height = height;
-        m_mode = mode;
+        UpdateFormatFromVideo();
         UpdateUIElements();
         m_requestIdVideoRegs = 0;
-
-        // Now update palette
-        static const uint32_t stToRgb[16] =
-        {
-            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
-            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee
-        };
-        static const uint32_t steToRgb[16] =
-        {
-            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
-            0x11, 0x33, 0x55, 0x77, 0x99, 0xbb, 0xdd, 0xff
-        };
-
-        bool isST = IsMachineST(m_pTargetModel->GetMachineType());
-        const uint32_t* pPalette = isST ? stToRgb : steToRgb;
-
-        // Colours are ARGB
-        m_pImageWidget->m_colours.clear();
-
-        for (uint i = 0; i < 16; ++i)
-        {
-            uint32_t addr = HardwareST::VIDEO_PALETTE_0 + i*2;
-            uint32_t  r = pMemOrig->ReadAddressByte(addr + 0) & 0xf;
-            uint32_t  g = pMemOrig->ReadAddressByte(addr + 1) >> 4;
-            uint32_t  b = pMemOrig->ReadAddressByte(addr + 1) & 0xf;
-
-            uint32_t colour = 0xff000000U;
-            colour |= pPalette[r] << 16;
-            colour |= pPalette[g] << 8;
-            colour |= pPalette[b] << 0;
-            m_pImageWidget->m_colours.append(colour);
-        }
     }
 }
 
 void GraphicsInspectorWidget::textEditChangedSlot()
 {
-    std::string expression = m_pLineEdit->text().toStdString();
+    std::string expression = m_pAddressLineEdit->text().toStdString();
     uint32_t addr;
     if (!StringParsers::ParseExpression(expression.c_str(), addr,
                                         m_pTargetModel->GetSymbolTable(),
@@ -496,14 +506,14 @@ void GraphicsInspectorWidget::textEditChangedSlot()
         return;
     }
     m_address = addr;
-    m_pLockToVideoCheckBox->setChecked(false);
+    m_pLockAddressToVideoCheckBox->setChecked(false);
     UpdateUIElements();
     RequestMemory();
 }
 
-void GraphicsInspectorWidget::lockToVideoChangedSlot()
+void GraphicsInspectorWidget::lockAddressToVideoChangedSlot()
 {
-    bool m_bLockToVideo = m_pLockToVideoCheckBox->isChecked();
+    bool m_bLockToVideo = m_pLockAddressToVideoCheckBox->isChecked();
     if (m_bLockToVideo)
     {
         SetAddressFromVideo();
@@ -511,6 +521,28 @@ void GraphicsInspectorWidget::lockToVideoChangedSlot()
     }
     UpdateUIElements();
 }
+
+void GraphicsInspectorWidget::lockFormatToVideoChangedSlot()
+{
+    bool m_bLockToVideo = m_pLockFormatToVideoCheckBox->isChecked();
+    if (m_bLockToVideo)
+    {
+        UpdateFormatFromVideo();
+        RequestMemory();
+    }
+    UpdateUIElements();
+}
+
+void GraphicsInspectorWidget::lockPaletteToVideoChangedSlot()
+{
+    UpdatePaletteFromVideo();
+
+    // Ensure pixmap is updated
+    m_pImageWidget->setPixmap(GetEffectiveWidth(), GetEffectiveHeight());
+
+    UpdateUIElements();
+}
+
 
 void GraphicsInspectorWidget::modeChangedSlot(int index)
 {
@@ -580,7 +612,70 @@ bool GraphicsInspectorWidget::SetAddressFromVideo()
 
 void GraphicsInspectorWidget::DisplayAddress()
 {
-    m_pLineEdit->setText(QString::asprintf("$%x", m_address));
+    m_pAddressLineEdit->setText(QString::asprintf("$%x", m_address));
+}
+
+void GraphicsInspectorWidget::UpdatePaletteFromVideo()
+{
+    // Colours are ARGB
+    m_pImageWidget->m_colours.clear();
+
+    // Now update palette
+    if (m_pLockPaletteToVideoCheckBox->isChecked())
+    {
+        const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
+        if (!pMemOrig)
+            return;
+        static const uint32_t stToRgb[16] =
+        {
+            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
+            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee
+        };
+        static const uint32_t steToRgb[16] =
+        {
+            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
+            0x11, 0x33, 0x55, 0x77, 0x99, 0xbb, 0xdd, 0xff
+        };
+
+        bool isST = IsMachineST(m_pTargetModel->GetMachineType());
+        const uint32_t* pPalette = isST ? stToRgb : steToRgb;
+
+
+        for (uint i = 0; i < 16; ++i)
+        {
+            uint32_t addr = HardwareST::VIDEO_PALETTE_0 + i*2;
+            uint32_t  r = pMemOrig->ReadAddressByte(addr + 0) & 0xf;
+            uint32_t  g = pMemOrig->ReadAddressByte(addr + 1) >> 4;
+            uint32_t  b = pMemOrig->ReadAddressByte(addr + 1) & 0xf;
+
+            uint32_t colour = 0xff000000U;
+            colour |= pPalette[r] << 16;
+            colour |= pPalette[g] << 8;
+            colour |= pPalette[b] << 0;
+            m_pImageWidget->m_colours.append(colour);
+        }
+    }
+    else {
+        for (uint i = 0; i < 16; ++i)
+        {
+            m_pImageWidget->m_colours.append(0xff000000 + i * 0x101010);
+        }
+    }
+}
+
+void GraphicsInspectorWidget::UpdateFormatFromVideo()
+{
+    // Now we have the registers, we can now video dimensions.
+    int width = GetEffectiveWidth();
+    int height = GetEffectiveHeight();
+    Mode mode = GetEffectiveMode();
+
+    // Set these as current values, so that if we scroll around,
+    // they are not lost
+    m_width = width;
+    m_height = height;
+    m_mode = mode;
+    UpdateUIElements();
 }
 
 void GraphicsInspectorWidget::UpdateUIElements()
@@ -589,14 +684,14 @@ void GraphicsInspectorWidget::UpdateUIElements()
     m_pHeightSpinBox->setValue(m_height);
     m_pModeComboBox->setCurrentIndex(m_mode);
 
-    m_pWidthSpinBox->setEnabled(!m_pLockToVideoCheckBox->isChecked());
-    m_pHeightSpinBox->setEnabled(!m_pLockToVideoCheckBox->isChecked());
-    m_pModeComboBox->setEnabled(!m_pLockToVideoCheckBox->isChecked());
+    m_pWidthSpinBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
+    m_pHeightSpinBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
+    m_pModeComboBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
 }
 
 GraphicsInspectorWidget::Mode GraphicsInspectorWidget::GetEffectiveMode() const
 {
-    if (!m_pLockToVideoCheckBox->isChecked())
+    if (!m_pLockFormatToVideoCheckBox->isChecked())
         return m_mode;
 
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
@@ -613,7 +708,7 @@ GraphicsInspectorWidget::Mode GraphicsInspectorWidget::GetEffectiveMode() const
 
 int GraphicsInspectorWidget::GetEffectiveWidth() const
 {
-    if (!m_pLockToVideoCheckBox->isChecked())
+    if (!m_pLockAddressToVideoCheckBox->isChecked())
         return m_width;
 
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
@@ -629,7 +724,7 @@ int GraphicsInspectorWidget::GetEffectiveWidth() const
 
 int GraphicsInspectorWidget::GetEffectiveHeight() const
 {
-    if (!m_pLockToVideoCheckBox->isChecked())
+    if (!m_pLockAddressToVideoCheckBox->isChecked())
         return m_height;
 
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
