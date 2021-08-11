@@ -79,7 +79,8 @@ private slots:
     void paletteChangedSlot(int index);
     void widthChangedSlot(int width);
     void heightChangedSlot(int height);
-    void StringChangedSlot();
+    void paddingChangedSlot(int height);
+    void tooltipStringChangedSlot();
 protected:
     virtual void keyPressEvent(QKeyEvent *ev);
 
@@ -109,11 +110,22 @@ private:
     // Copy format from video regs if required
     void UpdateFormatFromSettings();
 
+    struct EffectiveData
+    {
+        int width;
+        int height;
+        Mode mode;
+        int bytesPerLine;
+        int requiredSize;
+    };
+
     // Get the effective data by checking the "lock to" flags and
     // using them if necessary.
     GraphicsInspectorWidget::Mode GetEffectiveMode() const;
     int GetEffectiveWidth() const;
     int GetEffectiveHeight() const;
+    int GetEffectivePadding() const;
+    void GetEffectiveData(EffectiveData& data) const;
 
     static int32_t BytesPerMode(Mode mode);
 
@@ -121,6 +133,7 @@ private:
     QComboBox*      m_pModeComboBox;
     QSpinBox*       m_pWidthSpinBox;
     QSpinBox*       m_pHeightSpinBox;
+    QSpinBox*       m_pPaddingSpinBox;
     QCheckBox*      m_pLockAddressToVideoCheckBox;
     QCheckBox*      m_pLockFormatToVideoCheckBox;
     QCheckBox*      m_pLockPaletteToVideoCheckBox;
@@ -135,8 +148,9 @@ private:
 
     Mode            m_mode;
     uint32_t        m_address;
-    int             m_width;
+    int             m_width;            // in "chunks"
     int             m_height;
+    int             m_padding;          // in bytes
 
     uint64_t        m_requestIdBitmap;
     uint64_t        m_requestIdVideoRegs;
