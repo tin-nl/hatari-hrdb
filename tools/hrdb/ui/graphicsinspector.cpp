@@ -31,21 +31,21 @@ static void CreateBitplanePalette(QVector<uint32_t>& palette,
                                   uint32_t col3)
 {
     palette.append(0xff000000 + 0                  );
-    palette.append(0xff000000 +               +col3);
-    palette.append(0xff000000 +          +col2     );
-    palette.append(0xff000000 +          +col2+col3);
-    palette.append(0xff000000 +      col1          );
-    palette.append(0xff000000 +      col1     +col3);
-    palette.append(0xff000000 +      col1+col2     );
-    palette.append(0xff000000 +      col1+col2+col3);
-    palette.append(0xff000000 + col0               );
-    palette.append(0xff000000 + col0          +col3);
-    palette.append(0xff000000 +          +col2     );
-    palette.append(0xff000000 + col0     +col2+col3);
-    palette.append(0xff000000 + col0+col1          );
-    palette.append(0xff000000 + col0+col1     +col3);
-    palette.append(0xff000000 + col0+col1+col2     );
-    palette.append(0xff000000 + col0+col1+col2+col3);
+    palette.append(0xff000000 +               +col0);
+    palette.append(0xff000000 +          +col1     );
+    palette.append(0xff000000 +          +col1+col0);
+    palette.append(0xff000000 +      col2          );
+    palette.append(0xff000000 +      col2     +col0);
+    palette.append(0xff000000 +      col2+col1     );
+    palette.append(0xff000000 +      col2+col1+col0);
+    palette.append(0xff000000 + col3               );
+    palette.append(0xff000000 + col3          +col0);
+    palette.append(0xff000000 + col3     +col1     );
+    palette.append(0xff000000 + col3     +col1+col0);
+    palette.append(0xff000000 + col3+col2          );
+    palette.append(0xff000000 + col3+col2     +col0);
+    palette.append(0xff000000 + col3+col2+col1     );
+    palette.append(0xff000000 + col3+col2+col1+col0);
 }
 
 NonAntiAliasImage::NonAntiAliasImage(QWidget *parent)
