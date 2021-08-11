@@ -24,6 +24,30 @@
 #include "../hardware/hardware_st.h"
 #include "quicklayout.h"
 
+static void CreateBitplanePalette(QVector<uint32_t>& palette,
+                                  uint32_t col0,
+                                  uint32_t col1,
+                                  uint32_t col2,
+                                  uint32_t col3)
+{
+    palette.append(0xff000000 + 0                  );
+    palette.append(0xff000000 +               +col3);
+    palette.append(0xff000000 +          +col2     );
+    palette.append(0xff000000 +          +col2+col3);
+    palette.append(0xff000000 +      col1          );
+    palette.append(0xff000000 +      col1     +col3);
+    palette.append(0xff000000 +      col1+col2     );
+    palette.append(0xff000000 +      col1+col2+col3);
+    palette.append(0xff000000 + col0               );
+    palette.append(0xff000000 + col0          +col3);
+    palette.append(0xff000000 +          +col2     );
+    palette.append(0xff000000 + col0     +col2+col3);
+    palette.append(0xff000000 + col0+col1          );
+    palette.append(0xff000000 + col0+col1     +col3);
+    palette.append(0xff000000 + col0+col1+col2     );
+    palette.append(0xff000000 + col0+col1+col2+col3);
+}
+
 NonAntiAliasImage::NonAntiAliasImage(QWidget *parent)
     : QWidget(parent),
       m_pBitmap(nullptr),
@@ -186,6 +210,10 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_pPaletteComboBox = new QComboBox(this);
     m_pPaletteComboBox->addItem(tr("Greyscale"), kGreyscale);
     m_pPaletteComboBox->addItem(tr("Contrast1"), kContrast1);
+    m_pPaletteComboBox->addItem(tr("Bitplane0"), kBitplane0);
+    m_pPaletteComboBox->addItem(tr("Bitplane1"), kBitplane1);
+    m_pPaletteComboBox->addItem(tr("Bitplane2"), kBitplane2);
+    m_pPaletteComboBox->addItem(tr("Bitplane3"), kBitplane3);
 
     m_pLockPaletteToVideoCheckBox = new QCheckBox(tr("Use Registers"), this);
     m_pInfoLabel = new QLabel(this);
@@ -720,29 +748,20 @@ void GraphicsInspectorWidget::UpdatePaletteFromSettings()
             }
             break;
         case kContrast1:
-        {
             // This palette is derived from one of the bitplane palettes in "44"
-            uint32_t col0 = 0x500000*2;
-            uint32_t col1 = 0x224400*2;
-            uint32_t col2 = 0x003322*2;
-            uint32_t col3 = 0x000055*2;
-            m_pImageWidget->m_colours.append(0xff000000 +0                   );
-            m_pImageWidget->m_colours.append(0xff000000 +0	      +col3      );
-            m_pImageWidget->m_colours.append(0xff000000 +         +col2      );
-            m_pImageWidget->m_colours.append(0xff000000 +         +col2+col3 );
-            m_pImageWidget->m_colours.append(0xff000000 +     col1           );
-            m_pImageWidget->m_colours.append(0xff000000 +     col1     +col3 );
-            m_pImageWidget->m_colours.append(0xff000000 +     col1+col2      );
-            m_pImageWidget->m_colours.append(0xff000000 +     col1+col2+col3 );
-            m_pImageWidget->m_colours.append(0xff000000 +col0                );
-            m_pImageWidget->m_colours.append(0xff000000 +col0	      +col3  );
-            m_pImageWidget->m_colours.append(0xff000000 +0	 +col2           );
-            m_pImageWidget->m_colours.append(0xff000000 +col0	 +col2+col3  );
-            m_pImageWidget->m_colours.append(0xff000000 +col0+col1           );
-            m_pImageWidget->m_colours.append(0xff000000 +col0+col1     +col3 );
-            m_pImageWidget->m_colours.append(0xff000000 +col0+col1+col2      );
-            m_pImageWidget->m_colours.append(0xff000000 +col0+col1+col2+col3 );
-        }
+            CreateBitplanePalette(m_pImageWidget->m_colours, 0x500000*2, 0x224400*2, 0x003322*2, 0x000055*2);
+            break;
+        case kBitplane0:
+            CreateBitplanePalette(m_pImageWidget->m_colours, 0xbbbbbb, 0x220000, 0x2200, 0x22);
+            break;
+        case kBitplane1:
+            CreateBitplanePalette(m_pImageWidget->m_colours, 0x220000, 0xbbbbbb, 0x2200, 0x22);
+            break;
+        case kBitplane2:
+            CreateBitplanePalette(m_pImageWidget->m_colours, 0x220000, 0x2200, 0xbbbbbb, 0x22);
+            break;
+        case kBitplane3:
+            CreateBitplanePalette(m_pImageWidget->m_colours, 0x220000, 0x2200, 0x22, 0xbbbbbb);
             break;
         default:
             break;

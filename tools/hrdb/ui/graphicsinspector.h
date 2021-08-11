@@ -95,7 +95,11 @@ private:
     enum Palette
     {
         kGreyscale,
-        kContrast1
+        kContrast1,
+        kBitplane0,
+        kBitplane1,
+        kBitplane2,
+        kBitplane3,
     };
 
     void UpdateUIElements();
