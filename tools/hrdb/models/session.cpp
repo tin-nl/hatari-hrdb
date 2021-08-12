@@ -25,7 +25,7 @@ Session::Session() :
     m_pTimer->start(500);
 
     // Default settings
-    m_settings.m_bSquarePixels = true;
+    m_settings.m_bSquarePixels = false;
     m_settings.m_font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     loadSettings();
 }
@@ -71,6 +71,7 @@ void Session::loadSettings()
         QString fontString = settings.value("font").toString();
         m_settings.m_font.fromString(fontString);
     }
+    m_settings.m_bSquarePixels = settings.value("squarePixels", QVariant(false)).toBool();
     settings.endGroup();
 }
 
@@ -79,6 +80,7 @@ void Session::saveSettings()
     QSettings settings;
     settings.beginGroup("Session");
     settings.setValue("font", m_settings.m_font.toString());
+    settings.setValue("squarePixels", m_settings.m_bSquarePixels);
     settings.endGroup();
 }
 
