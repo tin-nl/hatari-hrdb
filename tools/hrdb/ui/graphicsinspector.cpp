@@ -187,6 +187,9 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     this->setWindowTitle(name);
     this->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
 
+    // Make img widget first so that tab order "works"
+    m_pImageWidget = new NonAntiAliasImage(this);
+
     // top line
     m_pAddressLineEdit = new QLineEdit(this);
     m_pLockAddressToVideoCheckBox = new QCheckBox(tr("Use Registers"), this);
@@ -225,7 +228,6 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_pInfoLabel = new QLabel(this);
 
     // Bottom
-    m_pImageWidget = new NonAntiAliasImage(this);
     m_pImageWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
 
     // Layout First line
