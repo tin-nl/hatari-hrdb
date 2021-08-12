@@ -789,7 +789,7 @@ void MainWindow::startStopChangedSlot()
         m_pDispatcher->RequestMemory(MemorySlot::kVideo, HardwareST::VIDEO_REGS_BASE, 0x70);
 
         // Only re-request symbols if we didn't find any the first time
-        if (m_pTargetModel->GetSymbolTable().m_userSymbolCount == 0)  // NO CHECK
+        if (m_pTargetModel->GetSymbolTable().GetHatariSubTable().Count() == 0)
             m_pDispatcher->SendCommandPacket("symlist");
     }
     PopulateRunningSquare();
