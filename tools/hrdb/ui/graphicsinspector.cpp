@@ -101,26 +101,29 @@ void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
     const QRect& r = rect();
 
     const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    if (m_pixmap.width() != 0 && m_pixmap.height() != 0)
+    if (m_pSession->m_pTargetModel->IsConnected())
     {
-        // Draw the pixmap with square pixels
-        if (m_pSession->GetSettings().m_bSquarePixels)
+        if (m_pixmap.width() != 0 && m_pixmap.height() != 0)
         {
-            float texelsToPixelsX = r.width() / static_cast<float>(m_pixmap.width());
-            float texelsToPixelsY = r.height() / static_cast<float>(m_pixmap.height());
-            float minRatio = std::min(texelsToPixelsX, texelsToPixelsY);
+            // Draw the pixmap with square pixels
+            if (m_pSession->GetSettings().m_bSquarePixels)
+            {
+                float texelsToPixelsX = r.width() / static_cast<float>(m_pixmap.width());
+                float texelsToPixelsY = r.height() / static_cast<float>(m_pixmap.height());
+                float minRatio = std::min(texelsToPixelsX, texelsToPixelsY);
 
-            QRect fixedR(0, 0, minRatio * m_pixmap.width(), minRatio * m_pixmap.height());
-            painter.setRenderHint(QPainter::Antialiasing, false);
-            style()->drawItemPixmap(&painter, fixedR, Qt::AlignCenter, m_pixmap.scaled(fixedR.size()));
-        }
-        else {
-            style()->drawItemPixmap(&painter, r, Qt::AlignCenter, m_pixmap.scaled(r.size()));
+                QRect fixedR(0, 0, minRatio * m_pixmap.width(), minRatio * m_pixmap.height());
+                painter.setRenderHint(QPainter::Antialiasing, false);
+                style()->drawItemPixmap(&painter, fixedR, Qt::AlignCenter, m_pixmap.scaled(fixedR.size()));
+            }
+            else {
+                style()->drawItemPixmap(&painter, r, Qt::AlignCenter, m_pixmap.scaled(r.size()));
+            }
         }
     }
     else {
         painter.setFont(monoFont);
-        painter.drawText(10, 10, "Not connected");
+        painter.drawText(r, Qt::AlignCenter, "Not connected.");
     }
     const QPalette& pal = this->palette();
 
