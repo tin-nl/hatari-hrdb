@@ -27,10 +27,12 @@ Session::Session() :
     // Default settings
     m_settings.m_bSquarePixels = true;
     m_settings.m_font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    loadSettings();
 }
 
 Session::~Session()
 {
+    saveSettings();
     m_pLoggingFile->close();
     delete m_pTcpSocket;
     delete m_pTimer;
@@ -58,6 +60,26 @@ void Session::SetSettings(const Session::Settings& newSettings)
 {
     m_settings = newSettings;
     emit settingsChanged();
+}
+
+void Session::loadSettings()
+{
+    QSettings settings;
+    settings.beginGroup("Session");
+    if (settings.contains("font"))
+    {
+        QString fontString = settings.value("font").toString();
+        m_settings.m_font.fromString(fontString);
+    }
+    settings.endGroup();
+}
+
+void Session::saveSettings()
+{
+    QSettings settings;
+    settings.beginGroup("Session");
+    settings.setValue("font", m_settings.m_font.toString());
+    settings.endGroup();
 }
 
 void Session::connectTimerCallback()

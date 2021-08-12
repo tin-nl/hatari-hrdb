@@ -50,6 +50,9 @@ public:
     // Also emits settingsChanged()
     void SetSettings(const Settings& newSettings);
 
+    void loadSettings();
+    void saveSettings();
+
 signals:
     void settingsChanged();
 
