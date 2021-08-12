@@ -2,6 +2,9 @@
 #include <QtNetwork>
 #include <QTimer>
 
+#include "targetmodel.h"
+#include "../transport/dispatcher.h"
+
 Session::Session() :
     QObject(),
     m_autoConnect(true)
@@ -12,10 +15,16 @@ Session::Session() :
     // Create the core data models, since other object want to connect to them.
     m_pTcpSocket = new QTcpSocket();
 
+    m_pTargetModel = new TargetModel();
+    m_pDispatcher = new Dispatcher(m_pTcpSocket, m_pTargetModel);
+
     m_pTimer = new QTimer(this);
     connect(m_pTimer, &QTimer::timeout, this, &Session::connectTimerCallback);
 
     m_pTimer->start(500);
+
+    // Default settings
+    m_settings.m_bSquarePixels = true;
 }
 
 Session::~Session()
@@ -36,6 +45,17 @@ void Session::Disconnect()
 {
     m_autoConnect = false;
     m_pTcpSocket->disconnectFromHost();
+}
+
+const Session::Settings &Session::GetSettings() const
+{
+    return m_settings;
+}
+
+void Session::SetSettings(const Session::Settings& newSettings)
+{
+    m_settings = newSettings;
+    emit settingsChanged();
 }
 
 void Session::connectTimerCallback()

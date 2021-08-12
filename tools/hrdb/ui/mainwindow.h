@@ -29,6 +29,7 @@ class BreakpointsWindow;
 class ConsoleWindow;
 class ExceptionDialog;
 class RunDialog;
+class PrefsDialog;
 
 class RegisterWidget : public QWidget
 {
@@ -166,13 +167,16 @@ private slots:
     void aboutQt();
 private:
     void updateWindowMenu();
+
+    // QAction callbacks
     // File Menu
-    void Run();
-    void Connect();
-    void Disconnect();
+    void RunTriggered();
+    void ConnectTriggered();
+    void DisconnectTriggered();
 
     // Exception Menu
-    void ExceptionsDialog();
+    void ExceptionsDialogTriggered();
+    void PrefsDialogTriggered();
 
 	// Populaters
     void PopulateRunningSquare();
@@ -195,6 +199,7 @@ private:
     // Dialogs
     ExceptionDialog*    m_pExceptionDialog;
     RunDialog*          m_pRunDialog;
+    PrefsDialog*        m_pPrefsDialog;
 
     // Docking windows
     DisasmWindow*               m_pDisasmWidgets[kNumDisasmViews];
@@ -214,26 +219,32 @@ private:
     // Menus
     void createActions();
     void createMenus();
+
+    // Shared function to show a sub-window, called by Action callbacks
     void enableVis(QWidget *pWidget);
-    QMenu *fileMenu;
-    QMenu *editMenu;
-    QMenu *windowMenu;
-    QMenu *helpMenu;
 
-    QAction *runAct;
-    QAction *connectAct;
-    QAction *disconnectAct;
-    QAction *exitAct;
+    QMenu* m_pFileMenu;
+    QMenu* m_pEditMenu;
+    QMenu* m_pWindowMenu;
+    QMenu* m_pHelpMenu;
 
-    QAction *exceptionsAct;
+    QAction* m_pRunAct;
+    QAction* m_pConnectAct;
+    QAction* m_pDisconnectAct;
+    QAction* m_pExitAct;
 
-    QAction *disasmWindowActs[kNumDisasmViews];
-    QAction *memoryWindowActs[kNumMemoryViews];
-    QAction *graphicsInspectorAct;
-    QAction *breakpointsWindowAct;
-    QAction *consoleWindowAct;
+    QAction* m_pExceptionsAct;
+    QAction* m_pPrefsAct;
 
-    QAction *aboutAct;
-    QAction *aboutQtAct;
+    // Multiple actions, one for each window
+    QAction* m_pDisasmWindowActs[kNumDisasmViews];
+    // Multiple actions, one for each window
+    QAction* m_pMemoryWindowActs[kNumMemoryViews];
+    QAction* m_pGraphicsInspectorAct;
+    QAction* m_pBreakpointsWindowAct;
+    QAction* m_pConsoleWindowAct;
+
+    QAction* m_pAboutAct;
+    QAction* m_pAboutQtAct;
 };
 #endif // MAINWINDOW_H

@@ -21,6 +21,7 @@
 #include "../models/targetmodel.h"
 #include "../models/symboltablemodel.h"
 #include "../models/stringparsers.h"
+#include "../models/session.h"
 #include "../hardware/hardware_st.h"
 #include "quicklayout.h"
 
@@ -48,14 +49,17 @@ static void CreateBitplanePalette(QVector<uint32_t>& palette,
     palette.append(0xff000000 + col3+col2+col1+col0);
 }
 
-NonAntiAliasImage::NonAntiAliasImage(QWidget *parent)
+NonAntiAliasImage::NonAntiAliasImage(QWidget *parent, Session* pSession)
     : QWidget(parent),
+      m_pSession(pSession),
       m_pBitmap(nullptr),
       m_bitmapSize(0),
       m_bRunningMask(false)
 {
     setMouseTracking(true);
     setFocusPolicy(Qt::FocusPolicy::StrongFocus);
+
+    connect(m_pSession, &Session::settingsChanged, this, &NonAntiAliasImage::settingsChangedSlot);
 }
 
 void NonAntiAliasImage::setPixmap(int width, int height)
@@ -100,13 +104,19 @@ void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
     if (m_pixmap.width() != 0 && m_pixmap.height() != 0)
     {
         // Draw the pixmap with square pixels
-        float texelsToPixelsX = r.width() / static_cast<float>(m_pixmap.width());
-        float texelsToPixelsY = r.height() / static_cast<float>(m_pixmap.height());
-        float minRatio = std::min(texelsToPixelsX, texelsToPixelsY);
+        if (m_pSession->GetSettings().m_bSquarePixels)
+        {
+            float texelsToPixelsX = r.width() / static_cast<float>(m_pixmap.width());
+            float texelsToPixelsY = r.height() / static_cast<float>(m_pixmap.height());
+            float minRatio = std::min(texelsToPixelsX, texelsToPixelsY);
 
-        QRect fixedR(0, 0, minRatio * m_pixmap.width(), minRatio * m_pixmap.height());
-        painter.setRenderHint(QPainter::Antialiasing, false);
-        style()->drawItemPixmap(&painter, fixedR, Qt::AlignCenter, m_pixmap.scaled(fixedR.size()));
+            QRect fixedR(0, 0, minRatio * m_pixmap.width(), minRatio * m_pixmap.height());
+            painter.setRenderHint(QPainter::Antialiasing, false);
+            style()->drawItemPixmap(&painter, fixedR, Qt::AlignCenter, m_pixmap.scaled(fixedR.size()));
+        }
+        else {
+            style()->drawItemPixmap(&painter, r, Qt::AlignCenter, m_pixmap.scaled(r.size()));
+        }
     }
     else {
         painter.setFont(monoFont);
@@ -140,6 +150,12 @@ void NonAntiAliasImage::mouseMoveEvent(QMouseEvent *event)
     QWidget::mouseMoveEvent(event);
 }
 
+void NonAntiAliasImage::settingsChangedSlot()
+{
+    // Force redraw in case square pixels changed
+    update();
+}
+
 void NonAntiAliasImage::UpdateString()
 {
     m_infoString.clear();
@@ -170,10 +186,9 @@ void NonAntiAliasImage::UpdateString()
 }
 
 GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
-                                                 TargetModel* pTargetModel, Dispatcher* pDispatcher) :
+                                                 Session* pSession) :
     QDockWidget(parent),
-    m_pTargetModel(pTargetModel),
-    m_pDispatcher(pDispatcher),
+    m_pSession(pSession),
     m_mode(k4Bitplane),
     m_address(0U),
     m_width(20),
@@ -182,13 +197,16 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_requestIdBitmap(0U),
     m_requestIdVideoRegs(0U)
 {
+    m_pTargetModel = m_pSession->m_pTargetModel;
+    m_pDispatcher = m_pSession->m_pDispatcher;
+
     QString name("GraphicsInspector");
     this->setObjectName(name);
     this->setWindowTitle(name);
     this->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
 
     // Make img widget first so that tab order "works"
-    m_pImageWidget = new NonAntiAliasImage(this);
+    m_pImageWidget = new NonAntiAliasImage(this, pSession);
 
     // top line
     m_pAddressLineEdit = new QLineEdit(this);
@@ -228,7 +246,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_pInfoLabel = new QLabel(this);
 
     // Bottom
-    m_pImageWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
+    m_pImageWidget->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
 
     // Layout First line
     QHBoxLayout *hlayout1 = new QHBoxLayout();
