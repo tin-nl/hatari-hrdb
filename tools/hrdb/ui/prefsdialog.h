@@ -29,6 +29,7 @@ protected:
 private slots:
     void okClicked();
     void squarePixelsClicked();
+    void fontSelectClicked();
 
 private:
     // Make the UI reflect the stored settings (copy)

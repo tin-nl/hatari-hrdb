@@ -77,10 +77,11 @@ static QString MakeBracket(QString str)
     return QString("(") + str + ")";
 }
 
-RegisterWidget::RegisterWidget(QWidget *parent, TargetModel *pTargetModel, Dispatcher *pDispatcher) :
+RegisterWidget::RegisterWidget(QWidget *parent, Session* pSession) :
     QWidget(parent),
-    m_pDispatcher(pDispatcher),
-    m_pTargetModel(pTargetModel),
+    m_pSession(pSession),
+    m_pDispatcher(pSession->m_pDispatcher),
+    m_pTargetModel(pSession->m_pTargetModel),
     m_tokenUnderMouseIndex(-1)
 {
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -106,6 +107,7 @@ RegisterWidget::RegisterWidget(QWidget *parent, TargetModel *pTargetModel, Dispa
     for (int i = 0; i < kNumMemoryViews; ++i)
         connect(m_pShowMemoryWindowActions[i], &QAction::triggered, this, [=] () { this->memoryViewTrigger(i); } );
 
+    connect(m_pSession, &Session::settingsChanged, this, &RegisterWidget::settingsChangedSlot);
     setFocusPolicy(Qt::FocusPolicy::StrongFocus);
     setMouseTracking(true);
     UpdateFont();
@@ -278,6 +280,14 @@ void RegisterWidget::startStopDelayedSlot(int running)
         AddToken(1, 1, tr("Running, Ctrl+R to break..."), TokenType::kNone, 0);
         update();
     }
+}
+
+void RegisterWidget::settingsChangedSlot()
+{
+    UpdateFont();
+    PopulateRegisters();
+    UpdateTokenUnderMouse();
+    update();
 }
 
 void RegisterWidget::registersChangedSlot(uint64_t /*commandId*/)
@@ -481,7 +491,7 @@ void RegisterWidget::PopulateRegisters()
 
 void RegisterWidget::UpdateFont()
 {
-    m_monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    m_monoFont = m_pSession->GetSettings().m_font;
     QFontMetrics info(m_monoFont);
     m_yAscent = info.ascent();
     m_lineHeight = info.lineSpacing();
@@ -612,7 +622,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Creation - done in Tab order
     // Register/status window
-    m_pRegisterWidget = new RegisterWidget(this, m_pTargetModel, m_pDispatcher);
+    m_pRegisterWidget = new RegisterWidget(this, &m_session);
 
     // Top row of buttons
     m_pRunningSquare = new QWidget(this);
@@ -630,7 +640,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     for (int i = 0; i < kNumDisasmViews; ++i)
     {
-        m_pDisasmWidgets[i] = new DisasmWindow(this, m_pTargetModel, m_pDispatcher, i);
+        m_pDisasmWidgets[i] = new DisasmWindow(this, &m_session, i);
         if (i == 0)
             m_pDisasmWidgets[i]->setWindowTitle("Disassembly 1 (Alt+D)");
         else
@@ -639,7 +649,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     for (int i = 0; i < kNumMemoryViews; ++i)
     {
-        m_pMemoryViewWidgets[i] = new MemoryWindow(this, m_pTargetModel, m_pDispatcher, i);
+        m_pMemoryViewWidgets[i] = new MemoryWindow(this, &m_session, i);
         if (i == 0)
             m_pMemoryViewWidgets[i]->setWindowTitle("Memory 1 (Alt+M)");
         else

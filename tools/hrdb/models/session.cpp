@@ -1,6 +1,7 @@
 #include "session.h"
 #include <QtNetwork>
 #include <QTimer>
+#include <QFontDatabase>
 
 #include "targetmodel.h"
 #include "../transport/dispatcher.h"
@@ -25,6 +26,7 @@ Session::Session() :
 
     // Default settings
     m_settings.m_bSquarePixels = true;
+    m_settings.m_font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 }
 
 Session::~Session()

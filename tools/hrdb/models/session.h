@@ -2,6 +2,7 @@
 #define SESSION_H
 
 #include <QObject>
+#include <QFont>
 
 class QTcpSocket;
 class QTimer;
@@ -20,6 +21,7 @@ public:
     class Settings
     {
     public:
+        QFont       m_font;
         // GRAPHICS INSPECTOR
         bool        m_bSquarePixels;
     };

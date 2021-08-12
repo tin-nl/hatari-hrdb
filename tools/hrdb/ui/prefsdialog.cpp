@@ -6,11 +6,8 @@
 #include <QProcess>
 #include <QSettings>
 #include <QCloseEvent>
-#include <QFileDialog>
-#include <QPushButton>
 #include <QCheckBox>
-#include <QTemporaryFile>
-#include <QTextStream>
+#include <QFontDialog>
 
 #include "../models/session.h"
 #include "quicklayout.h"
@@ -43,8 +40,13 @@ PrefsDialog::PrefsDialog(QWidget *parent, Session* pSession) :
     // Add the options
     m_pGraphicsSquarePixels = new QCheckBox(tr("Square Pixels"), this);
 
+    QLabel* pFont = new QLabel("Font:", this);
+    QPushButton* pFontButton = new QPushButton("Select...", this);
+
     gridGroupBox->setLayout(gridLayout);
     gridLayout->addWidget(m_pGraphicsSquarePixels, 0, 0);
+    gridLayout->addWidget(pFont, 1, 0);
+    gridLayout->addWidget(pFontButton, 1, 1);
 
     // Overall layout (options at top, buttons at bottom)
     QVBoxLayout* pLayout = new QVBoxLayout(this);
@@ -56,6 +58,7 @@ PrefsDialog::PrefsDialog(QWidget *parent, Session* pSession) :
     connect(pCancelButton, &QPushButton::clicked, this, &PrefsDialog::reject);
 
     connect(m_pGraphicsSquarePixels, &QPushButton::clicked, this, &PrefsDialog::squarePixelsClicked);
+    connect(pFontButton, &QPushButton::clicked, this, &PrefsDialog::fontSelectClicked);
     loadSettings();
     this->setLayout(pLayout);
 }
@@ -110,6 +113,21 @@ void PrefsDialog::okClicked()
 void PrefsDialog::squarePixelsClicked()
 {
     m_settingsCopy.m_bSquarePixels = m_pGraphicsSquarePixels->isChecked();
+}
+
+void PrefsDialog::fontSelectClicked()
+{
+    bool ok;
+    QFontDialog::FontDialogOptions options;
+    options.setFlag(QFontDialog::MonospacedFonts);
+    QFont font = QFontDialog::getFont(
+                &ok, m_settingsCopy.m_font,
+                this,
+                "Choose Font",
+                options);
+
+    if (ok)
+        m_settingsCopy.m_font = font;
 }
 
 void PrefsDialog::UpdateUIElements()

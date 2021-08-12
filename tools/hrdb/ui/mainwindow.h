@@ -35,7 +35,7 @@ class RegisterWidget : public QWidget
 {
     Q_OBJECT
 public:
-    RegisterWidget(QWidget* parent, TargetModel* pTargetModel, Dispatcher* pDispatcher);
+    RegisterWidget(QWidget* parent, Session* pSession);
     virtual ~RegisterWidget() override;
 
 protected:
@@ -51,6 +51,7 @@ private slots:
     void memoryChangedSlot(int slot, uint64_t commandId);
     void symbolTableChangedSlot(uint64_t commandId);
     void startStopDelayedSlot(int running);
+    void settingsChangedSlot();
 
     // Callbacks when "show in Memory X" etc is selected
     void disasmViewTrigger(int windowIndex);
@@ -112,6 +113,7 @@ private:
     QAction*                    m_pShowDisasmWindowActions[kNumDisasmViews];
     QAction*                    m_pShowMemoryWindowActions[kNumMemoryViews];
 
+    Session*                    m_pSession;
     Dispatcher*             	m_pDispatcher;
     TargetModel*                m_pTargetModel;
 
