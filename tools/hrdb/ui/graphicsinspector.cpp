@@ -100,6 +100,7 @@ void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
     QPainter painter(this);
     const QRect& r = rect();
 
+    QPalette pal = this->palette();
     const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     if (m_pSession->m_pTargetModel->IsConnected())
     {
@@ -120,22 +121,21 @@ void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
                 style()->drawItemPixmap(&painter, r, Qt::AlignCenter, m_pixmap.scaled(r.size()));
             }
         }
+        if (m_bRunningMask)
+        {
+            painter.setBrush(QBrush(QColor(0, 0, 0, 128)));
+            painter.drawRect(r);
+
+            painter.setPen(Qt::magenta);
+            painter.setBrush(Qt::NoBrush);
+            painter.drawText(r, Qt::AlignCenter, "Running...");
+        }
     }
     else {
         painter.setFont(monoFont);
         painter.drawText(r, Qt::AlignCenter, "Not connected.");
     }
-    const QPalette& pal = this->palette();
 
-    if (m_bRunningMask)
-    {
-        painter.setBrush(QBrush(QColor(0, 0, 0, 128)));
-        painter.drawRect(r);
-
-        painter.setPen(Qt::magenta);
-        painter.setBrush(Qt::NoBrush);
-        painter.drawText(r, Qt::AlignCenter, "Running...");
-    }
 
     painter.setPen(QPen(pal.dark(), hasFocus() ? 6 : 2));
     painter.drawRect(r);
