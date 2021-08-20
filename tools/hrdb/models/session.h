@@ -10,6 +10,8 @@ class QTemporaryFile;
 class Dispatcher;
 class TargetModel;
 
+#define VERSION_STRING      "0.001 (Aug 2021)"
+
 // Shared runtime data about the debugging session used by multiple UI components
 // This data isn't persisted over runs (that is saved in Settings)
 class Session : public QObject

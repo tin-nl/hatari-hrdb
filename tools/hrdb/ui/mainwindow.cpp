@@ -1061,8 +1061,15 @@ void MainWindow::menuDisconnect()
 
 void MainWindow::about()
 {
-    QMessageBox::about(this, tr("hrdb"),
-            tr("hrdb - Hatari remote debugger GUI"));
+    QMessageBox box;
+
+    box.setText("<h1>hrdb - Hatari remote debugger GUI</h1>\n"
+                "<p>Released under a GPL licence.</p>"
+               "<p><a href=\"https://github.com/tattlemuss/hatari\">Github Repository</a></p>\n"
+               "<p>Version: " VERSION_STRING "</p>");
+    box.setTextFormat(Qt::RichText);
+
+    box.exec();
 }
 
 void MainWindow::aboutQt()
