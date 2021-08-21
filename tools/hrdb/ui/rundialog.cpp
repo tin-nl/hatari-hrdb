@@ -203,7 +203,7 @@ void RunDialog::exeClicked()
     QString filename = QFileDialog::getOpenFileName(this,
           tr("Choose Hatari executable"));
     if (filename.size() != 0)
-        m_pExecutableTextEdit->setText(filename);
+        m_pExecutableTextEdit->setText(QDir::toNativeSeparators(filename));
     saveSettings();
 }
 
@@ -215,7 +215,7 @@ void RunDialog::prgClicked()
           QString(), //dir
           filter);
     if (filename.size() != 0)
-        m_pPrgTextEdit->setText(filename);
+        m_pPrgTextEdit->setText(QDir::toNativeSeparators(filename));
     saveSettings();
 }
 
@@ -229,7 +229,7 @@ void RunDialog::workingDirectoryClicked()
     {
         fileNames = dialog.selectedFiles();
         if (fileNames.length() > 0)
-            m_pWorkingDirectoryTextEdit->setText(fileNames[0]);
+            m_pWorkingDirectoryTextEdit->setText(QDir::toNativeSeparators(fileNames[0]));
         saveSettings();
     }
 }
