@@ -13,6 +13,7 @@
 #include <QPainter>
 #include <QKeyEvent>
 #include <QSettings>
+#include <QShortcut>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -44,6 +45,7 @@ MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
     SetMode(Mode::kModeByte);
     setFocus();
     setFocusPolicy(Qt::StrongFocus);
+
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryWidget::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryWidget::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &MemoryWidget::connectChangedSlot);
@@ -107,7 +109,6 @@ void MemoryWidget::SetMode(MemoryWidget::Mode mode)
 
     // Calc the screen postions.
     // I need a screen position for each *character* on the grid (i.e. nybble)
-
     int groupSize = 0;
     if (m_mode == kModeByte)
         groupSize = 1;
@@ -116,20 +117,38 @@ void MemoryWidget::SetMode(MemoryWidget::Mode mode)
     else if (m_mode == kModeLong)
         groupSize = 4;
 
-    m_columnPositions.clear();
-    for (int i = 0; i < m_bytesPerRow; ++i)
+    m_columnMap.clear();
+    int byte = 0;
+    while (byte + groupSize <= m_bytesPerRow)
     {
-        int group = i / groupSize;     // group of N bytes (N * chars)
-        int byteInGroup = i % groupSize;
+        ColInfo info;
+        for (int subByte = 0; subByte < groupSize; ++subByte)
+        {
+            info.byteOffset = byte;
+            info.type = ColInfo::kTopNybble;
+            m_columnMap.push_back(info);
+            info.type = ColInfo::kBottomNybble;
+            m_columnMap.push_back(info);
+            ++byte;
+        }
 
-        // Calc the left-hand X position of this byte
-        int base_x = group * (groupSize * 2 + 1) + 2 * byteInGroup;
-
-        // top nybble
-        m_columnPositions.push_back(base_x);
-        // bottom nybble
-        m_columnPositions.push_back(base_x + 1);
+        // Insert a space
+        info.type = ColInfo::kSpace;
+        m_columnMap.push_back(info);
     }
+
+    // Add ASCII
+    for (int byte2 = 0; byte2 < m_bytesPerRow; ++byte2)
+    {
+        ColInfo info;
+        info.type = ColInfo::kASCII;
+        info.byteOffset = byte2;
+        m_columnMap.push_back(info);
+    }
+
+    // Stop crash when resizing and cursor is at end
+    if (m_cursorCol >= m_columnMap.size())
+        m_cursorCol = m_columnMap.size() - 1;
 
     RecalcText();
 }
@@ -139,7 +158,7 @@ void MemoryWidget::MoveUp()
     if (m_cursorRow > 0)
     {
         --m_cursorRow;
-        repaint();
+        update();
         return;
     }
 
@@ -157,7 +176,7 @@ void MemoryWidget::MoveDown()
     if (m_cursorRow < m_rowCount - 1)
     {
         ++m_cursorRow;
-        repaint();
+        update();
         return;
     }
 
@@ -173,16 +192,15 @@ void MemoryWidget::MoveLeft()
         return;
 
     m_cursorCol--;
-    repaint();
+    update();
 }
 
 void MemoryWidget::MoveRight()
 {
-    if (m_cursorCol + 2 >= m_bytesPerRow * 2 + 1)
-        return;
-
     m_cursorCol++;
-    repaint();
+    if (m_cursorCol + 1 >= m_columnMap.size())
+        m_cursorCol = m_columnMap.size() - 1;
+    update();
 }
 
 void MemoryWidget::PageUp()
@@ -190,7 +208,7 @@ void MemoryWidget::PageUp()
     if (m_cursorRow > 0)
     {
         m_cursorRow = 0;
-        repaint();
+        update();
         return;
     }
 
@@ -208,7 +226,7 @@ void MemoryWidget::PageDown()
     if (m_cursorRow < m_rowCount - 1)
     {
         m_cursorRow = m_rowCount - 1;
-        repaint();
+        update();
         return;
     }
 
@@ -218,37 +236,46 @@ void MemoryWidget::PageDown()
     SetAddress(m_address + m_bytesPerRow * m_rowCount);
 }
 
-void MemoryWidget::EditKey(uint8_t val)
+void MemoryWidget::EditKey(char key)
 {
     // Can't edit while we still wait for memory
     if (m_requestId != 0)
         return;
-    uint32_t address;
-    bool lowNybble;
-    GetCursorInfo(address, lowNybble);
 
-    uint8_t nybbles[2];
-    uint8_t cursorByte = m_rows[m_cursorRow].m_rawBytes[m_cursorCol / 2];
-    if (lowNybble)
+    const ColInfo& info = m_columnMap[m_cursorCol];
+    if (info.type == ColInfo::kSpace)
     {
-        // This is the low nybble
-        nybbles[0] = cursorByte & 0xf0;
-        nybbles[1] = val;
+        MoveRight();
+        return;
     }
-    else
+
+    uint8_t cursorByte = m_rows[m_cursorRow].m_rawBytes[info.byteOffset];
+    uint32_t address = m_rows[m_cursorRow].m_address + static_cast<uint32_t>(info.byteOffset);
+    uint8_t val;
+    if (info.type == ColInfo::kBottomNybble)
     {
-        nybbles[0] = val << 4;
-        nybbles[1] = cursorByte & 0xf;
+        if (!StringParsers::ParseHexChar(key, val))
+            return;
+
+        cursorByte &= 0xf0;
+        cursorByte |= val;
     }
-    uint8_t finalVal = nybbles[0] | nybbles[1];
-    QString cmd = QString::asprintf("memset $%x 1 %02x", address, finalVal);
-
-    std::cout << cmd.toStdString() << std::endl;
-
+    else if (info.type == ColInfo::kTopNybble)
+    {
+        if (!StringParsers::ParseHexChar(key, val))
+            return;
+        cursorByte &= 0x0f;
+        cursorByte |= val << 4;
+    }
+    else if (info.type == ColInfo::kASCII)
+    {
+        cursorByte = static_cast<uint8_t>(key);
+    }
+    QString cmd = QString::asprintf("memset $%x 1 %02x", address, cursorByte);
     m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
 
     // Replace the value so that editing still works
-    m_rows[m_cursorRow].m_rawBytes[m_cursorCol / 2] = finalVal;
+    m_rows[m_cursorRow].m_rawBytes[info.byteOffset] = cursorByte;
     RecalcText();
 
     MoveRight();
@@ -302,36 +329,53 @@ void MemoryWidget::memoryChangedSlot(int memorySlot, uint64_t commandId)
 
 void MemoryWidget::RecalcText()
 {
+    static char toHex[] = "0123456789abcdef";
     int32_t rowCount = m_rows.size();
+    int32_t colCount = m_columnMap.size();
     for (int32_t r = 0; r < rowCount; ++r)
     {
         Row& row = m_rows[r];
-        row.m_hexText.clear();
-        row.m_asciiText.clear();
-        row.m_byteChanged.resize(row.m_rawBytes.size());
+        row.m_text.resize(colCount);
+        row.m_byteChanged.resize(colCount);
 
-        for (int32_t i = 0; i < row.m_rawBytes.size(); ++i)
+        for (int col = 0; col < colCount; ++col)
         {
-            uint8_t c = row.m_rawBytes[i];
-            row.m_hexText += QString::asprintf("%02x", c);
+            const ColInfo& info = m_columnMap[col];
+            uint8_t byteVal = 0;
+            char outChar = ' ';
+            switch (info.type)
+            {
+            case ColInfo::kTopNybble:
+                byteVal = row.m_rawBytes[info.byteOffset];
+                outChar = toHex[(byteVal >> 4) & 0xf];
+                break;
+            case ColInfo::kBottomNybble:
+                byteVal = row.m_rawBytes[info.byteOffset];
+                outChar = toHex[byteVal & 0xf];
+                break;
+            case ColInfo::kASCII:
+                byteVal = row.m_rawBytes[info.byteOffset];
+                outChar = '.';
+                if (byteVal >= 32 && byteVal < 128)
+                    outChar = static_cast<char>(byteVal);
+                break;
+            case ColInfo::kSpace:
+                break;
+            }
 
-            if (c >= 32 && c < 128)
-                row.m_asciiText += QString::asprintf("%c", c);
-            else
-                row.m_asciiText += ".";
-
-            uint32_t addr = row.m_address + static_cast<uint32_t>(i);
+            uint32_t addr = row.m_address + static_cast<uint32_t>(info.byteOffset);
             bool changed = false;
             if (m_previousMemory.HasAddress(addr))
             {
                 uint8_t oldC = m_previousMemory.ReadAddressByte(addr);
-                if (oldC != c)
+                if (oldC != byteVal)
                     changed = true;
             }
-            row.m_byteChanged[i] = changed;
+            row.m_text[col] = outChar;
+            row.m_byteChanged[col] = changed;
         }
     }
-    repaint();
+    update();
 }
 
 void MemoryWidget::startStopChangedSlot()
@@ -369,7 +413,7 @@ void MemoryWidget::connectChangedSlot()
     m_rows.clear();
     m_address = 0;
     m_rowCount = 10;
-    repaint();
+    update();
 }
 
 void MemoryWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
@@ -429,24 +473,13 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
 
         // Now hex
         // We write out the values per-nybble
-        for (int col = 0; col < m_columnPositions.size(); ++col)
+        for (int col = 0; col < m_columnMap.size(); ++col)
         {
-            int byteOffset = col / 2;
-            bool changed = r.m_byteChanged[byteOffset];
-            painter.setPen(changed ? Qt::red : pal.text().color());
-
-            int x = GetHexCharX(col);
-            QChar st = r.m_hexText.at(col);
-            painter.drawText(x, text_y, st);
-        }
-
-        for (int col = 0; col < r.m_asciiText.size(); ++col)
-        {
-            int x_ascii = GetAsciiCharX(col);
             bool changed = r.m_byteChanged[col];
+            QChar st = r.m_text.at(col);
             painter.setPen(changed ? Qt::red : pal.text().color());
-            QString t = r.m_asciiText.at(col);
-            painter.drawText(x_ascii, text_y, t);
+            int x = GetPixelFromCol(col);
+            painter.drawText(x, text_y, st);
         }
     }
 
@@ -454,12 +487,12 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     if (m_cursorRow >= 0 && m_cursorRow < m_rows.size())
     {
         int y_curs = GetPixelFromRow(m_cursorRow);
-        int x_curs = GetHexCharX(m_cursorCol);
+        int x_curs = GetPixelFromCol(m_cursorCol);
 
         painter.setBrush(pal.highlight());
         painter.drawRect(x_curs, y_curs, char_width, m_lineHeight);
 
-        QChar st = m_rows[m_cursorRow].m_hexText.at(m_cursorCol);
+        QChar st = m_rows[m_cursorRow].m_text.at(m_cursorCol);
         painter.setPen(pal.highlightedText().color());
         painter.drawText(x_curs, y_ascent + y_curs, st);
     }
@@ -475,24 +508,19 @@ void MemoryWidget::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Down:       MoveDown();          return;
     case Qt::Key_PageUp:     PageUp();            return;
     case Qt::Key_PageDown:   PageDown();          return;
-
-    case Qt::Key_0:          EditKey(0); return;
-    case Qt::Key_1:          EditKey(1); return;
-    case Qt::Key_2:          EditKey(2); return;
-    case Qt::Key_3:          EditKey(3); return;
-    case Qt::Key_4:          EditKey(4); return;
-    case Qt::Key_5:          EditKey(5); return;
-    case Qt::Key_6:          EditKey(6); return;
-    case Qt::Key_7:          EditKey(7); return;
-    case Qt::Key_8:          EditKey(8); return;
-    case Qt::Key_9:          EditKey(9); return;
-    case Qt::Key_A:          EditKey(10); return;
-    case Qt::Key_B:          EditKey(11); return;
-    case Qt::Key_C:          EditKey(12); return;
-    case Qt::Key_D:          EditKey(13); return;
-    case Qt::Key_E:          EditKey(14); return;
-    case Qt::Key_F:          EditKey(15); return;
     default: break;
+    }
+
+    // Try edit keys
+    if (event->text().size() != 0)
+    {
+        QChar ch = event->text().at(0);
+        signed char ascii = ch.toLatin1();
+        if (ascii >= 32)
+        {
+            EditKey(ascii);
+            return;
+        }
     }
     QWidget::keyPressEvent(event);
 }
@@ -509,14 +537,14 @@ void MemoryWidget::mousePressEvent(QMouseEvent *event)
         if (row >= 0 && row < m_rows.size())
         {
             // Find the X char that might fit
-            for (int col = 0; col < m_columnPositions.size(); ++col)
+            for (int col = 0; col < m_columnMap.size(); ++col)
             {
-                int charPos = GetHexCharX(col);
+                int charPos = GetPixelFromCol(col);
                 if (x >= charPos && x < charPos + m_charWidth)
                 {
                     m_cursorCol = col;
                     m_cursorRow = row;
-                    repaint();
+                    update();
                     break;
                 }
             }
@@ -580,23 +608,9 @@ int MemoryWidget::GetRowFromPixel(int y) const
     return (y - Session::kWidgetBorderY) / m_lineHeight;
 }
 
-int MemoryWidget::GetHexCharX(int column) const
+int MemoryWidget::GetPixelFromCol(int column) const
 {
-    assert(column < m_columnPositions.size());
-    return GetAddrX() + (10 + m_columnPositions[column]) * m_charWidth;
-}
-
-int MemoryWidget::GetAsciiCharX(int column) const
-{
-    int32_t lastCharX = m_columnPositions.back();
-    return GetAddrX() + (10 + lastCharX + 3 + column) * m_charWidth;
-}
-
-void MemoryWidget::GetCursorInfo(uint32_t &address, bool &bottomNybble)
-{
-    address = m_rows[m_cursorRow].m_address;
-    address += (m_cursorCol / 2);
-    bottomNybble = (m_cursorCol & 1) ? true : false;
+    return GetAddrX() + (10 + column) * m_charWidth;
 }
 
 //-----------------------------------------------------------------------------

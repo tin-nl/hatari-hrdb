@@ -147,6 +147,7 @@ public:
 
 protected:
     virtual void closeEvent(QCloseEvent *event);
+    virtual void keyPressEvent(QKeyEvent*);
 
 private slots:
     void connectChangedSlot();

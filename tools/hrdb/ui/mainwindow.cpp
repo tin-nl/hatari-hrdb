@@ -729,11 +729,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pWindowMenu, &QMenu::aboutToShow, this, &MainWindow::updateWindowMenu);
 
 	// Keyboard shortcuts
+    // "S" and "N" now done with keyPressEvent() to handle conflicts with other windows
     new QShortcut(QKeySequence(tr("Ctrl+R", "Start/Stop")),         this, SLOT(startStopClicked()));
-    new QShortcut(QKeySequence(tr("n",      "Next")),               this, SLOT(nextClicked()));
-    new QShortcut(QKeySequence(tr("s",      "Step")),               this, SLOT(singleStepClicked()));
     new QShortcut(QKeySequence(tr("Esc",    "Break")),              this, SLOT(breakPressed()));
-    new QShortcut(QKeySequence(tr("u",      "Run Until")),          this, SLOT(runToClicked()));
 
     // Try initial connect
     ConnectTriggered();
@@ -1223,5 +1221,21 @@ void MainWindow::closeEvent(QCloseEvent *event)
 {
     saveSettings();
     event->accept();
+}
+
+void MainWindow::keyPressEvent(QKeyEvent* event)
+{
+    // These are handled by keyPressEvent so that e.g the MemoryWindow
+    // can intercept S and N when editing ASCII.
+    if (event->modifiers() == Qt::KeyboardModifier::NoModifier)
+    {
+        switch (event->key())
+        {
+        case Qt::Key_S:       singleStepClicked();      return;
+        case Qt::Key_N:       nextClicked();            return;
+        case Qt::Key_U:       runToClicked();           return;
+        default: break;
+        }
+    }
 }
 

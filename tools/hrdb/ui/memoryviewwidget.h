@@ -51,6 +51,7 @@ protected:
     virtual void paintEvent(QPaintEvent*);
     virtual void keyPressEvent(QKeyEvent*);
     virtual void mousePressEvent(QMouseEvent *event);
+
 private:
     void MoveUp();
     void MoveDown();
@@ -58,7 +59,7 @@ private:
     void MoveRight();
     void PageUp();
     void PageDown();
-    void EditKey(uint8_t val);
+    void EditKey(char key);
 
     void SetAddress(uint32_t address);
     void RequestMemory();
@@ -68,9 +69,9 @@ private:
 
     void UpdateFont();
     int GetAddrX() const;
-    // Get the x-coord of the hex-character at cursor column
-    int GetHexCharX(int column) const;
-    int GetAsciiCharX(int column) const;
+
+    // Get the x-coord of the character at cursor column
+    int GetPixelFromCol(int column) const;
 
     // Convert from row ID to a pixel Y (top pixel in the drawn row)
     int GetPixelFromRow(int row) const;
@@ -78,7 +79,6 @@ private:
     // Convert from pixel Y to a row ID
     int GetRowFromPixel(int y) const;
 
-    void GetCursorInfo(uint32_t& address, bool& bottomNybble);
     void SetRowCount(int rowCount);
 
     Session*        m_pSession;
@@ -92,13 +92,23 @@ private:
 
         QVector<uint8_t> m_rawBytes;
         QVector<bool> m_byteChanged;
-        QString m_hexText;
-        QString m_asciiText;
+        QString m_text;
     };
 
     QVector<Row> m_rows;
-    // Positions of each column (need to multiply by m_charWidth for pixel position)
-    QVector<int32_t> m_columnPositions;
+    struct ColInfo
+    {
+        enum Type
+        {
+            kSpace,
+            kTopNybble,
+            kBottomNybble,
+            kASCII
+        } type;
+        int32_t byteOffset;     // offset into memory
+    };
+
+    QVector<ColInfo> m_columnMap;
 
     std::string m_addressExpression;
     bool        m_isLocked;
