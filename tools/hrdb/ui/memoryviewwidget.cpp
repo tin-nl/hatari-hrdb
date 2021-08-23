@@ -506,7 +506,7 @@ void MemoryWidget::mousePressEvent(QMouseEvent *event)
         int y = (int)event->localPos().y();
 
         int row = GetRowFromPixel(y);
-        if (row > 0 && row < m_rows.size())
+        if (row >= 0 && row < m_rows.size())
         {
             // Find the X char that might fit
             for (int col = 0; col < m_columnPositions.size(); ++col)
