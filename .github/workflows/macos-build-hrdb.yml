@@ -23,8 +23,11 @@ jobs:
       - name: Run a multi-line script
         run: |
            brew install qt5
-           echo "/usr/local/opt/qt5/bin" >> $GITHUB_PATH
+           echo "/usr/local/opt/qt@5/bin" >> $GITHUB_PATH
            echo "Qt5_DIR=/usr/local/opt/qt5/lib/cmake/Qt5" >> $GITHUB_ENV
+      - name: check install
+        run: |
+           export
            cd tools/hrdb
            qmake .
            make
