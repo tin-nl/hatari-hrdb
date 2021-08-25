@@ -33,7 +33,7 @@ jobs:
            make
       - name: package
         run: |
-           ls --recursive
+           ls -R *
            macdeployqt hrdb.app
            zip -9 -r hrdb.zip hrdb.app
       - name: "Upload artifacts"
