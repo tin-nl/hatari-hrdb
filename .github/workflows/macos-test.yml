@@ -30,7 +30,7 @@ jobs:
            export
            cd tools/hrdb
            qmake .
-           make release
+           make
       - name: package
         run: |
            ls --recursive
