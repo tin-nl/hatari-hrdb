@@ -1,4 +1,4 @@
-# This is a basic workflow to help you get started with Actions
+# Macos Build
 
 name: macos-build-hrdb
 
@@ -20,18 +20,20 @@ jobs:
       - uses: actions/checkout@v2
 
       # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Install libs
         run: |
            brew install qt5
            brew install sdl2
            echo "/usr/local/opt/qt@5/bin" >> $GITHUB_PATH
            echo "Qt5_DIR=/usr/local/opt/qt@5/lib/cmake/Qt5" >> $GITHUB_ENV
+           mkdir output
       - name: Build hatari
         run: |
           ./configure
           make
           cd src
           ls -al
+          mv hatari.app ../output/
       - name: build hrdb
         run: |
            export
@@ -40,19 +42,14 @@ jobs:
            make
       - name: package
         run: |
-           cd tools/hrdb        
-           ls -Rl *
+           cd tools/hrdb
            macdeployqt hrdb.app
-           zip -9 -r hrdb.zip hrdb.app
+           #ls -Rl *
+           mv hrdb.app ../../output/
       - name: "Upload artifacts"
         uses: actions/upload-artifact@v2
         with:
           name: hrdb-${{ github.sha }}
-          path: tools/hrdb/hrdb.app/
-      - name: "Upload artifacts 2"
-        uses: actions/upload-artifact@v2
-        with:
-          name: hrdb-${{ github.sha }}
-          path: src/hatari.app/
+          path: output
           
            
