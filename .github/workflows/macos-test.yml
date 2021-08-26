@@ -48,12 +48,13 @@ jobs:
            macdeployqt hrdb.app
            ls -Rl *
            mv hrdb.app ../../output/
-      - name: 'Tar files'
-        run: tar -cvf hrdb.tar output/           
+      - name: zip outputs
+        run: zip -r hrdb.zip output/hrdb.app output/hatari.app           
       - name: "Upload artifacts"
         uses: actions/upload-artifact@v2
         with:
           name: hrdb-${{ github.sha }}
-          path: hrdb.tar
+          path: hrdb.zip
+          
           
            
