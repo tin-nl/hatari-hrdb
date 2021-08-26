@@ -49,12 +49,14 @@ jobs:
            ls -Rl *
            mv hrdb.app ../../output/
       - name: zip outputs
-        run: zip -r hrdb.zip output/hrdb.app output/hatari.app           
+        run: |
+          cd output
+          zip -r macos-hrdb.zip hrdb.app hatari.app           
       - name: "Upload artifacts"
         uses: actions/upload-artifact@v2
         with:
           name: hrdb-${{ github.sha }}
-          path: hrdb.zip
+          path: output/macos-hrdb.zip
           
           
            
