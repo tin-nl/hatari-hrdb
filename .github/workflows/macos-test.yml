@@ -23,6 +23,7 @@ jobs:
       - name: Run a multi-line script
         run: |
            brew install qt5
+           brew install sdl2
            echo "/usr/local/opt/qt@5/bin" >> $GITHUB_PATH
            echo "Qt5_DIR=/usr/local/opt/qt@5/lib/cmake/Qt5" >> $GITHUB_ENV
       - name: Build hatari
