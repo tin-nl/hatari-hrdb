@@ -33,7 +33,8 @@ jobs:
            make
       - name: package
         run: |
-           ls -R *
+           cd tools/hrdb        
+           ls -Rl *
            macdeployqt hrdb.app
            zip -9 -r hrdb.zip hrdb.app
       - name: "Upload artifacts"
