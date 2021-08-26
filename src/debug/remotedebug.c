@@ -28,8 +28,8 @@
 #include <winsock.h>
 #endif
 
-#include "m68000.h"
 #include "main.h"		/* For ARRAY_SIZE, event handler */
+#include "m68000.h"		/* Must be after main.h for "unlikely" */
 #include "debugui.h"	/* For DebugUI_RegisterRemoteDebug */
 #include "debug_priv.h"	/* For debugOutput control */
 #include "debugcpu.h"	/* For stepping */
