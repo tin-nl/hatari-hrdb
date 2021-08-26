@@ -101,7 +101,7 @@ void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
     const QRect& r = rect();
 
     QPalette pal = this->palette();
-    const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    painter.setFont(m_pSession->GetSettings().m_font);
     if (m_pSession->m_pTargetModel->IsConnected())
     {
         if (m_pixmap.width() != 0 && m_pixmap.height() != 0)
@@ -132,7 +132,6 @@ void NonAntiAliasImage::paintEvent(QPaintEvent* ev)
         }
     }
     else {
-        painter.setFont(monoFont);
         painter.drawText(r, Qt::AlignCenter, "Not connected.");
     }
 
