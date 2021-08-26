@@ -25,6 +25,12 @@ jobs:
            brew install qt5
            echo "/usr/local/opt/qt@5/bin" >> $GITHUB_PATH
            echo "Qt5_DIR=/usr/local/opt/qt@5/lib/cmake/Qt5" >> $GITHUB_ENV
+      - name: Build hatari
+        run: |
+          ./configure
+          make
+          cd src
+          ls -al
       - name: build hrdb
         run: |
            export
@@ -36,11 +42,10 @@ jobs:
            cd tools/hrdb        
            ls -Rl *
            macdeployqt hrdb.app
-           zip -9 -r ../../hrdb.zip hrdb.app
+           zip -9 -r hrdb.zip hrdb.app
       - name: "Upload artifacts"
         uses: actions/upload-artifact@v2
         with:
-          name: hatari-debugger-${{ github.sha }}
-          path: |
-              hrdb.zip
+          name: hrdb-${{ github.sha }}
+          path: tools/hrdb/hrdb.app/ src/hatari.app/
            
