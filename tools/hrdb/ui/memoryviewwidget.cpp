@@ -14,6 +14,8 @@
 #include <QKeyEvent>
 #include <QSettings>
 #include <QShortcut>
+#include <QToolTip>
+#include <QTextStream>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -21,6 +23,22 @@
 #include "../models/symboltablemodel.h"
 #include "../models/session.h"
 #include "quicklayout.h"
+
+static QString CreateTooltip(uint32_t address, const SymbolTable& symTable)
+{
+    QString final;
+    QTextStream ref(&final);
+
+    ref << QString::asprintf("Address: $%x\n", address);
+    Symbol sym;
+    if (symTable.FindLowerOrEqual(address, sym))
+    {
+        ref << QString::asprintf("Symbol: $%x %s", sym.address, sym.name.c_str());
+        if (sym.address != address)
+            ref << QString::asprintf("+$%x", address - sym.address);
+    }
+    return final;
+}
 
 MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
                                            int windowIndex) :
@@ -50,6 +68,7 @@ MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryWidget::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &MemoryWidget::connectChangedSlot);
     connect(m_pTargetModel, &TargetModel::otherMemoryChanged,       this, &MemoryWidget::otherMemoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &MemoryWidget::symbolTableChangedSlot);
     connect(m_pSession,     &Session::settingsChanged,              this, &MemoryWidget::settingsChangedSlot);
 }
 
@@ -329,6 +348,8 @@ void MemoryWidget::memoryChangedSlot(int memorySlot, uint64_t commandId)
 
 void MemoryWidget::RecalcText()
 {
+    const SymbolTable& symTable = m_pTargetModel->GetSymbolTable();
+
     static char toHex[] = "0123456789abcdef";
     int32_t rowCount = m_rows.size();
     int32_t colCount = m_columnMap.size();
@@ -337,6 +358,7 @@ void MemoryWidget::RecalcText()
         Row& row = m_rows[r];
         row.m_text.resize(colCount);
         row.m_byteChanged.resize(colCount);
+        row.m_symbolId.resize(colCount);
 
         for (int col = 0; col < colCount; ++col)
         {
@@ -370,6 +392,17 @@ void MemoryWidget::RecalcText()
                 uint8_t oldC = m_previousMemory.ReadAddressByte(addr);
                 if (oldC != byteVal)
                     changed = true;
+            }
+
+            Symbol sym;
+            row.m_symbolId[col] = -1;
+
+            if (info.type != ColInfo::kSpace)
+            {
+                if (symTable.FindLowerOrEqual(addr, sym))
+                {
+                    row.m_symbolId[col] = (int)sym.index;
+                }
             }
             row.m_text[col] = outChar;
             row.m_byteChanged[col] = changed;
@@ -425,6 +458,11 @@ void MemoryWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
     RequestMemory();
 }
 
+void MemoryWidget::symbolTableChangedSlot()
+{
+    RecalcText();
+}
+
 void MemoryWidget::settingsChangedSlot()
 {
     UpdateFont();
@@ -460,6 +498,18 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     // Set up the rendering info
     m_charWidth = char_width;
 
+    QColor backCol = pal.background().color();
+    QColor cols[7] =
+    {
+        QColor(backCol.red() ^ 32, backCol.green() ^  0, backCol.blue() ^ 0),
+        QColor(backCol.red() ^  0, backCol.green() ^ 32, backCol.blue() ^ 0),
+        QColor(backCol.red() ^ 32, backCol.green() ^ 32, backCol.blue() ^ 0),
+        QColor(backCol.red() ^  0, backCol.green() ^  0, backCol.blue() ^ 32),
+        QColor(backCol.red() ^ 32, backCol.green() ^  0, backCol.blue() ^ 32),
+        QColor(backCol.red() ^  0, backCol.green() ^ 32, backCol.blue() ^ 32),
+        QColor(backCol.red() ^ 32, backCol.green() ^ 32, backCol.blue() ^ 32),
+    };
+
     painter.setPen(pal.text().color());
     for (int row = 0; row < m_rows.size(); ++row)
     {
@@ -467,7 +517,8 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
 
         // Draw address string
         painter.setPen(pal.text().color());
-        int text_y = GetPixelFromRow(row) + y_ascent;
+        int topleft_y = GetPixelFromRow(row);
+        int text_y = topleft_y + y_ascent;
         QString addr = QString::asprintf("%08x", r.m_address);
         painter.drawText(GetAddrX(), text_y, addr);
 
@@ -475,10 +526,18 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
         // We write out the values per-nybble
         for (int col = 0; col < m_columnMap.size(); ++col)
         {
+            int x = GetPixelFromCol(col);
+            // Mark symbol
+            if (r.m_symbolId[col] != -1)
+            {
+                painter.setBrush(cols[r.m_symbolId[col] % 7]);
+                painter.setPen(Qt::NoPen);
+                painter.drawRect(x, topleft_y, m_charWidth, m_lineHeight);
+            }
+
             bool changed = r.m_byteChanged[col];
             QChar st = r.m_text.at(col);
             painter.setPen(changed ? Qt::red : pal.text().color());
-            int x = GetPixelFromCol(col);
             painter.drawText(x, text_y, st);
         }
     }
@@ -530,40 +589,61 @@ void MemoryWidget::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::MouseButton::LeftButton)
     {
         // Over a hex char
-        int x = (int)event->localPos().x();
-        int y = (int)event->localPos().y();
-
-        int row = GetRowFromPixel(y);
-        if (row >= 0 && row < m_rows.size())
+        int x = static_cast<int>(event->localPos().x());
+        int y = static_cast<int>(event->localPos().y());
+        int row;
+        int col;
+        if (FindInfo(x, y, row, col))
         {
-            // Find the X char that might fit
-            for (int col = 0; col < m_columnMap.size(); ++col)
-            {
-                int charPos = GetPixelFromCol(col);
-                if (x >= charPos && x < charPos + m_charWidth)
-                {
-                    m_cursorCol = col;
-                    m_cursorRow = row;
-                    update();
-                    break;
-                }
-            }
+            m_cursorCol = col;
+            m_cursorRow = row;
+            update();
         }
     }
     QWidget::mousePressEvent(event);
-}
-
-void MemoryWidget::RequestMemory()
-{
-    uint32_t size = ((m_rowCount * 16));
-    if (m_pTargetModel->IsConnected())
-        m_requestId = m_pDispatcher->RequestMemory(m_memSlot, m_address, size);
 }
 
 void MemoryWidget::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
     RecalcRowCount();
+}
+
+bool MemoryWidget::event(QEvent *event)
+{
+    if (event->type() == QEvent::ToolTip) {
+
+        QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
+        QString text = "";
+
+        int x = static_cast<int>(helpEvent->pos().x());
+        int y = static_cast<int>(helpEvent->pos().y());
+        int row;
+        int col;
+        if (FindInfo(x, y, row, col))
+        {
+            uint32_t addr = m_rows[row].m_address + m_columnMap[col].byteOffset;
+            // Work out what's under the mouse
+            text = CreateTooltip(addr, m_pTargetModel->GetSymbolTable());
+        }
+
+        if (text.size() != 0)
+            QToolTip::showText(helpEvent->globalPos(), text);
+        else
+        {
+            QToolTip::hideText();
+            event->ignore();
+        }
+        return true;
+    }
+    return QWidget::event(event);
+}
+
+void MemoryWidget::RequestMemory()
+{
+    uint32_t size = static_cast<uint32_t>(m_rowCount * m_bytesPerRow);
+    if (m_pTargetModel->IsConnected())
+        m_requestId = m_pDispatcher->RequestMemory(m_memSlot, m_address, size);
 }
 
 void MemoryWidget::RecalcRowCount()
@@ -611,6 +691,22 @@ int MemoryWidget::GetRowFromPixel(int y) const
 int MemoryWidget::GetPixelFromCol(int column) const
 {
     return GetAddrX() + (10 + column) * m_charWidth;
+}
+
+bool MemoryWidget::FindInfo(int x, int y, int& row, int& col)
+{
+    row = GetRowFromPixel(y);
+    if (row >= 0 && row < m_rows.size())
+    {
+        // Find the X char that might fit
+        for (col = 0; col < m_columnMap.size(); ++col)
+        {
+            int charPos = GetPixelFromCol(col);
+            if (x >= charPos && x < charPos + m_charWidth)
+                return true;
+        }
+    }
+    return false;
 }
 
 //-----------------------------------------------------------------------------

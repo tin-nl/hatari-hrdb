@@ -273,9 +273,14 @@ void SymbolSubTable::CreateCache()
     // Recalc the keys table
     m_addrKeys.clear();
     Map::iterator it(m_addrLookup.begin());
+    size_t index = 0;
     while (it != m_addrLookup.end())
     {
         m_addrKeys.push_back(*it);
+
+        size_t symIndex = it->second;
+        m_symbols[symIndex].index = index;
+        ++index;
         ++it;
     }
 }

@@ -45,12 +45,15 @@ public slots:
     void startStopChangedSlot();
     void connectChangedSlot();
     void otherMemoryChangedSlot(uint32_t address, uint32_t size);
+    void symbolTableChangedSlot();
     void settingsChangedSlot();
 
 protected:
-    virtual void paintEvent(QPaintEvent*);
-    virtual void keyPressEvent(QKeyEvent*);
-    virtual void mousePressEvent(QMouseEvent *event);
+    virtual void paintEvent(QPaintEvent*) override;
+    virtual void keyPressEvent(QKeyEvent*) override;
+    virtual void mousePressEvent(QMouseEvent *event) override;
+    virtual void resizeEvent(QResizeEvent *event) override;
+    virtual bool event(QEvent *event) override;
 
 private:
     void MoveUp();
@@ -64,7 +67,6 @@ private:
     void SetAddress(uint32_t address);
     void RequestMemory();
     void RecalcText();
-    void resizeEvent(QResizeEvent *event);
     void RecalcRowCount();
 
     void UpdateFont();
@@ -79,6 +81,10 @@ private:
     // Convert from pixel Y to a row ID
     int GetRowFromPixel(int y) const;
 
+    // Find a valid entry under the pixel
+    bool FindInfo(int x, int y, int& row, int& col);
+
+
     void SetRowCount(int rowCount);
 
     Session*        m_pSession;
@@ -92,6 +98,7 @@ private:
 
         QVector<uint8_t> m_rawBytes;
         QVector<bool> m_byteChanged;
+        QVector<int> m_symbolId;
         QString m_text;
     };
 
@@ -105,7 +112,7 @@ private:
             kBottomNybble,
             kASCII
         } type;
-        int32_t byteOffset;     // offset into memory
+        uint32_t byteOffset;     // offset into memory
     };
 
     QVector<ColInfo> m_columnMap;
