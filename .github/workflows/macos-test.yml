@@ -32,8 +32,8 @@ jobs:
           ./configure
           make -j 2
           cd src
+          ls -Rl
           chmod +x hatari.app/Contents/MacOS/hatari
-          ls -rl
           mv hatari.app ../output/
       - name: build hrdb
         run: |
@@ -46,12 +46,14 @@ jobs:
         run: |
            cd tools/hrdb
            macdeployqt hrdb.app
-           #ls -Rl *
+           ls -Rl *
            mv hrdb.app ../../output/
+      - name: 'Tar files'
+        run: tar -cvf hrdb.tar output/           
       - name: "Upload artifacts"
         uses: actions/upload-artifact@v2
         with:
           name: hrdb-${{ github.sha }}
-          path: output
+          path: hrdb.tar
           
            
