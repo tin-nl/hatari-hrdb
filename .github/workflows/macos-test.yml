@@ -36,7 +36,7 @@ jobs:
            cd tools/hrdb        
            ls -Rl *
            macdeployqt hrdb.app
-           zip -9 -r hrdb.zip hrdb.app
+           zip -9 -r ../../hrdb.zip hrdb.app
       - name: "Upload artifacts"
         uses: actions/upload-artifact@v2
         with:
