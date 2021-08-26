@@ -30,16 +30,18 @@ jobs:
       - name: Build hatari
         run: |
           ./configure
-          make
+          make -j 2
           cd src
-          ls -al
+          chmod +x hatari.app/Contents/MacOS/hatari
+          ls -rl
           mv hatari.app ../output/
       - name: build hrdb
         run: |
-           export
-           cd tools/hrdb
-           qmake .
-           make
+          export
+          cd tools/hrdb
+          qmake .
+          make
+          chmod +x hrdb.app/Contents/MacOS/hrdb
       - name: package
         run: |
            cd tools/hrdb
