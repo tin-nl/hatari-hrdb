@@ -559,26 +559,29 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
 
 void MemoryWidget::keyPressEvent(QKeyEvent* event)
 {
-    switch (event->key())
+    if (m_pTargetModel->IsConnected())
     {
-    case Qt::Key_Left:       MoveLeft();          return;
-    case Qt::Key_Right:      MoveRight();         return;
-    case Qt::Key_Up:         MoveUp();            return;
-    case Qt::Key_Down:       MoveDown();          return;
-    case Qt::Key_PageUp:     PageUp();            return;
-    case Qt::Key_PageDown:   PageDown();          return;
-    default: break;
-    }
-
-    // Try edit keys
-    if (event->text().size() != 0)
-    {
-        QChar ch = event->text().at(0);
-        signed char ascii = ch.toLatin1();
-        if (ascii >= 32)
+        switch (event->key())
         {
-            EditKey(ascii);
-            return;
+        case Qt::Key_Left:       MoveLeft();          return;
+        case Qt::Key_Right:      MoveRight();         return;
+        case Qt::Key_Up:         MoveUp();            return;
+        case Qt::Key_Down:       MoveDown();          return;
+        case Qt::Key_PageUp:     PageUp();            return;
+        case Qt::Key_PageDown:   PageDown();          return;
+        default: break;
+        }
+
+        // Try edit keys
+        if (event->text().size() != 0)
+        {
+            QChar ch = event->text().at(0);
+            signed char ascii = ch.toLatin1();
+            if (ascii >= 32)
+            {
+                EditKey(ascii);
+                return;
+            }
         }
     }
     QWidget::keyPressEvent(event);
