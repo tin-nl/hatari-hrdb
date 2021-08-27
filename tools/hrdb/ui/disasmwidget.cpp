@@ -34,7 +34,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     m_pSession(pSession),
     m_pTargetModel(pSession->m_pTargetModel),
     m_pDispatcher(pSession->m_pDispatcher),
-    m_rightClickActiveAddress(0),
+    m_showAddressActions(pSession->m_pTargetModel),
     m_bShowHex(true),
     m_rightClickRow(-1),
     m_cursorRow(0),
@@ -57,25 +57,15 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     m_pBreakpointAction = new QAction(tr("Toggle Breakpoint"), this);
     m_pNopAction = new QAction(tr("Replace with NOPs"), this);
 
-    for (int i = 0; i < kNumDisasmViews; ++i)
-        m_pShowDisasmWindowActions[i] = new QAction(QString::asprintf("Show in Disassembly %d", i + 1), this);
+    m_pEditMenu = new QMenu("Edit", this);
+    m_pEditMenu->addAction(m_pNopAction);
 
-    for (int i = 0; i < kNumMemoryViews; ++i)
-        m_pShowMemoryWindowActions[i] = new QAction(QString::asprintf("Show in Memory %d", i + 1), this);
-
-    // Add all the above actions to all 3 "top" menus;
+    // Add context for addresses
     for (int showMenu = 0; showMenu < 3; ++showMenu)
     {
         m_pShowMemMenus[showMenu] = new QMenu("", this);
-        for (int i = 0; i < kNumDisasmViews; ++i)
-            m_pShowMemMenus[showMenu]->addAction(m_pShowDisasmWindowActions[i]);
-
-        for (int i = 0; i < kNumMemoryViews; ++i)
-            m_pShowMemMenus[showMenu]->addAction(m_pShowMemoryWindowActions[i]);
+        m_showAddressActions.addToMenu(m_pShowMemMenus[showMenu]);
     }
-
-    m_pEditMenu = new QMenu("Edit", this);
-    m_pEditMenu->addAction(m_pNopAction);
 
     new QShortcut(QKeySequence(tr("Ctrl+H", "Run to Here")),        this, SLOT(runToCursor()));
     new QShortcut(QKeySequence(tr("Ctrl+B", "Toggle breakpoint")),  this, SLOT(toggleBreakpoint()));
@@ -97,12 +87,6 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     connect(m_pShowMemMenus[0],      &QMenu::aboutToShow, this, &DisasmWidget::showMemMenu0Shown);
     connect(m_pShowMemMenus[1],      &QMenu::aboutToShow, this, &DisasmWidget::showMemMenu1Shown);
     connect(m_pShowMemMenus[2],      &QMenu::aboutToShow, this, &DisasmWidget::showMemMenu2Shown);
-
-    for (int i = 0; i < kNumDisasmViews; ++i)
-        connect(m_pShowDisasmWindowActions[i], &QAction::triggered, this, [=] () { this->disasmViewTrigger(i); } );
-
-    for (int i = 0; i < kNumMemoryViews; ++i)
-        connect(m_pShowMemoryWindowActions[i], &QAction::triggered, this, [=] () { this->memoryViewTrigger(i); } );
 
     connect(m_pSession, &Session::settingsChanged, this, &DisasmWidget::settingsChangedSlot);
     setMouseTracking(true);
@@ -771,27 +755,17 @@ void DisasmWidget::nopRightClick()
 
 void DisasmWidget::showMemMenu0Shown()
 {
-    m_rightClickActiveAddress = m_showMenuAddresses[0];
+    m_showAddressActions.setAddress(m_showMenuAddresses[0]);
 }
 
 void DisasmWidget::showMemMenu1Shown()
 {
-    m_rightClickActiveAddress = m_showMenuAddresses[1];
+    m_showAddressActions.setAddress(m_showMenuAddresses[1]);
 }
 
 void DisasmWidget::showMemMenu2Shown()
 {
-    m_rightClickActiveAddress = m_showMenuAddresses[2];
-}
-
-void DisasmWidget::disasmViewTrigger(int windowIndex)
-{
-    emit m_pTargetModel->addressRequested(windowIndex, false, m_rightClickActiveAddress);
-}
-
-void DisasmWidget::memoryViewTrigger(int windowIndex)
-{
-    emit m_pTargetModel->addressRequested(windowIndex, true, m_rightClickActiveAddress);
+    m_showAddressActions.setAddress(m_showMenuAddresses[2]);
 }
 
 void DisasmWidget::settingsChangedSlot()
@@ -1033,4 +1007,3 @@ void DisasmWindow::UpdateTextBox()
     uint32_t addr = m_pDisasmWidget->GetAddress();
     m_pLineEdit->setText(QString::asprintf("$%x", addr));
 }
-

@@ -79,18 +79,13 @@ static QString MakeBracket(QString str)
 
 RegisterWidget::RegisterWidget(QWidget *parent, Session* pSession) :
     QWidget(parent),
+    m_showAddressActions(pSession->m_pTargetModel),
     m_pSession(pSession),
     m_pDispatcher(pSession->m_pDispatcher),
     m_pTargetModel(pSession->m_pTargetModel),
     m_tokenUnderMouseIndex(-1)
 {
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-
-    for (int i = 0; i < kNumDisasmViews; ++i)
-        m_pShowDisasmWindowActions[i] = new QAction(QString::asprintf("Show in Disassembly %d", i + 1), this);
-
-    for (int i = 0; i < kNumMemoryViews; ++i)
-        m_pShowMemoryWindowActions[i] = new QAction(QString::asprintf("Show in Memory %d", i + 1), this);
 
     // Listen for target changes
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,        this, &RegisterWidget::startStopChangedSlot);
@@ -99,13 +94,6 @@ RegisterWidget::RegisterWidget(QWidget *parent, Session* pSession) :
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,           this, &RegisterWidget::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal,      this, &RegisterWidget::symbolTableChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignalDelayed, this, &RegisterWidget::startStopDelayedSlot);
-
-    // Handle click on right-click menu items
-    for (int i = 0; i < kNumDisasmViews; ++i)
-        connect(m_pShowDisasmWindowActions[i], &QAction::triggered, this, [=] () { this->disasmViewTrigger(i); } );
-
-    for (int i = 0; i < kNumMemoryViews; ++i)
-        connect(m_pShowMemoryWindowActions[i], &QAction::triggered, this, [=] () { this->memoryViewTrigger(i); } );
 
     connect(m_pSession, &Session::settingsChanged, this, &RegisterWidget::settingsChangedSlot);
     setFocusPolicy(Qt::FocusPolicy::StrongFocus);
@@ -196,12 +184,8 @@ void RegisterWidget::contextMenuEvent(QContextMenuEvent *event)
 
     if (pAddressMenu)
     {
-        for (int i = 0; i < kNumDisasmViews; ++i)
-            pAddressMenu->addAction(m_pShowDisasmWindowActions[i]);
-
-        for (int i = 0; i < kNumMemoryViews; ++i)
-            pAddressMenu->addAction(m_pShowMemoryWindowActions[i]);
-
+        m_showAddressActions.addToMenu(pAddressMenu);
+        m_showAddressActions.setAddress(m_addressUnderMouse);
         menu.addMenu(pAddressMenu);
 
         // Run it
@@ -315,16 +299,6 @@ void RegisterWidget::memoryChangedSlot(int slot, uint64_t /*commandId*/)
 void RegisterWidget::symbolTableChangedSlot(uint64_t /*commandId*/)
 {
     PopulateRegisters();
-}
-
-void RegisterWidget::disasmViewTrigger(int windowIndex)
-{
-    emit m_pTargetModel->addressRequested(windowIndex, false, m_addressUnderMouse);
-}
-
-void RegisterWidget::memoryViewTrigger(int windowIndex)
-{
-    emit m_pTargetModel->addressRequested(windowIndex, true, m_addressUnderMouse);
 }
 
 void RegisterWidget::PopulateRegisters()

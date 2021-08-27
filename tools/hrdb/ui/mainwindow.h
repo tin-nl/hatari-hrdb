@@ -11,6 +11,7 @@
 #include "../models/targetmodel.h"
 #include "../models/disassembler.h"
 #include "../models/session.h"
+#include "showaddressactions.h"
 
 class QPushButton;
 class QLabel;
@@ -52,10 +53,6 @@ private slots:
     void symbolTableChangedSlot(uint64_t commandId);
     void startStopDelayedSlot(int running);
     void settingsChangedSlot();
-
-    // Callbacks when "show in Memory X" etc is selected
-    void disasmViewTrigger(int windowIndex);
-    void memoryViewTrigger(int windowIndex);
 
 private:
     void PopulateRegisters();
@@ -110,8 +107,7 @@ private:
     int GetRowFromPixel(int y) const;
 
     // UI Elements
-    QAction*                    m_pShowDisasmWindowActions[kNumDisasmViews];
-    QAction*                    m_pShowMemoryWindowActions[kNumMemoryViews];
+    ShowAddressActions          m_showAddressActions;
 
     Session*                    m_pSession;
     Dispatcher*             	m_pDispatcher;

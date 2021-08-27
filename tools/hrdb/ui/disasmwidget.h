@@ -7,6 +7,7 @@
 #include "../models/disassembler.h"
 #include "../models/breakpoint.h"
 #include "../models/memory.h"
+#include "showaddressactions.h"
 
 class Session;
 class TargetModel;
@@ -126,9 +127,6 @@ private:
     void showMemMenu1Shown();
     void showMemMenu2Shown();
 
-    // Callbacks when "show in Memory X" etc is selected
-    void disasmViewTrigger(int windowIndex);
-    void memoryViewTrigger(int windowIndex);
     void settingsChangedSlot();
 
     // Layout functions
@@ -151,6 +149,7 @@ private:
     QAction*              m_pBreakpointAction;
     QMenu*                m_pEditMenu;        // "edit this instruction" menu
     QAction*              m_pNopAction;
+    ShowAddressActions    m_showAddressActions;
 
     // "Show memory for $x" top-level menus:
     // Show Instruction
@@ -158,18 +157,6 @@ private:
     // Show EA 1
     QMenu *               m_pShowMemMenus[3];
     uint32_t              m_showMenuAddresses[3];
-    uint32_t              m_rightClickActiveAddress;    // One of m_showMenuAddresses[] selected by triggering the menu
-
-    // Each top-level action has 4 sub-actions
-    // 0 show in Disasm 1
-    // 1 show in Disasm 2
-    // 2 show in Memory 1
-    // 3 show in Memory 2
-    // These actions are shared by *all* menus in m_pShowMemMenus.
-    // The "active" address, m_rightClickActiveAddress, is set when the relevant
-    // m_pShowMemMenus menu is about to be shown.
-    QAction*              m_pShowDisasmWindowActions[kNumDisasmViews];
-    QAction*              m_pShowMemoryWindowActions[kNumMemoryViews];
 
     // Column layout
     bool                  m_bShowHex;

@@ -40,7 +40,8 @@ SOURCES += \
     ui/consolewindow.cpp \
     models/session.cpp \
     models/registers.cpp \
-    ui/prefsdialog.cpp
+    ui/prefsdialog.cpp \
+    ui/showaddressactions.cpp
 
 HEADERS += \
     hopper/buffer.h \
@@ -70,7 +71,8 @@ HEADERS += \
     ui/rundialog.h \
     ui/consolewindow.h \
     hardware/hardware_st.h \
-    ui/prefsdialog.h
+    ui/prefsdialog.h \
+    ui/showaddressactions.h
 
 RESOURCES     = hrdb.qrc    
 
