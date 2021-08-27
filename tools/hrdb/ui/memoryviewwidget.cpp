@@ -55,7 +55,8 @@ MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
     m_windowIndex(windowIndex),
     m_previousMemory(0, 0),
     m_cursorRow(0),
-    m_cursorCol(0)
+    m_cursorCol(0),
+    m_showAddressActions(pSession->m_pTargetModel)
 {
     m_memSlot = static_cast<MemorySlot>(MemorySlot::kMemoryView0 + m_windowIndex);
 
@@ -63,6 +64,9 @@ MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
     SetMode(Mode::kModeByte);
     setFocus();
     setFocusPolicy(Qt::StrongFocus);
+
+    // Right-click menu
+    m_pShowAddressMenu = new QMenu("", this);
 
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryWidget::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryWidget::startStopChangedSlot);
@@ -604,6 +608,52 @@ void MemoryWidget::mousePressEvent(QMouseEvent *event)
         }
     }
     QWidget::mousePressEvent(event);
+}
+
+void MemoryWidget::contextMenuEvent(QContextMenuEvent *event)
+{
+    // Over a hex char
+    int x = static_cast<int>(event->pos().x());
+    int y = static_cast<int>(event->pos().y());
+    int row;
+    int col;
+    if (!FindInfo(x, y, row, col))
+        return;
+
+    if (m_columnMap[col].type == ColInfo::kSpace)
+        return;
+
+    // Align the memory location to 2 or 4 bytes, based on context
+    // (view address, or word/long mode)
+    uint32_t byteOffset = m_columnMap[col].byteOffset;
+    byteOffset &= ~1U;
+    if (m_mode == Mode::kModeLong)
+        byteOffset &= ~3U;
+
+    uint32_t addr = m_rows[row].m_address + byteOffset;
+    const Memory* mem = m_pTargetModel->GetMemory(m_memSlot);
+    if (!mem)
+        return;
+
+    // Read a longword
+    uint32_t longContents = 0;
+    for (uint i = 0; i < 4; ++i)
+    {
+        longContents <<= 8;
+        if (!mem->HasAddress(addr + i))
+            return;
+        longContents |= mem->ReadAddressByte(addr + i);
+    }
+    longContents &= 0xffffff;
+    m_showAddressActions.setAddress(longContents);
+
+    QMenu menu(this);
+    menu.addMenu(m_pShowAddressMenu);
+    m_pShowAddressMenu->setTitle(QString::asprintf("Address: $%x", longContents));
+    m_showAddressActions.addToMenu(m_pShowAddressMenu);
+
+    // Run it
+    menu.exec(event->globalPos());
 }
 
 void MemoryWidget::resizeEvent(QResizeEvent* event)

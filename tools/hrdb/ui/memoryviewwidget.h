@@ -3,6 +3,7 @@
 
 #include <QDockWidget>
 #include <QTableView>
+#include "showaddressactions.h"
 #include "../models/memory.h"
 
 class Session;
@@ -52,6 +53,7 @@ protected:
     virtual void paintEvent(QPaintEvent*) override;
     virtual void keyPressEvent(QKeyEvent*) override;
     virtual void mousePressEvent(QMouseEvent *event) override;
+    virtual void contextMenuEvent(QContextMenuEvent *event) override;
     virtual void resizeEvent(QResizeEvent *event) override;
     virtual bool event(QEvent *event) override;
 
@@ -139,6 +141,10 @@ private:
     int         m_charWidth;            // font width in pixels
     int         m_lineHeight;           // font height in pixels
     QFont       m_monoFont;
+
+    // Menu actions
+    QMenu*              m_pShowAddressMenu;
+    ShowAddressActions  m_showAddressActions;
 };
 
 class MemoryWindow : public QDockWidget
