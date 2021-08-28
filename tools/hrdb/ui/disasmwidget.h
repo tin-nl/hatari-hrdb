@@ -4,12 +4,12 @@
 #include <QDockWidget>
 #include <QTableView>
 #include <QMenu>
-#include "../models/disassembler.h"
 #include "../models/breakpoint.h"
+#include "../models/disassembler.h"
 #include "../models/memory.h"
+#include "../models/session.h"
 #include "showaddressactions.h"
 
-class Session;
 class TargetModel;
 class Dispatcher;
 class QCheckBox;
@@ -201,8 +201,7 @@ public:
     void saveSettings();
 
 public slots:
-    void requestAddress(int windowIndex, bool isMemory, uint32_t address);
-
+    void requestAddress(Session::WindowType type, int windowIndex, uint32_t address);
 
 protected:
 

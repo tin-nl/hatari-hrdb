@@ -5,6 +5,7 @@
 #include <QObject>
 
 // Forward declarations
+#include "../models/session.h"
 class QLabel;
 class QLineEdit;
 class QAbstractItemModel;
@@ -12,7 +13,6 @@ class QSpinBox;
 class QCheckBox;
 class QComboBox;
 
-class Session;
 class TargetModel;
 class Dispatcher;
 
@@ -87,6 +87,7 @@ private slots:
     void heightChangedSlot(int height);
     void paddingChangedSlot(int height);
     void tooltipStringChangedSlot();
+    void requestAddress(Session::WindowType type, int windowIndex, uint32_t address);
 protected:
     virtual void keyPressEvent(QKeyEvent *ev);
 

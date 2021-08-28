@@ -79,7 +79,7 @@ static QString MakeBracket(QString str)
 
 RegisterWidget::RegisterWidget(QWidget *parent, Session* pSession) :
     QWidget(parent),
-    m_showAddressActions(pSession->m_pTargetModel),
+    m_showAddressActions(pSession),
     m_pSession(pSession),
     m_pDispatcher(pSession->m_pDispatcher),
     m_pTargetModel(pSession->m_pTargetModel),
@@ -184,7 +184,7 @@ void RegisterWidget::contextMenuEvent(QContextMenuEvent *event)
 
     if (pAddressMenu)
     {
-        m_showAddressActions.addToMenu(pAddressMenu);
+        m_showAddressActions.addActionsToMenu(pAddressMenu);
         m_showAddressActions.setAddress(m_addressUnderMouse);
         menu.addMenu(pAddressMenu);
 
@@ -686,12 +686,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,   this, &MainWindow::connectChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,    this, &MainWindow::memoryChangedSlot);
-
-    // Wire up cross-window requests
-    for (int i = 0; i < kNumDisasmViews; ++i)
-        connect(m_pTargetModel, &TargetModel::addressRequested, m_pDisasmWidgets[i],     &DisasmWindow::requestAddress);
-    for (int i = 0; i < kNumMemoryViews; ++i)
-        connect(m_pTargetModel, &TargetModel::addressRequested, m_pMemoryViewWidgets[i], &MemoryWindow::requestAddress);
 
     // Wire up buttons to actions
     connect(m_pStartStopButton, &QAbstractButton::clicked, this, &MainWindow::startStopClicked);

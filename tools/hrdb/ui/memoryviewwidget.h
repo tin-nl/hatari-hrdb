@@ -5,8 +5,8 @@
 #include <QTableView>
 #include "showaddressactions.h"
 #include "../models/memory.h"
+#include "../models/session.h"
 
-class Session;
 class TargetModel;
 class Dispatcher;
 class QComboBox;
@@ -160,7 +160,7 @@ public:
     void saveSettings();
 
 public slots:
-    void requestAddress(int windowIndex, bool isMemory, uint32_t address);
+    void requestAddress(Session::WindowType type, int windowIndex, uint32_t address);
 
     void textEditChangedSlot();
     void lockChangedSlot();

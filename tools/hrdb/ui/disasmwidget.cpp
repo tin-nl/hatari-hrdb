@@ -34,7 +34,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     m_pSession(pSession),
     m_pTargetModel(pSession->m_pTargetModel),
     m_pDispatcher(pSession->m_pDispatcher),
-    m_showAddressActions(pSession->m_pTargetModel),
+    m_showAddressActions(pSession),
     m_bShowHex(true),
     m_rightClickRow(-1),
     m_cursorRow(0),
@@ -64,7 +64,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     for (int showMenu = 0; showMenu < 3; ++showMenu)
     {
         m_pShowMemMenus[showMenu] = new QMenu("", this);
-        m_showAddressActions.addToMenu(m_pShowMemMenus[showMenu]);
+        m_showAddressActions.addActionsToMenu(m_pShowMemMenus[showMenu]);
     }
 
     new QShortcut(QKeySequence(tr("Ctrl+H", "Run to Here")),        this, SLOT(runToCursor()));
@@ -89,6 +89,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     connect(m_pShowMemMenus[2],      &QMenu::aboutToShow, this, &DisasmWidget::showMemMenu2Shown);
 
     connect(m_pSession, &Session::settingsChanged, this, &DisasmWidget::settingsChangedSlot);
+
     setMouseTracking(true);
 
     this->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
@@ -891,18 +892,19 @@ DisasmWindow::DisasmWindow(QWidget *parent, Session* pSession, int windowIndex) 
     loadSettings();
 
     // Listen for start/stop, so we can update our memory request
-    connect(m_pDisasmWidget,      &DisasmWidget::addressChanged,       this, &DisasmWindow::UpdateTextBox);
+    connect(m_pDisasmWidget,&DisasmWidget::addressChanged,        this, &DisasmWindow::UpdateTextBox);
     connect(m_pLineEdit,    &QLineEdit::returnPressed,            this, &DisasmWindow::returnPressedSlot);
     connect(m_pLineEdit,    &QLineEdit::textEdited,               this, &DisasmWindow::textChangedSlot);
     connect(m_pFollowPC,    &QCheckBox::clicked,                  this, &DisasmWindow::followPCClickedSlot);
     connect(m_pShowHex,     &QCheckBox::clicked,                  this, &DisasmWindow::showHexClickedSlot);
+    connect(m_pSession,     &Session::addressRequested,           this, &DisasmWindow::requestAddress);
 
     this->resizeEvent(nullptr);
 }
 
-void DisasmWindow::requestAddress(int windowIndex, bool isMemory, uint32_t address)
+void DisasmWindow::requestAddress(Session::WindowType type, int windowIndex, uint32_t address)
 {
-    if (isMemory)
+    if (type != Session::WindowType::kDisasmWindow)
         return;
 
     if (windowIndex != m_windowIndex)

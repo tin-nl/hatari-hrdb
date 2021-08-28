@@ -322,6 +322,8 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
 
     connect(m_pImageWidget,  &NonAntiAliasImage::StringChanged,           this, &GraphicsInspectorWidget::tooltipStringChangedSlot);
 
+    connect(m_pSession,      &Session::addressRequested,                  this, &GraphicsInspectorWidget::requestAddress);
+
     loadSettings();
     UpdateUIElements();
     DisplayAddress();
@@ -688,6 +690,20 @@ void GraphicsInspectorWidget::tooltipStringChangedSlot()
     m_pInfoLabel->setText(m_pImageWidget->GetString());
 }
 
+void GraphicsInspectorWidget::requestAddress(Session::WindowType type, int windowIndex, uint32_t address)
+{
+    if (type != Session::WindowType::kGraphicsInspector)
+        return;
+
+    (void) windowIndex;
+
+    // Set the address and override video regs
+    m_address = address;
+    m_pLockAddressToVideoCheckBox->setChecked(false);
+    UpdateUIElements();
+    RequestMemory();
+}
+
 // Request enough memory based on m_rowCount and m_logicalAddr
 void GraphicsInspectorWidget::RequestMemory()
 {
@@ -825,6 +841,8 @@ void GraphicsInspectorWidget::UpdateUIElements()
     m_pModeComboBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
 
     m_pPaletteComboBox->setEnabled(!m_pLockPaletteToVideoCheckBox->isChecked());
+
+    m_pAddressLineEdit->setText(QString::asprintf("$%x", m_address));
 }
 
 GraphicsInspectorWidget::Mode GraphicsInspectorWidget::GetEffectiveMode() const

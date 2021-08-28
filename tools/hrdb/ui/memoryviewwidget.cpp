@@ -56,7 +56,7 @@ MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
     m_previousMemory(0, 0),
     m_cursorRow(0),
     m_cursorCol(0),
-    m_showAddressActions(pSession->m_pTargetModel)
+    m_showAddressActions(pSession)
 {
     m_memSlot = static_cast<MemorySlot>(MemorySlot::kMemoryView0 + m_windowIndex);
 
@@ -650,7 +650,7 @@ void MemoryWidget::contextMenuEvent(QContextMenuEvent *event)
     QMenu menu(this);
     menu.addMenu(m_pShowAddressMenu);
     m_pShowAddressMenu->setTitle(QString::asprintf("Address: $%x", longContents));
-    m_showAddressActions.addToMenu(m_pShowAddressMenu);
+    m_showAddressActions.addActionsToMenu(m_pShowAddressMenu);
 
     // Run it
     menu.exec(event->globalPos());
@@ -816,9 +816,10 @@ MemoryWindow::MemoryWindow(QWidget *parent, Session* pSession, int windowIndex) 
     loadSettings();
 
     // Listen for start/stop, so we can update our memory request
-    connect(m_pLineEdit, &QLineEdit::returnPressed,         this, &MemoryWindow::textEditChangedSlot);
-    connect(m_pLockCheckBox, &QCheckBox::stateChanged,      this, &MemoryWindow::lockChangedSlot);
-    connect(m_pComboBox, SIGNAL(currentIndexChanged(int)),  SLOT(modeComboBoxChanged(int)));
+    connect(m_pLineEdit,     &QLineEdit::returnPressed,        this, &MemoryWindow::textEditChangedSlot);
+    connect(m_pLockCheckBox, &QCheckBox::stateChanged,         this, &MemoryWindow::lockChangedSlot);
+    connect(m_pComboBox,     SIGNAL(currentIndexChanged(int)), SLOT(modeComboBoxChanged(int)));
+    connect(m_pSession,      &Session::addressRequested,       this, &MemoryWindow::requestAddress);
 }
 
 void MemoryWindow::keyFocus()
@@ -852,9 +853,9 @@ void MemoryWindow::saveSettings()
     settings.endGroup();
 }
 
-void MemoryWindow::requestAddress(int windowIndex, bool isMemory, uint32_t address)
+void MemoryWindow::requestAddress(Session::WindowType type, int windowIndex, uint32_t address)
 {
-    if (!isMemory)
+    if (type != Session::WindowType::kMemoryWindow)
         return;
 
     if (windowIndex != m_windowIndex)

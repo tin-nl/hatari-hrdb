@@ -1,22 +1,26 @@
 #include "showaddressactions.h"
 
-#include "../models/targetmodel.h"
+#include "../models/session.h"
 
-ShowAddressActions::ShowAddressActions(TargetModel* pTargetModel) :
-    m_rightClickActiveAddress(0),
-    m_pTargetModel(pTargetModel)
+ShowAddressActions::ShowAddressActions(Session* pSession) :
+    m_activeAddress(0),
+    m_pSession(pSession)
 {
     for (int i = 0; i < kNumDisasmViews; ++i)
-        m_pShowDisasmWindowActions[i] = new QAction(QString::asprintf("Show in Disassembly %d", i + 1), this);
+        m_pDisasmWindowActions[i] = new QAction(QString::asprintf("Show in Disassembly %d", i + 1), this);
 
     for (int i = 0; i < kNumMemoryViews; ++i)
-        m_pShowMemoryWindowActions[i] = new QAction(QString::asprintf("Show in Memory %d", i + 1), this);
+        m_pMemoryWindowActions[i] = new QAction(QString::asprintf("Show in Memory %d", i + 1), this);
+
+    m_pGraphicsInspectorAction = new QAction("Show in Graphics Inspector", this);
 
     for (int i = 0; i < kNumDisasmViews; ++i)
-        connect(m_pShowDisasmWindowActions[i], &QAction::triggered, this, [=] () { this->disasmViewTrigger(i); } );
+        connect(m_pDisasmWindowActions[i], &QAction::triggered, this, [=] () { this->disasmViewTrigger(i); } );
 
     for (int i = 0; i < kNumMemoryViews; ++i)
-        connect(m_pShowMemoryWindowActions[i], &QAction::triggered, this, [=] () { this->memoryViewTrigger(i); } );
+        connect(m_pMemoryWindowActions[i], &QAction::triggered, this, [=] () { this->memoryViewTrigger(i); } );
+
+    connect(m_pGraphicsInspectorAction, &QAction::triggered, this, [=] () { this->graphicsInspectorTrigger(); } );
 }
 
 ShowAddressActions::~ShowAddressActions()
@@ -24,27 +28,34 @@ ShowAddressActions::~ShowAddressActions()
 
 }
 
-void ShowAddressActions::addToMenu(QMenu* pMenu) const
+void ShowAddressActions::addActionsToMenu(QMenu* pMenu) const
 {
     for (int i = 0; i < kNumDisasmViews; ++i)
-        pMenu->addAction(m_pShowDisasmWindowActions[i]);
+        pMenu->addAction(m_pDisasmWindowActions[i]);
 
     for (int i = 0; i < kNumMemoryViews; ++i)
-        pMenu->addAction(m_pShowMemoryWindowActions[i]);
+        pMenu->addAction(m_pMemoryWindowActions[i]);
+
+    pMenu->addAction(m_pGraphicsInspectorAction);
 }
 
 void ShowAddressActions::setAddress(uint32_t address)
 {
-    m_rightClickActiveAddress = address;
+    m_activeAddress = address;
 }
 
 void ShowAddressActions::disasmViewTrigger(int windowIndex)
 {
-    emit m_pTargetModel->addressRequested(windowIndex, false, m_rightClickActiveAddress);
+    emit m_pSession->addressRequested(Session::kDisasmWindow, windowIndex, m_activeAddress);
 }
 
 void ShowAddressActions::memoryViewTrigger(int windowIndex)
 {
-    emit m_pTargetModel->addressRequested(windowIndex, true, m_rightClickActiveAddress);
+    emit m_pSession->addressRequested(Session::kMemoryWindow, windowIndex, m_activeAddress);
+}
+
+void ShowAddressActions::graphicsInspectorTrigger()
+{
+    emit m_pSession->addressRequested(Session::kGraphicsInspector, 0, m_activeAddress);
 }
 

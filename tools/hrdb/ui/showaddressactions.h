@@ -5,31 +5,37 @@
 #include "../models/memory.h"
 
 class QAction;
-class TargetModel;
+class Session;
 
-// Contains the QAction sets to do "Show in Disassembly 1", "Show in Memory 2" etc
+// Contains the QActions to do "Show in Disassembly 1", "Show in Memory 2" etc,
+// plus handling their callbacks/triggers
 class ShowAddressActions : public QObject
 {
     Q_OBJECT
 public:
-    ShowAddressActions(TargetModel* pTargetModel);
+    ShowAddressActions(Session* pSession);
     virtual ~ShowAddressActions();
-    void addToMenu(QMenu* pMenu) const;
 
+    void addActionsToMenu(QMenu* pMenu) const;
     void setAddress(uint32_t address);
 
-public slots:
+private slots:
     // Callbacks when "show in Memory X" etc is selected
     void disasmViewTrigger(int windowIndex);
     void memoryViewTrigger(int windowIndex);
-private:
+    void graphicsInspectorTrigger();
 
-    uint32_t     m_rightClickActiveAddress;    // What address will be set to the Window chosen
+private:
+    // What address will be set to the Window chosen
+    uint32_t     m_activeAddress;
 
     // Actions to add to the menus
-    QAction*     m_pShowDisasmWindowActions[kNumDisasmViews];
-    QAction*     m_pShowMemoryWindowActions[kNumMemoryViews];
-    TargetModel* m_pTargetModel;
+    QAction*     m_pDisasmWindowActions[kNumDisasmViews];
+    QAction*     m_pMemoryWindowActions[kNumMemoryViews];
+    QAction*     m_pGraphicsInspectorAction;
+
+    // Pointer for signal sending
+    Session*     m_pSession;
 };
 
 #endif // SHOWADDRESSACTIONS_H

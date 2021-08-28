@@ -114,10 +114,6 @@ signals:
     void symbolTableChangedSignal(uint64_t commandId);
     void exceptionMaskChanged();
 
-    // UI BODGE
-    // Qt seems to have no central message dispatch
-    void addressRequested(int windowId, bool isMemory, uint32_t address);
-
     // Something edited memory
     void otherMemoryChanged(uint32_t address, uint32_t size);
 

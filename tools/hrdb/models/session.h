@@ -18,6 +18,13 @@ class Session : public QObject
 {
     Q_OBJECT
 public:
+    // What kind of window we want to pop up via requestAddress
+    enum WindowType
+    {
+        kDisasmWindow,
+        kMemoryWindow,
+        kGraphicsInspector
+    };
 
     // Settings shared across the app and stored centrally.
     class Settings
@@ -57,6 +64,10 @@ public:
 
 signals:
     void settingsChanged();
+
+    // Shared signal to request a new address in another window.
+    // Qt seems to have no central message dispatch, so use signals/slots
+    void addressRequested(WindowType windowType, int windowId, uint32_t address);
 
 private slots:
 
