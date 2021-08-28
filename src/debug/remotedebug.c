@@ -68,6 +68,13 @@ static bool bRemoteBreakRequest = false;
 /* Processing is stopped and the remote debug loop is active */
 static bool bRemoteBreakIsActive = false;
 
+/* ID of a protocol for the transfers, so we can detect hatari<->mismatch in future */
+#define REMOTEDEBUG_PROTOCOL_ID	(0x1001)
+
+/* Char ID to denote terminator of a token. This is under the ASCII "normal"
+	character value range so that 32-255 can be used */
+#define SEPARATOR_VAL	0x1
+
 // -----------------------------------------------------------------------------
 // Structure managing connection state
 typedef struct RemoteDebugState
@@ -140,11 +147,18 @@ static void send_bool(RemoteDebugState* state, bool val)
 }
 
 // -----------------------------------------------------------------------------
+// Send the normal parameter separator (0x1)
+static void send_sep(RemoteDebugState* state)
+{
+	send_char(state, SEPARATOR_VAL);
+}
+
+// -----------------------------------------------------------------------------
 static void send_key_value(RemoteDebugState* state, const char* pStr, uint32_t val)
 {
-	send_str(state, " ");
+	send_sep(state);
 	send_str(state, pStr);
-	send_str(state, ":");
+	send_sep(state);
 	send_hex(state, val);
 }
 
@@ -178,24 +192,28 @@ static bool read_hex_char(char c, uint8_t* result)
 
 // -----------------------------------------------------------------------------
 // Send the out-of-band status to flag start/stop
+// Format: "!status <break active> <pc>"
 static int RemoteDebug_NotifyState(RemoteDebugState* state)
 {
-	char tmp[100];
-	sprintf(tmp, "!status %x %x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
-	send_str(state, tmp);
+	send_str(state, "!status");
+	send_sep(state);
+	send_hex(state, bRemoteBreakIsActive ? 0 : 1);
+	send_sep(state);
+	send_hex(state, M68000_GetPC());
 	send_term(state);
 	return 0;
 }
 
 // -----------------------------------------------------------------------------
+// Format: "!config <machinetype> <cpulevel>
 static int RemoteDebug_NotifyConfig(RemoteDebugState* state)
 {
 	const CNF_SYSTEM* system = &ConfigureParams.System;
-	char tmp[100];
-	sprintf(tmp, "!config %x %x", 
-		system->nMachineType, system->nCpuLevel);
-	
-	send_str(state, tmp);
+	send_str(state, "!config");
+	send_sep(state);
+	send_hex(state, system->nMachineType);
+	send_sep(state);
+	send_hex(state, system->nCpuLevel);
 	send_term(state);
 	return 0;
 }
@@ -226,11 +244,15 @@ static void RemoteDebug_CloseDebugOutput(RemoteDebugState* state)
 //    DEBUGGER COMMANDS
 // -----------------------------------------------------------------------------
 /* Return short status info in a useful format, mainly whether it's running */
+// Format: "OK <break active> <pc>"
 static int RemoteDebug_Status(int nArgc, char *psArgs[], RemoteDebugState* state)
 {
-	char tmp[100];
-	sprintf(tmp, "OK %x %x", bRemoteBreakIsActive ? 0 : 1, M68000_GetPC());
-	send_str(state, tmp);
+	send_str(state, "OK");
+	send_sep(state);
+	send_hex(state, bRemoteBreakIsActive ? 0 : 1);
+	send_sep(state);
+	send_hex(state, M68000_GetPC());
+	send_term(state);
 	return 0;
 }
 
@@ -248,7 +270,6 @@ static int RemoteDebug_Break(int nArgc, char *psArgs[], RemoteDebugState* state)
 	{
 		return 1;
 	}
-	
 	return 0;
 }
 
@@ -294,7 +315,8 @@ static int RemoteDebug_Regs(int nArgc, char *psArgs[], RemoteDebugState* state)
 		"D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7",
 		"A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7" };
 
-	send_str(state, "OK ");
+	send_str(state, "OK");
+	send_sep(state);
 
 	// Normal regs
 	for (regIdx = 0; regIdx < ARRAY_SIZE(regIds); ++regIdx)
@@ -330,7 +352,6 @@ static int RemoteDebug_Regs(int nArgc, char *psArgs[], RemoteDebugState* state)
 static int RemoteDebug_Mem(int nArgc, char *psArgs[], RemoteDebugState* state)
 {
 	int arg;
-	Uint8 value;
 	Uint32 memdump_addr = 0;
 	Uint32 memdump_count = 0;
 	int offset = 0;
@@ -356,37 +377,53 @@ static int RemoteDebug_Mem(int nArgc, char *psArgs[], RemoteDebugState* state)
 		return 1;
 	}
 
-	send_str(state, "OK ");
+	send_str(state, "OK");
+	send_sep(state);
 	send_hex(state, memdump_addr);
-	send_str(state, " ");
+	send_sep(state);
 	send_hex(state, memdump_count);
-	send_str(state, " ");
+	send_sep(state);
 
 	// Need to flush here before we switch to our existing buffer system
 	flush_data(state);
 
 	// Send data in blocks of "buffer_size" memory bytes
 	// (We don't need a terminator when sending)
-	const uint32_t buffer_size = RDB_MEM_BLOCK_SIZE*2;
+	const uint32_t buffer_size = RDB_MEM_BLOCK_SIZE*4;
 	char* buffer = malloc(buffer_size);
-	const char* hex = "0123456789ABCDEF";
-	uint32_t pos = 0;
-	while (pos < memdump_count)
-	{
-		uint32_t block_size = memdump_count - pos;
-		if (block_size > RDB_MEM_BLOCK_SIZE)
-			block_size = RDB_MEM_BLOCK_SIZE;
 
-		for (uint32_t i = 0; i < block_size; ++i)
+	Uint32 read_pos = 0;
+	Uint32 write_pos = 0;
+	Uint32 accum;
+	while (read_pos < memdump_count)
+	{
+		// Accumulate 3 bytes into 24 bits of a u32
+		accum = 0;
+		for (int i = 0; i < 3; ++i)
 		{
-			value = STMemory_ReadByte(memdump_addr);
-			buffer[i * 2]     = hex[(value >> 4) & 15];
-			buffer[i * 2 + 1] = hex[ value & 15];
-			++pos;
-			++memdump_addr;
+			accum <<= 8;
+			if (read_pos < memdump_count)
+				accum |= STMemory_ReadByte(memdump_addr + read_pos);
+			++read_pos;
 		}
-		send(state->AcceptedFD, buffer, block_size * 2, 0);
+
+		// Now write 4 chars out as ASCII uuencode
+		buffer[write_pos++] = 32 + ((accum >> 18) & 0x3f);
+		buffer[write_pos++] = 32 + ((accum >> 12) & 0x3f);
+		buffer[write_pos++] = 32 + ((accum >>  6) & 0x3f);
+		buffer[write_pos++] = 32 + ((accum      ) & 0x3f);
+
+		// Flush?
+		if (write_pos == RDB_MEM_BLOCK_SIZE*4)
+		{
+			send(state->AcceptedFD, buffer, write_pos, 0);
+			write_pos = 0;
+		}
 	}
+
+	// Flush remainder
+	if (write_pos != 0)
+		send(state->AcceptedFD, buffer, write_pos, 0);
 
 	free(buffer);
 	return 0;
@@ -448,10 +485,11 @@ static int RemoteDebug_Memset(int nArgc, char *psArgs[], RemoteDebugState* state
 		STMemory_WriteByte(memdump_addr, (valHi << 4) | valLo);
 		++memdump_addr;
 	}
-	send_str(state, "OK ");
+	send_str(state, "OK");
+	send_sep(state);
 	// Report changed range so tools can decide to update
 	send_hex(state, memdump_end - memdump_count);
-	send_str(state, " ");
+	send_sep(state);
 	send_hex(state, memdump_count);
 	return 0;
 }
@@ -480,9 +518,10 @@ static int RemoteDebug_bplist(int nArgc, char *psArgs[], RemoteDebugState* state
 	int i, count;
 
 	count = BreakCond_CpuBreakPointCount();
-	send_str(state, "OK ");
+	send_str(state, "OK");
+	send_sep(state);
 	send_hex(state, count);
-	send_str(state, " ");
+	send_sep(state);
 
 	/* NOTE breakpoint query indices start at 1 */
 	for (i = 1; i <= count; ++i)
@@ -493,12 +532,12 @@ static int RemoteDebug_bplist(int nArgc, char *psArgs[], RemoteDebugState* state
 		send_str(state, query.expression);
 		/* Note this has the ` character to flag the expression end,
 		since the expression can contain spaces */
-		send_str(state, "`");
-		send_hex(state, query.ccount); send_str(state, " ");
-		send_hex(state, query.hits); send_str(state, " ");
-		send_bool(state, query.once); send_str(state, " ");
-		send_bool(state, query.quiet); send_str(state, " ");
-		send_bool(state, query.trace); send_str(state, " ");
+		send_sep(state);
+		send_hex(state, query.ccount); send_sep(state);
+		send_hex(state, query.hits); send_sep(state);
+		send_bool(state, query.once); send_sep(state);
+		send_bool(state, query.quiet); send_sep(state);
+		send_bool(state, query.trace); send_sep(state);
 	}
 	return 0;
 }
@@ -531,9 +570,10 @@ static int RemoteDebug_symlist(int nArgc, char *psArgs[], RemoteDebugState* stat
 {
 	int i, count;
 	count = Symbols_CpuSymbolCount();
-	send_str(state, "OK ");
+	send_str(state, "OK");
+	send_sep(state);
 	send_hex(state, count);
-	send_str(state, " ");
+	send_sep(state);
 	
 	for (i = 0; i < count; ++i)
 	{
@@ -541,11 +581,11 @@ static int RemoteDebug_symlist(int nArgc, char *psArgs[], RemoteDebugState* stat
 		if (!Symbols_GetCpuSymbol(i, &query))
 			break;
 		send_str(state, query.name);
-		send_str(state, "`");
+		send_sep(state);
 		send_hex(state, query.address);
-		send_str(state, " ");
+		send_sep(state);
 		send_char(state, query.type);
-		send_str(state, " ");
+		send_sep(state);
 	}
 	return 0;
 }
@@ -571,7 +611,8 @@ static int RemoteDebug_exmask(int nArgc, char *psArgs[], RemoteDebugState* state
 
 	// Always respond with the mask value, so that setting comes back
 	// to the remote debugger
-	send_str(state, "OK ");
+	send_str(state, "OK");
+	send_sep(state);
 	send_hex(state, ExceptionDebugMask);
 	return 0;
 }
@@ -812,6 +853,8 @@ static int RemoteDebugState_TryAccept(RemoteDebugState* state, bool blocking)
 		// Send connected handshake, so client can
 		// drop any subsequent commands
 		send_str(state, "!connected");
+		send_sep(state);
+		send_hex(state, REMOTEDEBUG_PROTOCOL_ID);
 		send_term(state);
 		flush_data(state);
 

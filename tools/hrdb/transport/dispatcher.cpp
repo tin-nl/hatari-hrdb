@@ -11,6 +11,10 @@
 //#define DISPATCHER_DEBUG
 
 //-----------------------------------------------------------------------------
+// Character value for the separator in responses/notifications from the target
+static const char SEP_CHAR = 1;
+
+//-----------------------------------------------------------------------------
 int RegNameToEnum(const char* name)
 {
     const char** pCurrName = Registers::s_names;
@@ -258,9 +262,9 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     // Our handling depends on the original command type
     // e.g. "break"
     StringSplitter splitCmd(cmd.m_cmd);
-    std::string type = splitCmd.Split(' ');
+    std::string type = splitCmd.Split(' '); // commands use space for separators
     StringSplitter splitResp(cmd.m_response);
-    std::string cmd_status = splitResp.Split(' ');
+    std::string cmd_status = splitResp.Split(SEP_CHAR);
     if (cmd_status != std::string("OK"))
     {
         std::cout << "Repsonse dropped: " << cmd.m_response << std::endl;
@@ -273,10 +277,10 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         Registers regs;
         while (true)
         {
-            std::string reg = splitResp.Split(':');
+            std::string reg = splitResp.Split(SEP_CHAR);
             if (reg.size() == 0)
                 break;
-            std::string valueStr = splitResp.Split(' ');
+            std::string valueStr = splitResp.Split(SEP_CHAR);
             uint32_t value;
             if (!StringParsers::ParseHexString(valueStr.c_str(), value))
                 return;
@@ -292,8 +296,8 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     }
     else if (type == "mem")
     {
-        std::string addrStr = splitResp.Split(' ');
-        std::string sizeStr = splitResp.Split(' ');
+        std::string addrStr = splitResp.Split(SEP_CHAR);
+        std::string sizeStr = splitResp.Split(SEP_CHAR);
         uint32_t addr;
         if (!StringParsers::ParseHexString(addrStr.c_str(), addr))
             return;
@@ -304,19 +308,31 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         // Create a new memory block to pass to the data model
         Memory* pMem = new Memory(addr, size);
 
-        // Now parse the hex data
-        uint32_t readPos = splitResp.GetPos();
-        for (uint32_t off = 0; off < size; ++off)
-        {
-            uint8_t nybbleHigh;
-            uint8_t nybbleLow;
-            if (!StringParsers::ParseHexChar(cmd.m_response[readPos++], nybbleHigh))
-                break;
-            if (!StringParsers::ParseHexChar(cmd.m_response[readPos++], nybbleLow))
-                break;
+        // Now parse the uuencoded data
+        // Each "group" encodes 3 bytes
+        uint32_t numGroups = (size + 2) / 3;        // round up to next block
 
-            uint8_t byte = (nybbleHigh << 4) | nybbleLow;
-            pMem->Set(off, byte);
+        uint32_t writePos = 0;
+        uint32_t readPos = splitResp.GetPos();
+        for (uint32_t group = 0; group < numGroups; ++group)
+        {
+            uint32_t accum = 0;
+            for (int i = 0; i < 4; ++i)
+            {
+                accum <<= 6;
+                uint32_t value = cmd.m_response[readPos++];
+                assert(value >= 32 && value < 32+64);
+                accum |= (value - 32u);
+            }
+
+            // Now output 3 chars
+            for (int i = 0; i < 3; ++i)
+            {
+                if (writePos == size)
+                    break;
+                pMem->Set(writePos++, (accum >> 16) & 0xff);
+                accum <<= 8;
+            }
         }
 
         m_pTargetModel->SetMemory(cmd.m_memorySlot, pMem, cmd.m_uid);
@@ -324,7 +340,7 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     else if (type == "bplist")
     {
         // Breakpoints
-        std::string countStr = splitResp.Split(' ');
+        std::string countStr = splitResp.Split(SEP_CHAR);
         uint32_t count;
         if (!StringParsers::ParseHexString(countStr.c_str(), count))
             return;
@@ -334,12 +350,12 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         {
             Breakpoint bp;
             bp.m_id = i + 1;        // IDs in Hatari start at 1 :(
-            bp.SetExpression(splitResp.Split('`'));
-            std::string ccountStr = splitResp.Split(' ');
-            std::string hitsStr = splitResp.Split(' ');
-            std::string onceStr = splitResp.Split(' ');
-            std::string quietStr = splitResp.Split(' ');
-            std::string traceStr = splitResp.Split(' ');
+            bp.SetExpression(splitResp.Split(SEP_CHAR));
+            std::string ccountStr = splitResp.Split(SEP_CHAR);
+            std::string hitsStr = splitResp.Split(SEP_CHAR);
+            std::string onceStr = splitResp.Split(SEP_CHAR);
+            std::string quietStr = splitResp.Split(SEP_CHAR);
+            std::string traceStr = splitResp.Split(SEP_CHAR);
             if (!StringParsers::ParseHexString(ccountStr.c_str(), bp.m_conditionCount))
                 return;
             if (!StringParsers::ParseHexString(hitsStr.c_str(), bp.m_hitCount))
@@ -358,7 +374,7 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     else if (type == "symlist")
     {
         // Symbols
-        std::string countStr = splitResp.Split(' ');
+        std::string countStr = splitResp.Split(SEP_CHAR);
         uint32_t count;
         if (!StringParsers::ParseHexString(countStr.c_str(), count))
             return;
@@ -366,12 +382,12 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         SymbolSubTable syms;
         for (uint32_t i = 0; i < count; ++i)
         {
-            std::string name = splitResp.Split('`');
-            std::string addrStr = splitResp.Split(' ');
+            std::string name = splitResp.Split(SEP_CHAR);
+            std::string addrStr = splitResp.Split(SEP_CHAR);
             uint32_t address;
             if (!StringParsers::ParseHexString(addrStr.c_str(), address))
                 return;
-            std::string type = splitResp.Split(' ');
+            std::string type = splitResp.Split(SEP_CHAR);
             uint32_t size = 0;
             syms.AddSymbol(name, address, size, type);
         }
@@ -379,7 +395,7 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     }
     else if (type == "exmask")
     {
-        std::string maskStr = splitResp.Split(' ');
+        std::string maskStr = splitResp.Split(SEP_CHAR);
         uint32_t mask;
         if (!StringParsers::ParseHexString(maskStr.c_str(), mask))
             return;
@@ -391,8 +407,8 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     else if (type == "memset")
     {
         // check the affected range
-        std::string addrStr = splitResp.Split(' ');
-        std::string sizeStr = splitResp.Split(' ');
+        std::string addrStr = splitResp.Split(SEP_CHAR);
+        std::string sizeStr = splitResp.Split(SEP_CHAR);
         uint32_t addr;
         if (!StringParsers::ParseHexString(addrStr.c_str(), addr))
             return;
@@ -420,11 +436,11 @@ void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
 #endif
     StringSplitter s(cmd.m_payload);
 
-    std::string type = s.Split(' ');
+    std::string type = s.Split(SEP_CHAR);
     if (type == "!status")
     {
-        std::string runningStr = s.Split(' ');
-        std::string pcStr = s.Split(' ');
+        std::string runningStr = s.Split(SEP_CHAR);
+        std::string pcStr = s.Split(SEP_CHAR);
         uint32_t running;
         uint32_t pc;
         if (!StringParsers::ParseHexString(runningStr.c_str(), running))
@@ -438,8 +454,8 @@ void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
     }
     if (type == "!config")
     {
-        std::string machineTypeStr = s.Split(' ');
-        std::string cpuLevelStr = s.Split(' ');
+        std::string machineTypeStr = s.Split(SEP_CHAR);
+        std::string cpuLevelStr = s.Split(SEP_CHAR);
         uint32_t machineType;
         uint32_t cpuLevel;
         if (!StringParsers::ParseHexString(machineTypeStr.c_str(), machineType))
