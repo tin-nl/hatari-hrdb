@@ -851,12 +851,12 @@ DisasmWindow::DisasmWindow(QWidget *parent, Session* pSession, int windowIndex) 
     m_pDisasmWidget = new DisasmWidget(this, pSession, windowIndex);
     m_pDisasmWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     m_pLineEdit = new QLineEdit(this);
-    m_pShowHex = new QCheckBox("Show hex", this);
-    m_pShowHex->setTristate(false);
-    m_pShowHex->setChecked(m_pDisasmWidget->GetShowHex());
     m_pFollowPC = new QCheckBox("Follow PC", this);
     m_pFollowPC->setTristate(false);
     m_pFollowPC->setChecked(m_pDisasmWidget->GetFollowPC());
+    m_pShowHex = new QCheckBox("Show hex", this);
+    m_pShowHex->setTristate(false);
+    m_pShowHex->setChecked(m_pDisasmWidget->GetShowHex());
 
     const QFont monoFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     //m_pTableView->setFont(monoFont);
@@ -871,8 +871,8 @@ DisasmWindow::DisasmWindow(QWidget *parent, Session* pSession, int windowIndex) 
 
     SetMargins(pTopLayout);
     pTopLayout->addWidget(m_pLineEdit);
-    pTopLayout->addWidget(m_pShowHex);
     pTopLayout->addWidget(m_pFollowPC);
+    pTopLayout->addWidget(m_pShowHex);
 
     SetMargins(pMainLayout);
     pMainLayout->addWidget(pTopRegion);
