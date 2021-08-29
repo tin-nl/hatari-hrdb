@@ -489,8 +489,6 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
 
     const QBrush& br = pal.background().color();
     painter.fillRect(this->rect(), br);
-    painter.setPen(QPen(pal.dark(), hasFocus() ? 6 : 2));
-    painter.drawRect(this->rect());
 
     if (m_rows.size() == 0)
         return;
@@ -505,12 +503,12 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     QColor backCol = pal.background().color();
     QColor cols[7] =
     {
-        QColor(backCol.red() ^ 32, backCol.green() ^  0, backCol.blue() ^ 0),
         QColor(backCol.red() ^  0, backCol.green() ^ 32, backCol.blue() ^ 0),
-        QColor(backCol.red() ^ 32, backCol.green() ^ 32, backCol.blue() ^ 0),
-        QColor(backCol.red() ^  0, backCol.green() ^  0, backCol.blue() ^ 32),
-        QColor(backCol.red() ^ 32, backCol.green() ^  0, backCol.blue() ^ 32),
+        QColor(backCol.red() ^ 32, backCol.green() ^  0, backCol.blue() ^ 0),
         QColor(backCol.red() ^  0, backCol.green() ^ 32, backCol.blue() ^ 32),
+        QColor(backCol.red() ^ 32, backCol.green() ^  0, backCol.blue() ^ 32),
+        QColor(backCol.red() ^  0, backCol.green() ^  0, backCol.blue() ^ 32),
+        QColor(backCol.red() ^ 32, backCol.green() ^ 32, backCol.blue() ^ 0),
         QColor(backCol.red() ^ 32, backCol.green() ^ 32, backCol.blue() ^ 32),
     };
 
@@ -559,6 +557,11 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
         painter.setPen(pal.highlightedText().color());
         painter.drawText(x_curs, y_ascent + y_curs, st);
     }
+
+    // Draw border last
+    painter.setBrush(Qt::NoBrush);
+    painter.setPen(QPen(pal.dark(), hasFocus() ? 6 : 2));
+    painter.drawRect(this->rect());
 }
 
 void MemoryWidget::keyPressEvent(QKeyEvent* event)
