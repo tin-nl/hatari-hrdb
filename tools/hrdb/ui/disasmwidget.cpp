@@ -45,6 +45,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
 
     SetRowCount(8);
     setMinimumSize(0, 10 * m_lineHeight);
+    setAutoFillBackground(true);
 
     m_memSlot = static_cast<MemorySlot>(windowIndex + MemorySlot::kDisasm0);
 
@@ -369,90 +370,93 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
 
     QPainter painter(this);
     const QPalette& pal = this->palette();
-    painter.setPen(QPen(pal.dark(), hasFocus() ? 6 : 2));
-    painter.drawRect(this->rect());
-
-    painter.setFont(m_monoFont);
-    QFontMetrics info(painter.fontMetrics());
 
     // Anything to show?
-    if (m_disasm.lines.size() == 0)
-        return;
-
-    const int char_width = info.horizontalAdvance("0");
-    const int y_ascent = info.ascent();
-
-    // Highlight the mouse
-    if (m_mouseRow != -1)
+    if (m_disasm.lines.size())
     {
-        painter.setPen(Qt::PenStyle::DashLine);
-        painter.setBrush(Qt::BrushStyle::NoBrush);
-        painter.drawRect(0, GetPixelFromRow(m_mouseRow), rect().width(), m_lineHeight);
-    }
+        painter.setFont(m_monoFont);
+        QFontMetrics info(painter.fontMetrics());
 
-    // Highlight the cursor row
-    if (m_cursorRow != -1)
-    {
-        painter.setPen(Qt::PenStyle::NoPen);
-        painter.setBrush(pal.highlight());
-        painter.drawRect(0, GetPixelFromRow(m_cursorRow), rect().width(), m_lineHeight);
-    }
+        const int char_width = info.horizontalAdvance("0");
+        const int y_ascent = info.ascent();
 
-    for (int col = 0; col < kNumColumns; ++col)
-    {
-        int x = m_columnLeft[col] * char_width;
-        int x2 = m_columnLeft[col + 1] * char_width;
-
-        // Clip the column to prevent overdraw
-        painter.setClipRect(x, 0, x2 - x, height());
-        for (int row = 0; row < m_rowTexts.size(); ++row)
+        // Highlight the mouse
+        if (m_mouseRow != -1)
         {
-            const RowText& t = m_rowTexts[row];
-            if (row == m_cursorRow)
-                painter.setPen(pal.highlightedText().color());
-            else if (t.isPc)
-                painter.setPen(Qt::darkGreen);
-            else
-                painter.setPen(pal.text().color());
+            painter.setPen(Qt::PenStyle::DashLine);
+            painter.setBrush(Qt::BrushStyle::NoBrush);
+            painter.drawRect(0, GetPixelFromRow(m_mouseRow), rect().width(), m_lineHeight);
+        }
 
-            int row_top_y = GetPixelFromRow(row);
-            int text_y = y_ascent + row_top_y;
+        // Highlight the cursor row
+        if (m_cursorRow != -1)
+        {
+            painter.setPen(Qt::PenStyle::NoPen);
+            painter.setBrush(pal.highlight());
+            painter.drawRect(0, GetPixelFromRow(m_cursorRow), rect().width(), m_lineHeight);
+        }
 
-            switch (col)
+        for (int col = 0; col < kNumColumns; ++col)
+        {
+            int x = m_columnLeft[col] * char_width;
+            int x2 = m_columnLeft[col + 1] * char_width;
+
+            // Clip the column to prevent overdraw
+            painter.setClipRect(x, 0, x2 - x, height());
+            for (int row = 0; row < m_rowTexts.size(); ++row)
             {
-            case kSymbol:
-                painter.drawText(x, text_y, t.symbol);
-                break;
-            case kAddress:
-                painter.drawText(x, text_y, t.address);
-                break;
-            case kPC:
-                if (t.isPc)
-                    painter.drawText(x, text_y, ">");
-                break;
-            case kBreakpoint:
-                if (t.isBreakpoint)
+                const RowText& t = m_rowTexts[row];
+                if (row == m_cursorRow)
+                    painter.setPen(pal.highlightedText().color());
+                else if (t.isPc)
+                    painter.setPen(Qt::darkGreen);
+                else
+                    painter.setPen(pal.text().color());
+
+                int row_top_y = GetPixelFromRow(row);
+                int text_y = y_ascent + row_top_y;
+
+                switch (col)
                 {
-                    // Y is halfway between text bottom and row top
-                    int circle_y = (text_y + row_top_y) / 2;
-                    int circle_rad = (text_y - row_top_y) / 2;
-                    painter.setBrush(Qt::red);
-                    painter.drawEllipse(x, circle_y, circle_rad, circle_rad);
+                case kSymbol:
+                    painter.drawText(x, text_y, t.symbol);
+                    break;
+                case kAddress:
+                    painter.drawText(x, text_y, t.address);
+                    break;
+                case kPC:
+                    if (t.isPc)
+                        painter.drawText(x, text_y, ">");
+                    break;
+                case kBreakpoint:
+                    if (t.isBreakpoint)
+                    {
+                        // Y is halfway between text bottom and row top
+                        int circle_y = (text_y + row_top_y) / 2;
+                        int circle_rad = (text_y - row_top_y) / 2;
+                        painter.setBrush(Qt::red);
+                        painter.drawEllipse(x, circle_y, circle_rad, circle_rad);
+                    }
+                    break;
+                case kHex:
+                    if (m_bShowHex)
+                        painter.drawText(x, text_y, t.hex);
+                    break;
+                case kDisasm:
+                    painter.drawText(x, text_y, t.disasm);
+                    break;
+                case kComments:
+                    painter.drawText(x, text_y, t.comments);
+                    break;
                 }
-                break;
-            case kHex:
-                if (m_bShowHex)
-                    painter.drawText(x, text_y, t.hex);
-                break;
-            case kDisasm:
-                painter.drawText(x, text_y, t.disasm);
-                break;
-            case kComments:
-                painter.drawText(x, text_y, t.comments);
-                break;
-            }
-        } // row
-    }   // col
+            } // row
+        }   // col
+    }
+    // Border
+    painter.setClipRect(this->rect());
+    painter.setBrush(Qt::NoBrush);
+    painter.setPen(QPen(pal.dark(), hasFocus() ? 6 : 2));
+    painter.drawRect(this->rect());
 }
 
 void DisasmWidget::keyPressEvent(QKeyEvent* event)

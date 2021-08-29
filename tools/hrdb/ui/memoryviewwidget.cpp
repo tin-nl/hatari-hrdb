@@ -64,6 +64,7 @@ MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
     SetMode(Mode::kModeByte);
     setFocus();
     setFocusPolicy(Qt::StrongFocus);
+    setAutoFillBackground(true);
 
     // Right-click menu
     m_pShowAddressMenu = new QMenu("", this);
@@ -483,79 +484,77 @@ void MemoryWidget::paintEvent(QPaintEvent* ev)
     RecalcRowCount();
 
     QPainter painter(this);
-    painter.setFont(m_monoFont);
-    QFontMetrics info(painter.fontMetrics());
     const QPalette& pal = this->palette();
 
-    const QBrush& br = pal.background().color();
-    painter.fillRect(this->rect(), br);
-
-    if (m_rows.size() == 0)
-        return;
-
-    // Compensate for text descenders
-    int y_ascent = info.ascent();
-    int char_width = info.horizontalAdvance("0");
-
-    // Set up the rendering info
-    m_charWidth = char_width;
-
-    QColor backCol = pal.background().color();
-    QColor cols[7] =
+    if (m_rows.size() != 0)
     {
-        QColor(backCol.red() ^  0, backCol.green() ^ 32, backCol.blue() ^ 0),
-        QColor(backCol.red() ^ 32, backCol.green() ^  0, backCol.blue() ^ 0),
-        QColor(backCol.red() ^  0, backCol.green() ^ 32, backCol.blue() ^ 32),
-        QColor(backCol.red() ^ 32, backCol.green() ^  0, backCol.blue() ^ 32),
-        QColor(backCol.red() ^  0, backCol.green() ^  0, backCol.blue() ^ 32),
-        QColor(backCol.red() ^ 32, backCol.green() ^ 32, backCol.blue() ^ 0),
-        QColor(backCol.red() ^ 32, backCol.green() ^ 32, backCol.blue() ^ 32),
-    };
+        painter.setFont(m_monoFont);
+        QFontMetrics info(painter.fontMetrics());
 
-    painter.setPen(pal.text().color());
-    for (int row = 0; row < m_rows.size(); ++row)
-    {
-        const Row& r = m_rows[row];
+        // Compensate for text descenders
+        int y_ascent = info.ascent();
+        int char_width = info.horizontalAdvance("0");
 
-        // Draw address string
-        painter.setPen(pal.text().color());
-        int topleft_y = GetPixelFromRow(row);
-        int text_y = topleft_y + y_ascent;
-        QString addr = QString::asprintf("%08x", r.m_address);
-        painter.drawText(GetAddrX(), text_y, addr);
+        // Set up the rendering info
+        m_charWidth = char_width;
 
-        // Now hex
-        // We write out the values per-nybble
-        for (int col = 0; col < m_columnMap.size(); ++col)
+        QColor backCol = pal.background().color();
+        QColor cols[7] =
         {
-            int x = GetPixelFromCol(col);
-            // Mark symbol
-            if (r.m_symbolId[col] != -1)
+            QColor(backCol.red() ^  0, backCol.green() ^ 32, backCol.blue() ^ 0),
+            QColor(backCol.red() ^ 32, backCol.green() ^  0, backCol.blue() ^ 0),
+            QColor(backCol.red() ^  0, backCol.green() ^ 32, backCol.blue() ^ 32),
+            QColor(backCol.red() ^ 32, backCol.green() ^  0, backCol.blue() ^ 32),
+            QColor(backCol.red() ^  0, backCol.green() ^  0, backCol.blue() ^ 32),
+            QColor(backCol.red() ^ 32, backCol.green() ^ 32, backCol.blue() ^ 0),
+            QColor(backCol.red() ^ 32, backCol.green() ^ 32, backCol.blue() ^ 32),
+        };
+
+        painter.setPen(pal.text().color());
+        for (int row = 0; row < m_rows.size(); ++row)
+        {
+            const Row& r = m_rows[row];
+
+            // Draw address string
+            painter.setPen(pal.text().color());
+            int topleft_y = GetPixelFromRow(row);
+            int text_y = topleft_y + y_ascent;
+            QString addr = QString::asprintf("%08x", r.m_address);
+            painter.drawText(GetAddrX(), text_y, addr);
+
+            // Now hex
+            // We write out the values per-nybble
+            for (int col = 0; col < m_columnMap.size(); ++col)
             {
-                painter.setBrush(cols[r.m_symbolId[col] % 7]);
-                painter.setPen(Qt::NoPen);
-                painter.drawRect(x, topleft_y, m_charWidth, m_lineHeight);
+                int x = GetPixelFromCol(col);
+                // Mark symbol
+                if (r.m_symbolId[col] != -1)
+                {
+                    painter.setBrush(cols[r.m_symbolId[col] % 7]);
+                    painter.setPen(Qt::NoPen);
+                    painter.drawRect(x, topleft_y, m_charWidth, m_lineHeight);
+                }
+
+                bool changed = r.m_byteChanged[col];
+                QChar st = r.m_text.at(col);
+                painter.setPen(changed ? Qt::red : pal.text().color());
+                painter.drawText(x, text_y, st);
             }
-
-            bool changed = r.m_byteChanged[col];
-            QChar st = r.m_text.at(col);
-            painter.setPen(changed ? Qt::red : pal.text().color());
-            painter.drawText(x, text_y, st);
         }
-    }
 
-    // Draw highlight/cursor area in the hex
-    if (m_cursorRow >= 0 && m_cursorRow < m_rows.size())
-    {
-        int y_curs = GetPixelFromRow(m_cursorRow);
-        int x_curs = GetPixelFromCol(m_cursorCol);
+        // Draw highlight/cursor area in the hex
+        if (m_cursorRow >= 0 && m_cursorRow < m_rows.size())
+        {
+            int y_curs = GetPixelFromRow(m_cursorRow);
+            int x_curs = GetPixelFromCol(m_cursorCol);
 
-        painter.setBrush(pal.highlight());
-        painter.drawRect(x_curs, y_curs, char_width, m_lineHeight);
+            painter.setBrush(pal.highlight());
+            painter.drawRect(x_curs, y_curs, char_width, m_lineHeight);
 
-        QChar st = m_rows[m_cursorRow].m_text.at(m_cursorCol);
-        painter.setPen(pal.highlightedText().color());
-        painter.drawText(x_curs, y_ascent + y_curs, st);
+            QChar st = m_rows[m_cursorRow].m_text.at(m_cursorCol);
+            painter.setPen(pal.highlightedText().color());
+            painter.drawText(x_curs, y_ascent + y_curs, st);
+        }
     }
 
     // Draw border last
