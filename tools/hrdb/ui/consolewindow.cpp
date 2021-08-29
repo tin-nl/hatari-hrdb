@@ -142,6 +142,8 @@ void ConsoleWindow::textEditChangedSlot()
         QString string = "console ";
         string += m_pLineEdit->text();
         m_pDispatcher->SendCommandPacket(string.toStdString().c_str());
+
+        m_pTextArea->append(QString(">>") + m_pLineEdit->text());
     }
     m_pLineEdit->clear();
 }
