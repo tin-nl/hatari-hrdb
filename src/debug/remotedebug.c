@@ -87,10 +87,15 @@ typedef struct RemoteDebugState
 	char cmd_buf[RDB_CMD_MAX_SIZE+1];	/* accumulated command string */
 	int cmd_pos;						/* offset in cmd_buf for new data */
 
-	FILE* original_stdout;				/* original file pointers for redirecting output */
+	/* Redirection info when running Console window commands */
+	FILE* original_debugOutput;				/* This is easy to save and repoint */
+#ifdef __WINDOWS__
+	char consoleOutputFilename[PATH_MAX+1];	/* output filename for redirected output */
+#else
+	FILE* original_stdout;					/* original file pointers for redirecting output */
 	FILE* original_stderr;
-	FILE* original_debugOutput;
-	FILE* debugOutput;					/* our file handle to output */
+	FILE* consoleOutputFile;				/* our file handle to output */
+#endif
 
 	/* Output (send) buffer data */
 	char sendBuffer[RDB_SEND_BUFFER_SIZE];	/* buffer for replies */
@@ -219,25 +224,56 @@ static int RemoteDebug_NotifyConfig(RemoteDebugState* state)
 }
 
 // -----------------------------------------------------------------------------
+/* Repoint stderr and debugOutput to the file specified in the state. */
+static void RemoteDebug_OpenDebugOutput(RemoteDebugState* state)
+{
+	// NOTE: debugOutput is for "m" and "d", "r"
+	// stderr is for breakpoints, "info"
+	state->original_debugOutput = debugOutput;
+
+#ifdef __WINDOWS__
+	// Handle output not being set
+	if (state->consoleOutputFilename[0] == 0)
+		return;
+
+	// Repoint
+	freopen(state->consoleOutputFilename, "w", stdout);
+	freopen(state->consoleOutputFilename, "w", stderr);
+	debugOutput = stderr;
+#else
+	// Save old values for restore
+	state->original_stderr = stderr;
+	state->original_stdout = stdout;
+
+	// Handle output not being set
+	if (!state->consoleOutputFile)
+		return;
+
+	// Repoint
+	debugOutput = state->consoleOutputFile;
+	stderr = state->consoleOutputFile;
+	stdout = state->consoleOutputFile;
+#endif
+}
+
+// -----------------------------------------------------------------------------
 /* Restore any debugOutput settings to the original saved state. Close
    any file we opened. */
 static void RemoteDebug_CloseDebugOutput(RemoteDebugState* state)
 {
 	/* Restore old stdio, if set */
-#ifndef __WINDOWS__
-	if (state->original_stderr != NULL)
-		stderr = state->original_stderr;
-	if (state->original_stdout != NULL)
-		stdout = state->original_stdout;
-	if (state->original_debugOutput != NULL)
-		stdout = state->original_debugOutput;
-	if (state->debugOutput)
-		fclose(state->debugOutput);
-#endif
+#ifdef __WINDOWS__
+	freopen("CON", "w", stdout);
+	freopen("CON", "w", stderr);
+#else
+	stderr = state->original_stderr;
+	stdout = state->original_stdout;
 	state->original_stderr = NULL;
 	state->original_stdout = NULL;
+#endif
+	debugOutput = state->original_debugOutput;
 	state->original_debugOutput = NULL;
-	state->debugOutput = NULL;
+
 }
 
 // -----------------------------------------------------------------------------
@@ -624,6 +660,8 @@ static int RemoteDebug_console(int nArgc, char *psArgs[], RemoteDebugState* stat
 {
 	if (nArgc == 2)
 	{
+		// Repoint all output to any supplied file
+		RemoteDebug_OpenDebugOutput(state);
 		int cmdRet = DebugUI_ParseConsoleCommand(psArgs[1]);
 
 		/* handle a command that restarts execution */
@@ -631,7 +669,8 @@ static int RemoteDebug_console(int nArgc, char *psArgs[], RemoteDebugState* stat
 			bRemoteBreakIsActive = false;
 
 		fflush(debugOutput);
-		fflush(stderr);
+		RemoteDebug_CloseDebugOutput(state);
+
 		// Insert an out-of-band notification, in case of restart
 		RemoteDebug_NotifyState(state);
 	}
@@ -648,30 +687,20 @@ static int RemoteDebug_setstd(int nArgc, char *psArgs[], RemoteDebugState* state
 	{
 		// Create the output file
 		const char* filename = psArgs[1];
+#ifdef __WINDOWS__
+		strncpy(state->consoleOutputFilename, filename, PATH_MAX);
+		state->consoleOutputFilename[PATH_MAX] = 0; /* ensure terminator */
+		return 0;
+#else
 		FILE* outpipe = fopen(filename, "w");
 		if (outpipe)
 		{
-			// Switch back to "normal settings"
-			RemoteDebug_CloseDebugOutput(state);
-
-			// Record the original states
-			state->original_stderr = stderr;
-			state->original_stdout = stdout;
-			state->original_debugOutput = debugOutput;
-
-			// Switch over redirect
-#ifdef __WINDOWS__
-			freopen(filename, "w", stdout);
-			freopen(filename, "w", stderr);
-#else
-			stderr = outpipe;
-			stdout = outpipe;
-#endif
-			debugOutput = outpipe;
-			state->debugOutput = outpipe;
+			// Save this output so that we can pipe to it later
+			state->consoleOutputFile = outpipe;
 			send_str(state, "OK");
 			return 0;
 		}
+#endif
 	}
 	return 1;
 }
@@ -816,10 +845,14 @@ static void RemoteDebugState_Init(RemoteDebugState* state)
 	state->AcceptedFD = -1;
 	memset(state->cmd_buf, 0, sizeof(state->cmd_buf));
 	state->cmd_pos = 0;
+#ifdef __WINDOWS__
+	memset(state->consoleOutputFilename, 0, sizeof(state->consoleOutputFilename));
+#else
 	state->original_stdout = NULL;
 	state->original_stderr = NULL;
 	state->original_debugOutput = NULL;
-	state->debugOutput = NULL;
+	state->consoleOutputFile = NULL;
+#endif
 	state->sendBufferPos = 0;
 }
 

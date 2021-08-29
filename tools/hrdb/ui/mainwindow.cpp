@@ -634,7 +634,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_pGraphicsInspector->setWindowTitle("Graphics Inspector (Alt+G)");
     m_pBreakpointsWidget = new BreakpointsWindow(this, m_pTargetModel, m_pDispatcher);
     m_pBreakpointsWidget->setWindowTitle("Breakpoints (Alt+B)");
-    m_pConsoleWindow = new ConsoleWindow(this, m_pTargetModel, m_pDispatcher);
+    m_pConsoleWindow = new ConsoleWindow(this, &m_session);
 
     m_pExceptionDialog = new ExceptionDialog(this, m_pTargetModel, m_pDispatcher);
     m_pRunDialog = new RunDialog(this, &m_session);
@@ -721,16 +721,6 @@ void MainWindow::connectChangedSlot()
 {
     PopulateRunningSquare();
     updateButtonEnable();
-#if 0
-    // Experimental: force Hatari output to a file
-    if (m_pTargetModel->IsConnected())
-    {
-        QString logCmd("setstd ");
-        m_session.m_pLoggingFile->open();
-        logCmd += m_session.m_pLoggingFile->fileName();
-        m_pDispatcher->SendCommandPacket(logCmd.toStdString().c_str());
-    }
-#endif
 }
 
 void MainWindow::startStopChangedSlot()
