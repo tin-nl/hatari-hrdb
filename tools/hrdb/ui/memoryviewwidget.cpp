@@ -24,7 +24,7 @@
 #include "../models/session.h"
 #include "quicklayout.h"
 
-static QString CreateTooltip(uint32_t address, const SymbolTable& symTable)
+static QString CreateTooltip(uint32_t address, const SymbolTable& symTable, uint8_t byteVal, uint32_t wordVal, uint32_t longVal)
 {
     QString final;
     QTextStream ref(&final);
@@ -37,6 +37,19 @@ static QString CreateTooltip(uint32_t address, const SymbolTable& symTable)
         if (sym.address != address)
             ref << QString::asprintf("+$%x", address - sym.address);
     }
+
+    ref << QString::asprintf("\nLong: $%x -> %u", longVal, longVal);
+    if (longVal & 0x80000000)
+        ref << QString::asprintf(" (%d)", static_cast<int32_t>(longVal));
+
+    ref << QString::asprintf("\nWord: $%x -> %u", wordVal, wordVal);
+    if (wordVal & 0x8000)
+        ref << QString::asprintf(" (%d)", static_cast<int16_t>(wordVal));
+
+    ref << QString::asprintf("\nByte: $%x -> %u", byteVal, byteVal);
+    if (byteVal & 0x80)
+        ref << QString::asprintf(" (%d)", static_cast<int8_t>(byteVal));
+
     return final;
 }
 
@@ -639,13 +652,8 @@ void MemoryWidget::contextMenuEvent(QContextMenuEvent *event)
 
     // Read a longword
     uint32_t longContents = 0;
-    for (uint i = 0; i < 4; ++i)
-    {
-        longContents <<= 8;
-        if (!mem->HasAddress(addr + i))
-            return;
-        longContents |= mem->ReadAddressByte(addr + i);
-    }
+    if (!mem->ReadAddressMulti(addr, 4, longContents))
+        return;
     longContents &= 0xffffff;
     m_showAddressActions.setAddress(longContents);
 
@@ -673,16 +681,9 @@ bool MemoryWidget::event(QEvent *event)
 
         int x = static_cast<int>(helpEvent->pos().x());
         int y = static_cast<int>(helpEvent->pos().y());
-        int row;
-        int col;
-        if (FindInfo(x, y, row, col))
-        {
-            uint32_t addr = m_rows[row].m_address + m_columnMap[col].byteOffset;
-            // Work out what's under the mouse
-            text = CreateTooltip(addr, m_pTargetModel->GetSymbolTable());
-        }
 
-        if (text.size() != 0)
+        text = CalcMouseoverText(x, y);
+        if (!text.isNull())
             QToolTip::showText(helpEvent->globalPos(), text);
         else
         {
@@ -716,6 +717,44 @@ void MemoryWidget::RecalcRowCount()
     {
         m_cursorRow = m_rowCount - 1;
     }
+}
+
+QString MemoryWidget::CalcMouseoverText(int mouseX, int mouseY)
+{
+    int row;
+    int col;
+    if (!FindInfo(mouseX, mouseY, row, col))
+        return QString();
+
+    if (m_columnMap[col].type == ColInfo::kSpace)
+            return QString();
+
+    const Memory* mem = m_pTargetModel->GetMemory(m_memSlot);
+    if (!mem)
+        return QString();
+
+    uint32_t addr = m_rows[row].m_address + m_columnMap[col].byteOffset;
+    uint8_t byteVal = mem->ReadAddressByte(addr);
+
+    uint32_t wordVal;
+    if (!mem->ReadAddressMulti(addr & 0xfffffe, 2, wordVal))
+        return QString();
+
+    // Work out what's under the mouse
+
+    // Align the memory location to 2 or 4 bytes, based on context
+    // (view address, or word/long mode)
+    uint32_t byteOffset = m_columnMap[col].byteOffset;
+    byteOffset &= ~1U;
+    if (m_mode == Mode::kModeLong)
+        byteOffset &= ~3U;
+
+    uint32_t addrLong = m_rows[row].m_address + byteOffset;
+    uint32_t longVal;
+    if (!mem->ReadAddressMulti(addrLong, 4, longVal))
+        return QString();
+
+    return CreateTooltip(addr, m_pTargetModel->GetSymbolTable(), byteVal, wordVal, longVal);
 }
 
 void MemoryWidget::UpdateFont()

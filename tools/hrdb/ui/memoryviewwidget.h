@@ -71,6 +71,8 @@ private:
     void RecalcText();
     void RecalcRowCount();
 
+    QString CalcMouseoverText(int mouseX, int mouseY);
+
     void UpdateFont();
     int GetAddrX() const;
 

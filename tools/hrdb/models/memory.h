@@ -67,6 +67,10 @@ public:
         return Get(offset);
     }
 
+    // Read multiple bytes and put into 32-bit word. So can read byte/word/long
+    // TODO: I don't really like this interface being different from ReadAddressByte().
+    bool ReadAddressMulti(uint32_t address, uint32_t numBytes, uint32_t &result) const;
+
     uint32_t GetSize() const
     {
         return m_size;

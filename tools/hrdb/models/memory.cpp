@@ -22,6 +22,22 @@ void Memory::Clear()
     m_size = 0;
 }
 
+bool Memory::ReadAddressMulti(uint32_t address, uint32_t numBytes, uint32_t &result) const
+{
+    uint32_t offset = address - m_addr;
+    if (offset + numBytes > m_size)
+        return false;
+
+    uint32_t longContents = 0;
+    for (uint32_t i = 0; i < numBytes; ++i)
+    {
+        longContents <<= 8;
+        longContents += m_pData[offset + i];
+    }
+    result = longContents;
+    return true;
+}
+
 Memory& Memory::operator=(const Memory &other)
 {
     this->m_size = other.m_size;
