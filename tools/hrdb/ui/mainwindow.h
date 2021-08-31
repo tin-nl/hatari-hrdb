@@ -164,12 +164,13 @@ private slots:
 
     void about();
     void aboutQt();
+
 private:
     void updateWindowMenu();
 
     // QAction callbacks
     // File Menu
-    void RunTriggered();
+    void LaunchTriggered();
     void ConnectTriggered();
     void DisconnectTriggered();
 
@@ -227,7 +228,7 @@ private:
     QMenu* m_pWindowMenu;
     QMenu* m_pHelpMenu;
 
-    QAction* m_pRunAct;
+    QAction* m_pLaunchAct;
     QAction* m_pConnectAct;
     QAction* m_pDisconnectAct;
     QAction* m_pExitAct;

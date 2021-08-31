@@ -698,8 +698,8 @@ MainWindow::MainWindow(QWidget *parent)
 
 	// Keyboard shortcuts
     // "S" and "N" now done with keyPressEvent() to handle conflicts with other windows
-    new QShortcut(QKeySequence(tr("Ctrl+R", "Start/Stop")),         this, SLOT(startStopClicked()));
-    new QShortcut(QKeySequence(tr("Esc",    "Break")),              this, SLOT(breakPressed()));
+    new QShortcut(QKeySequence("Ctrl+R"),         this, SLOT(startStopClicked()));
+    new QShortcut(QKeySequence("Esc"),            this, SLOT(breakPressed()));
 
     // Try initial connect
     ConnectTriggered();
@@ -862,7 +862,7 @@ void MainWindow::breakPressed()
 }
 
 // Actions
-void MainWindow::RunTriggered()
+void MainWindow::LaunchTriggered()
 {
     m_pRunDialog->setModal(true);
     m_pRunDialog->show();
@@ -1056,9 +1056,10 @@ void MainWindow::aboutQt()
 void MainWindow::createActions()
 {
     // "File"
-    m_pRunAct = new QAction(tr("&Run..."), this);
-    m_pRunAct->setStatusTip(tr("Run Hatari"));
-    connect(m_pRunAct, &QAction::triggered, this, &MainWindow::RunTriggered);
+    m_pLaunchAct = new QAction(tr("&Launch..."), this);
+    m_pLaunchAct->setStatusTip(tr("Launch Hatari"));
+    m_pLaunchAct->setShortcut(QKeySequence("Alt+L"));
+    connect(m_pLaunchAct, &QAction::triggered, this, &MainWindow::LaunchTriggered);
 
     m_pConnectAct = new QAction(tr("&Connect"), this);
     m_pConnectAct->setStatusTip(tr("Connect to Hatari"));
@@ -1127,9 +1128,6 @@ void MainWindow::createActions()
     connect(m_pBreakpointsWindowAct, &QAction::triggered, this, [=] () { this->enableVis(m_pBreakpointsWidget); m_pBreakpointsWidget->keyFocus(); } );
     connect(m_pConsoleWindowAct,     &QAction::triggered, this, [=] () { this->enableVis(m_pConsoleWindow); m_pConsoleWindow->keyFocus(); } );
 
-    // This should be an action
-    new QShortcut(QKeySequence(tr("Shift+Alt+B",  "Add Breakpoint...")),  this, SLOT(addBreakpointPressed()));
-
     // "About"
     m_pAboutAct = new QAction(tr("&About"), this);
     m_pAboutAct->setStatusTip(tr("Show the application's About box"));
@@ -1145,7 +1143,7 @@ void MainWindow::createMenus()
 {
     // "File"
     m_pFileMenu = menuBar()->addMenu(tr("&File"));
-    m_pFileMenu->addAction(m_pRunAct);
+    m_pFileMenu->addAction(m_pLaunchAct);
     m_pFileMenu->addAction(m_pConnectAct);
     m_pFileMenu->addAction(m_pDisconnectAct);
     m_pFileMenu->addSeparator();

@@ -20,7 +20,7 @@ RunDialog::RunDialog(QWidget *parent, Session* pSession) :
     m_pSession(pSession)
 {
     this->setObjectName("RunDialog");
-    this->setWindowTitle(tr("Run Hatari"));
+    this->setWindowTitle(tr("Launch Hatari"));
 
     // Bottom OK/Cancel buttons
     QPushButton* pOkButton = new QPushButton("&OK", this);
@@ -35,7 +35,7 @@ RunDialog::RunDialog(QWidget *parent, Session* pSession) :
     pButtonContainer->setLayout(pHLayout);
 
     // Options grid box
-    QGroupBox* gridGroupBox = new QGroupBox(tr("Launch options"));
+    QGroupBox* gridGroupBox = new QGroupBox(tr("Options"));
     QGridLayout *gridLayout = new QGridLayout;
 
     QPushButton* pExeButton = new QPushButton(tr("Browse..."), this);
