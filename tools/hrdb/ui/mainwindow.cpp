@@ -802,6 +802,13 @@ void MainWindow::nextClicked()
     if (m_disasm.lines.size() == 0)
         return;
 
+    // Bug fix: we can't decide on how to step until the available disassembly matches
+    // the PC we are stepping from. This slows down stepping a little (since there is
+    // a round-trip). In theory we could send the next instruction opcode as part of
+    // the "status" notification if we want it to be faster.
+    if(m_disasm.lines[0].address != m_pTargetModel->GetPC())
+        return;
+
     const Disassembler::line& nextInst = m_disasm.lines[0];
     // Either "next" or set breakpoint to following instruction
     bool shouldStepOver = DisAnalyse::isSubroutine(nextInst.inst) ||
