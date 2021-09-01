@@ -68,9 +68,6 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
         m_showAddressActions.addActionsToMenu(m_pShowMemMenus[showMenu]);
     }
 
-    new QShortcut(QKeySequence(tr("Ctrl+H", "Run to Here")),        this, SLOT(runToCursor()));
-    new QShortcut(QKeySequence(tr("Ctrl+B", "Toggle breakpoint")),  this, SLOT(toggleBreakpoint()));
-
     // Target connects
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &DisasmWidget::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &DisasmWidget::memoryChangedSlot);
@@ -461,6 +458,18 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
 
 void DisasmWidget::keyPressEvent(QKeyEvent* event)
 {
+    // Handle keyboard shortcuts with scope here, since QShortcut is global
+    if (event->modifiers() == Qt::ControlModifier)
+    {
+        switch (event->key())
+        {
+            case Qt::Key_H:         runToCursor();            return;
+            case Qt::Key_B:         toggleBreakpoint();       return;
+            default: break;
+        }
+    }
+
+    // Movement currently doesn't care about modifiers
     switch (event->key())
     {
     case Qt::Key_Up:         MoveUp();            return;
@@ -469,6 +478,7 @@ void DisasmWidget::keyPressEvent(QKeyEvent* event)
     case Qt::Key_PageDown:   PageDown();          return;
     default: break;
     }
+
     QWidget::keyPressEvent(event);
 }
 
