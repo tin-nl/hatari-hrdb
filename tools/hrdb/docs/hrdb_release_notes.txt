@@ -1,0 +1,31 @@
+hrdb Release Notes
+==================
+
+v0.002 (September 2021)
+
+- Memory View
+  - Edit ASCII in Memory View.
+  - Added tooltips for values, similar to Register view.
+  - Added context menus to open the longword address under the mouse.
+  - Symbol regions are now coloured for easier separation.
+  - Fixed: crash from typing on the view when not connected.
+  - Fixed: clicking on top row of characters didn't chose the row
+
+- Disassembly Window
+  - Ctrl+B works when 2 Disassembly windows are visible.
+
+- Registers View
+  - Fixed: listed ISP and USP are stale when CPU stops.
+
+- Console View
+  - Added output area to Console View so you can see the results of commands.
+
+- General
+  - Fixed: (N)ext would still step into instructions when holding down key-repeat (reported by
+    Thomas van Noorden)
+  - Alt+L now brings up the (L)aunch Hatari dialog, which was previously "Run Hatari"
+  - Context menu "Show Address" options now include opening the Graphics Inspector
+
+v0.001 (August 2021)
+
+- Initial test release
