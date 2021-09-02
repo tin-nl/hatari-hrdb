@@ -51,7 +51,9 @@ jobs:
       - name: zip outputs
         run: |
           cd output
-          zip -r macos-hrdb.zip hrdb.app hatari.app           
+          cp ../tools/hrdb/docs/hrdb_release_notes.txt .
+          cp ../gpl.txt .
+          zip -r macos-hrdb.zip hrdb.app hatari.app *.txt      
       - name: "Upload artifacts"
         uses: actions/upload-artifact@v2
         with:
