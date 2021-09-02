@@ -358,6 +358,22 @@ static int RemoteDebug_Regs(int nArgc, char *psArgs[], RemoteDebugState* state)
 	for (regIdx = 0; regIdx < ARRAY_SIZE(regIds); ++regIdx)
 		send_key_value(state, regNames[regIdx], Regs[regIds[regIdx]]);
 		
+	/*
+	Workaround to match the behaviour in DebugCpu_Register().
+	The call to m68k_dumpstate_file actually *updates* these registers,
+	so they are stale until you view the registers in the command line
+	debugger (and possibly stale when evaluating breakpoints.)
+
+	Ideally I think this fix should happen when break occurs, but that
+	might be a bit drastic.
+	*/
+	if (regs.s == 0)
+		regs.usp = regs.regs[REG_A7];
+	if (regs.s && regs.m)
+		regs.msp = regs.regs[REG_A7];
+	if (regs.s && regs.m == 0)
+		regs.isp = regs.regs[REG_A7];
+
 	// Special regs
 	send_key_value(state, "PC", M68000_GetPC());
 	send_key_value(state, "USP", regs.usp);
