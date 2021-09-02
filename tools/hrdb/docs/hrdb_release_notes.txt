@@ -9,7 +9,7 @@ v0.002 (September 2021)
   - Added context menus to open the longword address under the mouse.
   - Symbol regions are now coloured for easier separation.
   - Fixed: crash from typing on the view when not connected.
-  - Fixed: clicking on top row of characters didn't chose the row
+  - Fixed: clicking on top row of characters didn't choose the row
 
 - Disassembly Window
   - Ctrl+B works when 2 Disassembly windows are visible.
