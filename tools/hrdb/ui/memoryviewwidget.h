@@ -53,6 +53,7 @@ protected:
     virtual void paintEvent(QPaintEvent*) override;
     virtual void keyPressEvent(QKeyEvent*) override;
     virtual void mousePressEvent(QMouseEvent *event) override;
+    virtual void wheelEvent(QWheelEvent* event) override;
     virtual void contextMenuEvent(QContextMenuEvent *event) override;
     virtual void resizeEvent(QResizeEvent *event) override;
     virtual bool event(QEvent *event) override;
@@ -62,8 +63,8 @@ private:
     void MoveDown();
     void MoveLeft();
     void MoveRight();
-    void PageUp();
-    void PageDown();
+    void PageUp(bool isKeyboard);
+    void PageDown(bool isKeyboard);
     void EditKey(char key);
 
     void SetAddress(uint32_t address);
@@ -147,6 +148,9 @@ private:
     // Menu actions
     QMenu*              m_pShowAddressMenu;
     ShowAddressActions  m_showAddressActions;
+
+    // Mouse wheel
+    float                m_wheelAngleDelta;
 };
 
 class MemoryWindow : public QDockWidget

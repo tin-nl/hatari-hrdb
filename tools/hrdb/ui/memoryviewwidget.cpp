@@ -69,7 +69,8 @@ MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
     m_previousMemory(0, 0),
     m_cursorRow(0),
     m_cursorCol(0),
-    m_showAddressActions(pSession)
+    m_showAddressActions(pSession),
+    m_wheelAngleDelta(0)
 {
     m_memSlot = static_cast<MemorySlot>(MemorySlot::kMemoryView0 + m_windowIndex);
 
@@ -240,9 +241,9 @@ void MemoryWidget::MoveRight()
     update();
 }
 
-void MemoryWidget::PageUp()
+void MemoryWidget::PageUp(bool isKeyboard)
 {
-    if (m_cursorRow > 0)
+    if (isKeyboard && m_cursorRow > 0)
     {
         m_cursorRow = 0;
         update();
@@ -258,9 +259,9 @@ void MemoryWidget::PageUp()
         SetAddress(0);
 }
 
-void MemoryWidget::PageDown()
+void MemoryWidget::PageDown(bool isKeyboard)
 {
-    if (m_cursorRow < m_rowCount - 1)
+    if (isKeyboard && m_cursorRow < m_rowCount - 1)
     {
         m_cursorRow = m_rowCount - 1;
         update();
@@ -586,8 +587,8 @@ void MemoryWidget::keyPressEvent(QKeyEvent* event)
         case Qt::Key_Right:      MoveRight();         return;
         case Qt::Key_Up:         MoveUp();            return;
         case Qt::Key_Down:       MoveDown();          return;
-        case Qt::Key_PageUp:     PageUp();            return;
-        case Qt::Key_PageDown:   PageDown();          return;
+        case Qt::Key_PageUp:     PageUp(true);        return;
+        case Qt::Key_PageDown:   PageDown(true);      return;
         default: break;
         }
 
@@ -623,6 +624,29 @@ void MemoryWidget::mousePressEvent(QMouseEvent *event)
         }
     }
     QWidget::mousePressEvent(event);
+}
+
+void MemoryWidget::wheelEvent(QWheelEvent *event)
+{
+    if (!this->underMouse())
+    {
+        event->ignore();
+        return;
+    }
+
+    // Accumulate delta for some mice
+    m_wheelAngleDelta += event->angleDelta().y();
+    if (m_wheelAngleDelta >= 15)
+    {
+        PageUp(false);
+        m_wheelAngleDelta = 0;
+    }
+    else if (m_wheelAngleDelta <= -15)
+    {
+        PageDown(false);
+        m_wheelAngleDelta = 0;
+    }
+    event->accept();
 }
 
 void MemoryWidget::contextMenuEvent(QContextMenuEvent *event)

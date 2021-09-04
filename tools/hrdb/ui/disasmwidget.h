@@ -36,8 +36,8 @@ public:
     bool SetAddress(std::string addr);
     void MoveUp();
     void MoveDown();
-    void PageUp();
-    void PageDown();
+    void PageUp(bool isKeyboard);
+    void PageDown(bool isKeyboard);
     void RunToRow(int row);
     void ToggleBreakpoint(int row);
     void NopRow(int row);
@@ -64,6 +64,7 @@ private:
     virtual void keyPressEvent(QKeyEvent* event) override;
     virtual void mouseMoveEvent(QMouseEvent* event) override;
     virtual void mousePressEvent(QMouseEvent* event) override;
+    virtual void wheelEvent(QWheelEvent* event) override;
     virtual void resizeEvent(QResizeEvent *event) override;
     virtual bool event(QEvent *ev) override;
 
@@ -185,6 +186,9 @@ private:
     int                   m_charWidth;            // font width in pixels
     int                   m_lineHeight;           // font height in pixels
     QFont                 m_monoFont;
+
+    // Mouse wheel
+    float                 m_wheelAngleDelta;
 };
 
 

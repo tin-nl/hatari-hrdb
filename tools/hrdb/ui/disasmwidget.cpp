@@ -38,7 +38,8 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     m_bShowHex(true),
     m_rightClickRow(-1),
     m_cursorRow(0),
-    m_mouseRow(-1)
+    m_mouseRow(-1),
+    m_wheelAngleDelta(0)
 {
     RecalcColums();
     UpdateFont();
@@ -228,9 +229,9 @@ void DisasmWidget::MoveDown()
     }
 }
 
-void DisasmWidget::PageUp()
+void DisasmWidget::PageUp(bool isKeyboard)
 {
-    if (m_cursorRow != 0)
+    if (isKeyboard && m_cursorRow != 0)
     {
         m_cursorRow = 0;
         update();
@@ -247,9 +248,9 @@ void DisasmWidget::PageUp()
         SetAddress(0);
 }
 
-void DisasmWidget::PageDown()
+void DisasmWidget::PageDown(bool isKeyboard)
 {
-    if (m_rowCount > 0 && m_cursorRow < m_rowCount - 1)
+    if (isKeyboard && m_rowCount > 0 && m_cursorRow < m_rowCount - 1)
     {
         // Just move to the bottom row
         m_cursorRow = m_rowCount - 1;
@@ -474,8 +475,8 @@ void DisasmWidget::keyPressEvent(QKeyEvent* event)
     {
     case Qt::Key_Up:         MoveUp();            return;
     case Qt::Key_Down:       MoveDown();          return;
-    case Qt::Key_PageUp:     PageUp();            return;
-    case Qt::Key_PageDown:   PageDown();          return;
+    case Qt::Key_PageUp:     PageUp(true);        return;
+    case Qt::Key_PageDown:   PageDown(true);      return;
     default: break;
     }
 
@@ -505,6 +506,29 @@ void DisasmWidget::mousePressEvent(QMouseEvent *event)
                 update();       // redraw highlight
         }
     }
+}
+
+void DisasmWidget::wheelEvent(QWheelEvent *event)
+{
+    if (!this->underMouse())
+    {
+        event->ignore();
+        return;
+    }
+
+    // Accumulate delta for some mice
+    m_wheelAngleDelta += event->angleDelta().y();
+    if (m_wheelAngleDelta >= 15)
+    {
+        PageUp(false);
+        m_wheelAngleDelta = 0;
+    }
+    else if (m_wheelAngleDelta <= -15)
+    {
+        PageDown(false);
+        m_wheelAngleDelta = 0;
+    }
+    event->accept();
 }
 
 bool DisasmWidget::event(QEvent* ev)
@@ -974,12 +998,12 @@ void DisasmWindow::keyUpPressed()
 
 void DisasmWindow::keyPageDownPressed()
 {
-    m_pDisasmWidget->PageDown();
+    m_pDisasmWidget->PageDown(true);
 }
 
 void DisasmWindow::keyPageUpPressed()
 {
-    m_pDisasmWidget->PageUp();
+    m_pDisasmWidget->PageUp(true);
 }
 
 void DisasmWindow::returnPressedSlot()
