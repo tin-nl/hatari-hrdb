@@ -638,5 +638,49 @@ bool DisAnalyse::isBranch(const instruction &inst, const Registers& regs, bool& 
 			break;
 	}
 	takeBranch = false;
-	return false;
+    return false;
+}
+
+bool DisAnalyse::getBranchTarget(uint32_t instAddr, const instruction &inst, uint32_t &target)
+{
+    switch (inst.opcode)
+    {
+        case Opcode::BRA:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+            // There is no "BF"
+        case Opcode::BHI:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BLS:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BCC:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BCS:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BNE:        calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BEQ:        calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BVC:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BVS:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BPL:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BMI:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BGE:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BLT:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BGT:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+        case Opcode::BLE:		 calc_relative_address(inst.op0, instAddr, target);		return true;
+
+        // DBcc
+        case Opcode::DBF:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBHI:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBLS:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBCC:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBCS:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBNE:       calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBEQ:       calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBVC:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBVS:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBPL:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBMI:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBGE:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBLT:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBGT:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+        case Opcode::DBLE:		 calc_relative_address(inst.op1, instAddr, target);		return true;
+
+        default:
+            break;
+    }
+    return false;
 }

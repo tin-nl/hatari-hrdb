@@ -369,15 +369,16 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
     QPainter painter(this);
     const QPalette& pal = this->palette();
 
+    painter.setFont(m_monoFont);
+    QFontMetrics info(painter.fontMetrics());
+
+    const int char_width = info.horizontalAdvance("0");
+    const int y_ascent = info.ascent();
+    const int y_midLine = y_ascent - info.strikeOutPos();
+
     // Anything to show?
     if (m_disasm.lines.size())
     {
-        painter.setFont(m_monoFont);
-        QFontMetrics info(painter.fontMetrics());
-
-        const int char_width = info.horizontalAdvance("0");
-        const int y_ascent = info.ascent();
-
         // Highlight the mouse
         if (m_mouseRow != -1)
         {
@@ -430,10 +431,10 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
                     if (t.isBreakpoint)
                     {
                         // Y is halfway between text bottom and row top
-                        int circle_y = (text_y + row_top_y) / 2;
-                        int circle_rad = (text_y - row_top_y) / 2;
+                        int circle_y = row_top_y + y_midLine;
+                        int circle_rad = (y_ascent - y_midLine);
                         painter.setBrush(Qt::red);
-                        painter.drawEllipse(x, circle_y, circle_rad, circle_rad);
+                        painter.drawEllipse(QPoint(x + circle_rad, circle_y), circle_rad, circle_rad);
                     }
                     break;
                 case kHex:
@@ -450,8 +451,40 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
             } // row
         }   // col
     }
-    // Border
     painter.setClipRect(this->rect());
+
+    // Branches
+    int x_base = m_columnLeft[kAddress] * char_width - 5;
+    int x_left = x_base - 12;
+    painter.setPen(Qt::darkGreen);
+    painter.setBrush(Qt::darkGreen);
+    for (int row = 0; row < m_rowTexts.size(); ++row)
+    {
+        const RowText& t = m_rowTexts[row];
+        if (t.branchTargetLine == -1)
+            continue;
+
+        int yStart = GetPixelFromRow(row) + y_midLine;
+        int yEnd   = GetPixelFromRow(t.branchTargetLine) + y_midLine;
+
+        QPoint points[4] = {
+            QPoint(x_base, yStart),
+            QPoint(x_left, yStart),
+            QPoint(x_left, yEnd),
+            QPoint(x_base, yEnd)
+        };
+        painter.drawPolyline(points, 4);
+
+        QPoint arrowPoints[3] = {
+            QPoint(x_base, yEnd),
+            QPoint(x_base - 10, yEnd + 4),
+            QPoint(x_base - 10, yEnd - 4)
+        };
+        painter.drawPolygon(arrowPoints, 3);
+        x_left -= 10;
+    }
+
+    // Border
     painter.setBrush(Qt::NoBrush);
     painter.setPen(QPen(pal.dark(), hasFocus() ? 6 : 2));
     painter.drawRect(this->rect());
@@ -568,6 +601,9 @@ void DisasmWidget::CalcDisasm()
         // Address
         uint32_t addr = line.address;
         t.address = QString::asprintf("%08x", addr);
+        t.branchTargetLine = -1;
+        t.isPc = line.address == m_pTargetModel->GetPC();
+        t.isBreakpoint = false;
 
         // Symbol
         QString addrText;
@@ -606,14 +642,26 @@ void DisasmWidget::CalcDisasm()
         printEA(line.inst.op1, regs, line.address, refC);
 
         // Breakpoint/PC
-        t.isPc = line.address == m_pTargetModel->GetPC();
-        t.isBreakpoint = false;
         for (size_t i = 0; i < m_breakpoints.m_breakpoints.size(); ++i)
         {
             if (m_breakpoints.m_breakpoints[i].m_pcHack == line.address)
             {
                 t.isBreakpoint = true;
                 break;
+            }
+        }
+
+        // Branch info
+        uint32_t target;
+        if (DisAnalyse::getBranchTarget(line.address, line.inst, target))
+        {
+            for (int i = 0; i < m_disasm.lines.count(); ++i)
+            {
+                if (m_disasm.lines[i].address == target)
+                {
+                    t.branchTargetLine = i;
+                    break;
+                }
             }
         }
 

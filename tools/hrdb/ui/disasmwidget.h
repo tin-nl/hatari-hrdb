@@ -96,6 +96,8 @@ private:
         QString     hex;
         QString     disasm;
         QString     comments;
+
+        int         branchTargetLine;       // -1 for no branch, or the ID of the target line
     };
     QVector<RowText>    m_rowTexts;
 
