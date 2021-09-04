@@ -456,8 +456,8 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
     // Branches
     int x_base = m_columnLeft[kAddress] * char_width - 5;
     int x_left = x_base - 12;
-    painter.setPen(Qt::darkGreen);
-    painter.setBrush(Qt::darkGreen);
+    painter.setPen(pal.dark().color());
+    painter.setBrush(pal.dark());
     for (int row = 0; row < m_rowTexts.size(); ++row)
     {
         const RowText& t = m_rowTexts[row];
@@ -477,8 +477,8 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
 
         QPoint arrowPoints[3] = {
             QPoint(x_base, yEnd),
-            QPoint(x_base - 10, yEnd + 4),
-            QPoint(x_base - 10, yEnd - 4)
+            QPoint(x_base - 8, yEnd + 3),
+            QPoint(x_base - 8, yEnd - 3)
         };
         painter.drawPolygon(arrowPoints, 3);
         x_left -= 10;
@@ -593,6 +593,12 @@ void DisasmWidget::CalcDisasm()
 
     // Recalc Text (which depends on e.g. symbols
     m_rowTexts.clear();
+    if (m_disasm.lines.size() == 0)
+        return;
+
+    uint32_t topAddr = m_disasm.lines[0].address;
+    uint32_t lastAddr = m_disasm.lines.back().address;
+
     for (int row = 0; row < m_disasm.lines.size(); ++row)
     {
         RowText t;
@@ -663,8 +669,16 @@ void DisasmWidget::CalcDisasm()
                     break;
                 }
             }
+            // We didn't find a target, so it's somewhere else
+            // Fake up a target which should be off-screen
+            if (t.branchTargetLine == -1)
+            {
+                if (target < topAddr)
+                    t.branchTargetLine = -2;
+                else if (target > lastAddr)
+                    t.branchTargetLine = +m_rowCount + 2;
+            }
         }
-
         m_rowTexts.push_back(t);
     }
 }
