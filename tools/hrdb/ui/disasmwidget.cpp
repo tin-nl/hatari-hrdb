@@ -373,7 +373,6 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
     painter.setFont(m_monoFont);
     QFontMetrics info(painter.fontMetrics());
 
-    const int char_width = info.horizontalAdvance("0");
     const int y_ascent = info.ascent();
     const int y_midLine = y_ascent - info.strikeOutPos();
 
@@ -398,8 +397,8 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
 
         for (int col = 0; col < kNumColumns; ++col)
         {
-            int x = m_columnLeft[col] * char_width;
-            int x2 = m_columnLeft[col + 1] * char_width;
+            int x = m_columnLeft[col] * m_charWidth;
+            int x2 = m_columnLeft[col + 1] * m_charWidth;
 
             // Clip the column to prevent overdraw
             painter.setClipRect(x, 0, x2 - x, height());
@@ -455,18 +454,25 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
     painter.setClipRect(this->rect());
 
     // Branches
-    int x_base = m_columnLeft[kAddress] * char_width - 5;
-    int x_left = x_base - 12;
-    painter.setPen(pal.dark().color());
+    int x_base = m_columnLeft[kAddress] * m_charWidth - 2;
     painter.setBrush(pal.dark());
-    for (int row = 0; row < m_rowTexts.size(); ++row)
-    {
-        const RowText& t = m_rowTexts[row];
-        if (t.branchTargetLine == -1)
-            continue;
 
-        int yStart = GetPixelFromRow(row) + y_midLine;
-        int yEnd   = GetPixelFromRow(t.branchTargetLine) + y_midLine;
+    int arrowWidth = m_charWidth;
+    int arrowHeight = arrowWidth / 2;
+
+    for (int i = 0; i < m_branches.size(); ++i)
+    {
+        const Branch& b = m_branches[i];
+        painter.setPen(QPen(pal.dark().color(), b.start == m_mouseRow ? 3 : 1));
+
+        int yStart = GetPixelFromRow(b.start) + y_midLine + 1;
+        int yEnd   = GetPixelFromRow(b.stop) + y_midLine - 1;
+        if (b.type == 1)
+            yEnd = GetPixelFromRow(0);
+        else if (b.type == 2)
+            yEnd = GetPixelFromRow(m_rowCount);
+
+        int x_left = x_base - m_charWidth * (2 + b.depth);
 
         QPoint points[4] = {
             QPoint(x_base, yStart),
@@ -474,15 +480,20 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
             QPoint(x_left, yEnd),
             QPoint(x_base, yEnd)
         };
-        painter.drawPolyline(points, 4);
+        if (b.type == 0)
+        {
 
-        QPoint arrowPoints[3] = {
-            QPoint(x_base, yEnd),
-            QPoint(x_base - 8, yEnd + 3),
-            QPoint(x_base - 8, yEnd - 3)
-        };
-        painter.drawPolygon(arrowPoints, 3);
-        x_left -= 10;
+            painter.drawPolyline(points, 4);
+            QPoint arrowPoints[3] = {
+                QPoint(x_base, yEnd),
+                QPoint(x_base - arrowWidth, yEnd + arrowHeight),
+                QPoint(x_base - arrowWidth, yEnd - arrowHeight)
+            };
+            painter.drawPolygon(arrowPoints, 3);
+        }
+        else {
+            painter.drawPolyline(points, 3);
+        }
     }
 
     // Border
@@ -594,11 +605,19 @@ void DisasmWidget::CalcDisasm()
 
     // Recalc Text (which depends on e.g. symbols
     m_rowTexts.clear();
+    m_branches.clear();
     if (m_disasm.lines.size() == 0)
         return;
 
     uint32_t topAddr = m_disasm.lines[0].address;
     uint32_t lastAddr = m_disasm.lines.back().address;
+
+    // Organise branches
+
+    // These store the number of branch lines going in, and coming out of,
+    // each instruction.
+    QVector<int> starts(m_disasm.lines.size());
+    QVector<int> stops(m_disasm.lines.size());
 
     for (int row = 0; row < m_disasm.lines.size(); ++row)
     {
@@ -670,17 +689,89 @@ void DisasmWidget::CalcDisasm()
                     break;
                 }
             }
+
+            Branch b;
+            b.start = row;
+            b.stop = t.branchTargetLine;
+            b.depth = 0;
+            b.type = 0;
+
             // We didn't find a target, so it's somewhere else
             // Fake up a target which should be off-screen
             if (t.branchTargetLine == -1)
             {
                 if (target < topAddr)
-                    t.branchTargetLine = -2;
+                {
+                    b.stop = 0;
+                    b.type = 1; // top
+                }
                 else if (target > lastAddr)
-                    t.branchTargetLine = +m_rowCount + 2;
+                {
+                    b.stop = m_rowCount - 1;
+                    b.type = 2; // bttom
+                }
+            }
+
+            if (b.stop != -1)
+            {
+                m_branches.push_back(b);
+
+                // Record where "edges" are
+                starts[b.start]++;
+                stops[b.stop]++;
             }
         }
         m_rowTexts.push_back(t);
+    }
+
+    // Branch layout:
+    // Method is simple but seems to work OK: iteratively choose the branch that
+    // crosses as few other branch start/stops as possible.
+    // Then we work out the "depth" from all pre-existing lines inside our bounds,
+    // and add 1.
+    // This might need tweaking for branches that go off the top/bottom, but seems OK
+    // so far.
+
+    // This stores the minimum distance for each row in the disassembly
+    QVector<int> depths(m_disasm.lines.size());
+    for (int write = 0; write < m_branches.size(); ++write)
+    {
+        // Choose the remaining branch with the lowest "score", where "score" is
+        // the number of branch start/stops we cross (including our own, but this
+        // cancels out among all branches)
+        int lowestScore = INT_MAX;
+        int lowestId = -1;
+
+        for (int i = write; i < m_branches.size(); ++i)
+        {
+            const Branch& b = m_branches[i];
+            int score = 0;
+            for (int r = b.top(); r <= b.bottom(); ++r)
+                score += starts[r] + stops[r];
+
+            if (score < lowestScore)
+            {
+                lowestScore = score;
+                lowestId = i;
+            }
+        }
+
+        // Work out our minimum "depth" needed to avoid all the existing branches
+        // we straddle
+        Branch& chosen = m_branches[lowestId];
+        int depth = 0;
+        for (int r = chosen.top(); r <= chosen.bottom(); ++r)
+            depth = std::max(depth, depths[r]);
+
+        // Write this depth back into our range
+        for (int r = chosen.top(); r <= chosen.bottom(); ++r)
+            depths[r] = depth + 1;
+        chosen.depth = depth;
+
+        // Swap entries "write" and "chosen"
+        Branch tmp = m_branches[write];
+        m_branches[write] = m_branches[lowestId];
+        m_branches[lowestId] = tmp;
     }
 }
 
@@ -908,6 +999,7 @@ void DisasmWidget::UpdateFont()
     m_monoFont = m_pSession->GetSettings().m_font;
     QFontMetrics info(m_monoFont);
     m_lineHeight = info.lineSpacing();
+    m_charWidth = info.horizontalAdvance("0");
 }
 
 void DisasmWidget::RecalcColums()

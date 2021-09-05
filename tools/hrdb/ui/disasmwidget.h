@@ -101,6 +101,17 @@ private:
     };
     QVector<RowText>    m_rowTexts;
 
+    struct Branch
+    {
+        int top() const { return std::min(start, stop);}
+        int bottom() const { return std::max(start, stop);}
+        int start;
+        int stop;
+        int depth;
+        int type; // 0=normal, 1=top, 2=bottom
+    };
+    QVector<Branch>     m_branches;
+
     Breakpoints m_breakpoints;
     int         m_rowCount;
 
