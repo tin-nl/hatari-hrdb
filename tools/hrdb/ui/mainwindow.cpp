@@ -700,7 +700,6 @@ MainWindow::MainWindow(QWidget *parent)
     // "S" and "N" now done with keyPressEvent() to handle conflicts with other windows
     new QShortcut(QKeySequence("Ctrl+R"),         this, SLOT(startStopClicked()));
     new QShortcut(QKeySequence("Esc"),            this, SLOT(breakPressed()));
-    new QShortcut(QKeySequence("S"),            this, SLOT(singleStepClicked()));
 
     // Try initial connect
     ConnectTriggered();
