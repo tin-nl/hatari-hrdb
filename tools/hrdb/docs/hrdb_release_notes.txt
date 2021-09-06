@@ -1,6 +1,18 @@
 hrdb Release Notes
 ==================
 
+v0.003 (September 2021)
+
+- Disassembly Window
+  - Added lines between branch instruction and targets
+  - Added mousewheel pageup/pagedown.
+
+- Memory Window
+  - Added mousewheel pageup/pagedown.
+
+- General
+  - Fixed: Focus for Step/Next/Until works when window is undocked.
+
 v0.002 (September 2021)
 
 - Memory View
