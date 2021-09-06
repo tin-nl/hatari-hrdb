@@ -53,6 +53,21 @@ static QString CreateTooltip(uint32_t address, const SymbolTable& symTable, uint
     return final;
 }
 
+// Decide whether a given key event will be used for our input (e.g. for hex or ASCII)
+// This is needed so we can successfully override shortcuts.
+static char IsEditKey(const QKeyEvent* event)
+{
+    // Try edit keys
+    if (event->text().size() != 0)
+    {
+        QChar ch = event->text().at(0);
+        signed char ascii = ch.toLatin1();
+        if (ascii >= 32)
+            return ascii;
+    }
+    return 0;
+}
+
 MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
                                            int windowIndex) :
     QWidget(parent),
@@ -592,17 +607,9 @@ void MemoryWidget::keyPressEvent(QKeyEvent* event)
         default: break;
         }
 
-        // Try edit keys
-        if (event->text().size() != 0)
-        {
-            QChar ch = event->text().at(0);
-            signed char ascii = ch.toLatin1();
-            if (ascii >= 32)
-            {
-                EditKey(ascii);
-                return;
-            }
-        }
+        char key = IsEditKey(event);
+        if (key)
+            EditKey(key);
     }
     QWidget::keyPressEvent(event);
 }
@@ -715,6 +722,14 @@ bool MemoryWidget::event(QEvent *event)
             event->ignore();
         }
         return true;
+    }
+    else if (event->type() == QEvent::ShortcutOverride) {
+        // If there is a usable key, allow this rather than passing through to global
+        // shortcut
+        QKeyEvent* ke = static_cast<QKeyEvent*>(event);
+        char key = IsEditKey(ke);
+        if (key)
+           event->accept();
     }
     return QWidget::event(event);
 }
