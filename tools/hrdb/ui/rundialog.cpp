@@ -11,9 +11,32 @@
 #include <QComboBox>
 #include <QTemporaryFile>
 #include <QTextStream>
-
+#include <QtGlobal> // for Q_OS_MACOS
 #include "../models/session.h"
 #include "quicklayout.h"
+
+#ifdef Q_OS_MACOS
+#define USE_MAC_BUNDLE
+#endif
+
+#ifdef USE_MAC_BUNDLE
+static QString FindExecutable(const QString& basePath)
+{
+    QDir baseDir(basePath);
+    baseDir.cd("Contents");
+    baseDir.cd("MacOS");
+
+    // Read this directory
+    //baseDir.setFilter(QDir::Executable);
+    baseDir.setFilter(QDir::Files | QDir::Executable);
+    QFileInfoList exes = baseDir.entryInfoList();
+
+    if (exes.length() != 0)
+        return exes[0].absoluteFilePath();
+
+    return basePath;
+}
+#endif
 
 RunDialog::RunDialog(QWidget *parent, Session* pSession) :
     QDialog(parent),
@@ -200,11 +223,27 @@ void RunDialog::okClicked()
 
 void RunDialog::exeClicked()
 {
-    QString filename = QFileDialog::getOpenFileName(this,
-          tr("Choose Hatari executable"));
-    if (filename.size() != 0)
-        m_pExecutableTextEdit->setText(QDir::toNativeSeparators(filename));
-    saveSettings();
+    QFileDialog dialog(this,
+                       tr("Choose Hatari executable"));
+#ifdef USE_MAC_BUNDLE
+    dialog.setFileMode(QFileDialog::Directory);
+#endif
+
+    QStringList fileNames;
+    if (dialog.exec())
+    {
+        fileNames = dialog.selectedFiles();
+        if (fileNames.length() > 0)
+        {
+            QString name = QDir::toNativeSeparators(fileNames[0]);
+
+#ifdef USE_MAC_BUNDLE
+            name = FindExecutable(name);
+#endif
+            m_pExecutableTextEdit->setText(name);
+        }
+        saveSettings();
+    }
 }
 
 void RunDialog::prgClicked()
