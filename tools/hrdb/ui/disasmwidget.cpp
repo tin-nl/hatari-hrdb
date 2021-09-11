@@ -301,6 +301,7 @@ void DisasmWidget::connectChangedSlot()
     if (!m_pTargetModel->IsConnected())
     {
         m_disasm.lines.clear();
+        m_branches.clear();
         m_rowCount = 0;
         m_rowTexts.clear();
         m_memory.Clear();
