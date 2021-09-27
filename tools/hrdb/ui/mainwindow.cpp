@@ -15,6 +15,7 @@
 #include "graphicsinspector.h"
 #include "breakpointswidget.h"
 #include "consolewindow.h"
+#include "hardwarewindow.h"
 #include "addbreakpointdialog.h"
 #include "exceptiondialog.h"
 #include "rundialog.h"
@@ -635,6 +636,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_pBreakpointsWidget = new BreakpointsWindow(this, m_pTargetModel, m_pDispatcher);
     m_pBreakpointsWidget->setWindowTitle("Breakpoints (Alt+B)");
     m_pConsoleWindow = new ConsoleWindow(this, &m_session);
+    m_pHardwareWindow = new HardwareWindow(this, &m_session);
 
     m_pExceptionDialog = new ExceptionDialog(this, m_pTargetModel, m_pDispatcher);
     m_pRunDialog = new RunDialog(this, &m_session);
@@ -675,6 +677,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->addDockWidget(Qt::LeftDockWidgetArea, m_pGraphicsInspector);
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pBreakpointsWidget);
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pConsoleWindow);
+    this->addDockWidget(Qt::RightDockWidgetArea, m_pHardwareWindow);
 
     loadSettings();
 
@@ -923,6 +926,7 @@ void MainWindow::updateWindowMenu()
     m_pGraphicsInspectorAct->setChecked(m_pGraphicsInspector->isVisible());
     m_pBreakpointsWindowAct->setChecked(m_pBreakpointsWidget->isVisible());
     m_pConsoleWindowAct->setChecked(m_pConsoleWindow->isVisible());
+    m_pHardwareWindowAct->setChecked(m_pHardwareWindow->isVisible());
 }
 
 void MainWindow::updateButtonEnable()
@@ -963,13 +967,14 @@ void MainWindow::loadSettings()
         m_pGraphicsInspector->setVisible(true);
         m_pBreakpointsWidget->setVisible(true);
         m_pConsoleWindow->setVisible(false);
+        m_pHardwareWindow->setVisible(false);
     }
     else
     {
         QDockWidget* wlist[] =
         {
             m_pBreakpointsWidget, m_pGraphicsInspector,
-            m_pConsoleWindow,
+            m_pConsoleWindow, m_pHardwareWindow,
             nullptr
         };
         QDockWidget** pCurr = wlist;
@@ -1012,6 +1017,7 @@ void MainWindow::saveSettings()
         m_pMemoryViewWidgets[i]->saveSettings();
     m_pGraphicsInspector->saveSettings();
     m_pConsoleWindow->saveSettings();
+    m_pHardwareWindow->saveSettings();
 }
 
 void MainWindow::menuConnect()
@@ -1120,6 +1126,10 @@ void MainWindow::createActions()
     m_pConsoleWindowAct->setStatusTip(tr("Show the Console window"));
     m_pConsoleWindowAct->setCheckable(true);
 
+    m_pHardwareWindowAct = new QAction(tr("&Hardware"), this);
+    m_pHardwareWindowAct->setStatusTip(tr("Show the Hardware window"));
+    m_pHardwareWindowAct->setCheckable(true);
+
     for (int i = 0; i < kNumDisasmViews; ++i)
         connect(m_pDisasmWindowActs[i], &QAction::triggered, this,     [=] () { this->enableVis(m_pDisasmWidgets[i]); m_pDisasmWidgets[i]->keyFocus(); } );
 
@@ -1129,6 +1139,7 @@ void MainWindow::createActions()
     connect(m_pGraphicsInspectorAct, &QAction::triggered, this, [=] () { this->enableVis(m_pGraphicsInspector); m_pGraphicsInspector->keyFocus(); } );
     connect(m_pBreakpointsWindowAct, &QAction::triggered, this, [=] () { this->enableVis(m_pBreakpointsWidget); m_pBreakpointsWidget->keyFocus(); } );
     connect(m_pConsoleWindowAct,     &QAction::triggered, this, [=] () { this->enableVis(m_pConsoleWindow); m_pConsoleWindow->keyFocus(); } );
+    connect(m_pHardwareWindowAct,    &QAction::triggered, this, [=] () { this->enableVis(m_pHardwareWindow); m_pHardwareWindow->keyFocus(); } );
 
     // "About"
     m_pAboutAct = new QAction(tr("&About"), this);
@@ -1169,6 +1180,7 @@ void MainWindow::createMenus()
     m_pWindowMenu->addAction(m_pGraphicsInspectorAct);
     m_pWindowMenu->addAction(m_pBreakpointsWindowAct);
     m_pWindowMenu->addAction(m_pConsoleWindowAct);
+    m_pWindowMenu->addAction(m_pHardwareWindowAct);
 
     m_pHelpMenu = menuBar()->addMenu(tr("&Help"));
     m_pHelpMenu->addAction(m_pAboutAct);

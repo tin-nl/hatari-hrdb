@@ -2,7 +2,6 @@
 #define CONSOLEWINDOW_H
 
 #include <QDockWidget>
-#include <QTableView>
 #include <QFile>
 #include <QTextStream>
 #include "../models/memory.h"
@@ -11,6 +10,7 @@ class TargetModel;
 class Dispatcher;
 class Session;
 class QLabel;
+class QLineEdit;
 class QTextEdit;
 class QFileSystemWatcher;
 
