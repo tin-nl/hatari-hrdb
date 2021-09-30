@@ -5,94 +5,258 @@
 #include <QHeaderView>
 #include <QKeyEvent>
 #include <QSettings>
+#include <QTreeView>
 #include <QDebug>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
 #include "../models/session.h"
+#include "../hardware/hardware_st.h"
+#include "../hardware/regs_st.h"
 #include "quicklayout.h"
+
+#define EXTRACT_REG_ENUM(mem, reg, field)                              \
+    if (m_videoMem.HasAddress(Regs::reg))                              \
+    {                                                                  \
+        uint8_t byte = mem.ReadAddressByte(Regs::reg);                 \
+        return Regs::GetString(Regs::GetField_##reg##_##field(byte));  \
+    }                                                                  \
+    return QString("");
+
+//-----------------------------------------------------------------------------
+HardwareTreeItem::HardwareTreeItem(const char* headerName, uint32_t memTypes, Type type)
+    : m_memTypes(memTypes),
+      m_type(type),
+      m_title(headerName)
+{}
+
+//-----------------------------------------------------------------------------
+HardwareTreeItem::~HardwareTreeItem()
+{
+    qDeleteAll(m_childItems);
+}
+
+//-----------------------------------------------------------------------------
+void HardwareTreeItem::appendChild(HardwareTreeItem *item)
+{
+    m_childItems.append(item);
+    item->m_parentItem = this;
+}
+
+//-----------------------------------------------------------------------------
+HardwareTreeItem *HardwareTreeItem::child(int row)
+{
+    if (row < 0 || row >= m_childItems.size())
+        return nullptr;
+    return m_childItems.at(row);
+}
+
+//-----------------------------------------------------------------------------
+int HardwareTreeItem::childCount() const
+{
+    return m_childItems.count();
+}
+
+//-----------------------------------------------------------------------------
+int HardwareTreeItem::columnCount() const
+{
+    // NOTE: we override this, else parent nodes limit their children!
+    return 2;//m_itemData.count();
+}
+
+//-----------------------------------------------------------------------------
+HardwareTreeItem *HardwareTreeItem::parentItem()
+{
+    return m_parentItem;
+}
+
+//-----------------------------------------------------------------------------
+int HardwareTreeItem::row() const
+{
+    if (m_parentItem)
+        return m_parentItem->m_childItems.indexOf(const_cast<HardwareTreeItem*>(this));
+
+    return 0;
+}
 
 //-----------------------------------------------------------------------------
 HardwareTableModel::HardwareTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher) :
-    QAbstractTableModel(parent),
+    QAbstractItemModel(parent),
     m_pTargetModel(pTargetModel),
-    m_pDispatcher(pDispatcher)
+    m_pDispatcher(pDispatcher),
+    m_videoMem(0,0)
 {
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &HardwareTableModel::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,    this, &HardwareTableModel::memoryChangedSlot);
+
+    m_pRootItem = new HardwareTreeItem("", 0, HardwareTreeItem::kHeader);
+
+    HardwareTreeItem* m_pVideo = new HardwareTreeItem("Video", 0, HardwareTreeItem::kHeader);
+    m_pVideo->appendChild(new HardwareTreeItem("Resolution", HardwareTreeItem::kMemTypeVideo, HardwareTreeItem::kVideoRes));
+    m_pVideo->appendChild(new HardwareTreeItem("Sync Rate", HardwareTreeItem::kMemTypeVideo, HardwareTreeItem::kVideoHz));
+    m_pVideo->appendChild(new HardwareTreeItem("Screen Base", HardwareTreeItem::kMemTypeVideo, HardwareTreeItem::kVideoBase));
+
+    HardwareTreeItem* m_pMfp = new HardwareTreeItem("MFP", 0, HardwareTreeItem::kHeader);
+
+    m_pRootItem->appendChild(m_pVideo);
+    m_pRootItem->appendChild(m_pMfp);
 }
 
-int HardwareTableModel::rowCount(const QModelIndex &parent) const
+//-----------------------------------------------------------------------------
+HardwareTableModel::~HardwareTableModel()
 {
-    if (parent.isValid())
-        return 0;
-
-    return 10;
+    delete m_pRootItem;
 }
 
+//-----------------------------------------------------------------------------
 int HardwareTableModel::columnCount(const QModelIndex &parent) const
 {
     if (parent.isValid())
-        return 0;
-
-    return kColCount;
+        return static_cast<HardwareTreeItem*>(parent.internalPointer())->columnCount();
+    return m_pRootItem->columnCount();
 }
 
+//-----------------------------------------------------------------------------
 QVariant HardwareTableModel::data(const QModelIndex &index, int role) const
 {
-    uint32_t row = index.row();
-    const Breakpoints& bps = m_pTargetModel->GetBreakpoints();
-    if (row >= bps.m_breakpoints.size())
+    if (!index.isValid())
         return QVariant();
-    const Breakpoint& bp = bps.m_breakpoints[row];
 
-    if (role == Qt::DisplayRole)
+    if (role != Qt::DisplayRole)
+        return QVariant();
+
+    HardwareTreeItem *item = static_cast<HardwareTreeItem*>(index.internalPointer());
+    if (index.column() == 0)
+        return item->m_title;
+    if (index.column() == 1)
     {
-        if (index.column() == kColName)
-            return QString("name");
-        else if (index.column() == kColData)
-            return QString("data");
+        return getData(item->m_type);
     }
-    if (role == Qt::TextAlignmentRole)
-    {
-        if (index.column() == kColName)
-            return Qt::AlignLeft;
-        return Qt::AlignRight;
-    }
-    return QVariant(); // invalid item
+
+    return QVariant();
 }
 
+//-----------------------------------------------------------------------------
+Qt::ItemFlags HardwareTableModel::flags(const QModelIndex &index) const
+{
+    if (!index.isValid())
+        return Qt::NoItemFlags;
+
+    return QAbstractItemModel::flags(index);
+}
+
+//-----------------------------------------------------------------------------
 QVariant HardwareTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    if (orientation == Qt::Orientation::Horizontal)
+    (void)section;
+    if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
     {
-        if (role == Qt::DisplayRole)
-        {
-            switch (section)
-            {
-            }
-        }
-        if (role == Qt::TextAlignmentRole)
-        {
-            if (section == kColName)
-                return Qt::AlignLeft;
-            return Qt::AlignRight;
-        }
+        return QVariant();
     }
     return QVariant();
 }
 
 //-----------------------------------------------------------------------------
-void HardwareTableModel::startStopChangedSlot()
+QModelIndex HardwareTableModel::index(int row, int column, const QModelIndex & parent) const
 {
+    if (!hasIndex(row, column, parent))
+         return QModelIndex();
 
+     HardwareTreeItem *parentItem;
+
+     if (!parent.isValid())
+         parentItem = m_pRootItem;
+     else
+         parentItem = static_cast<HardwareTreeItem*>(parent.internalPointer());
+
+     HardwareTreeItem *childItem = parentItem->child(row);
+     if (childItem)
+         return createIndex(row, column, childItem);
+     return QModelIndex();
 }
 
+//-----------------------------------------------------------------------------
+QModelIndex HardwareTableModel::parent(const QModelIndex& index) const
+{
+    if (!index.isValid())
+        return QModelIndex();
+
+    HardwareTreeItem *childItem = static_cast<HardwareTreeItem*>(index.internalPointer());
+    HardwareTreeItem *parentItem = childItem->parentItem();
+
+    if (parentItem == m_pRootItem)
+        return QModelIndex();
+
+    return createIndex(parentItem->row(), 0, parentItem);
+}
+
+//-----------------------------------------------------------------------------
+int HardwareTableModel::rowCount(const QModelIndex &parent) const
+{
+    HardwareTreeItem *parentItem;
+    if (parent.column() > 0)
+        return 0;
+
+    if (!parent.isValid())
+        parentItem = m_pRootItem;
+    else
+        parentItem = static_cast<HardwareTreeItem*>(parent.internalPointer());
+
+    return parentItem->childCount();
+}
+
+//-----------------------------------------------------------------------------
+void HardwareTableModel::startStopChangedSlot()
+{
+    if (m_pTargetModel->IsRunning())
+    {
+
+    }
+    else {
+        m_videoRequest = m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::VID_REG_BASE, 0x70);
+    }
+}
 
 //-----------------------------------------------------------------------------
 void HardwareTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
 {
+    (void) memorySlot;
+    if (commandId == m_videoRequest)
+    {
+        m_videoMem = *m_pTargetModel->GetMemory(MemorySlot::kHardwareWindow);
+        emitDataChange(m_pRootItem, HardwareTreeItem::kMemTypeVideo);
+    }
+}
 
+//-----------------------------------------------------------------------------
+void HardwareTableModel::emitDataChange(HardwareTreeItem* root, uint32_t memTypes)
+{
+    if (root->m_memTypes & memTypes)
+        emit dataChanged(createIndex(0, 0, root), createIndex(0, 1, root));
+
+    for (int i = 0; i < root->childCount(); ++i)
+        emitDataChange(root->child(i), memTypes);
+}
+
+//-----------------------------------------------------------------------------
+QString HardwareTableModel::getData(HardwareTreeItem::Type type) const
+{
+    switch (type)
+    {
+    case HardwareTreeItem::Type::kHeader:
+        return QString("");
+    case HardwareTreeItem::Type::kVideoRes:
+        EXTRACT_REG_ENUM(m_videoMem, VID_SHIFTER_RES, RES);
+    case HardwareTreeItem::Type::kVideoHz:
+        EXTRACT_REG_ENUM(m_videoMem, VID_SYNC_MODE, RATE);
+    case HardwareTreeItem::Type::kVideoBase:
+        {
+            uint32_t address = 0;
+            HardwareST::GetVideoBase(m_videoMem, m_pTargetModel->GetMachineType(), address);
+            return QString::asprintf("$%x", address);
+        }
+    }
+    return QString();
 }
 
 //-----------------------------------------------------------------------------
@@ -105,7 +269,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     this->setWindowTitle("Hardware");
     setObjectName("Hardware");
 
-    m_pTableView = new QTableView(this);
+    m_pTableView = new QTreeView(this);
     m_pTableView->setModel(new HardwareTableModel(this, m_pTargetModel, m_pDispatcher));
 
     // Layouts

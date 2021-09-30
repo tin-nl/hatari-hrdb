@@ -22,7 +22,7 @@
 #include "../models/symboltablemodel.h"
 #include "../models/stringparsers.h"
 #include "../models/session.h"
-#include "../hardware/hardware_st.h"
+#include "../hardware/regs_st.h"
 #include "quicklayout.h"
 
 static void CreateBitplanePalette(QVector<uint32_t>& palette,
@@ -441,7 +441,7 @@ void GraphicsInspectorWidget::startStopChangedSlot()
     if (!m_pTargetModel->IsRunning())
     {
         // Trigger a full refresh of registers
-        m_requestIdVideoRegs = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspectorVideoRegs, HardwareST::VIDEO_REGS_BASE, 0x70);
+        m_requestIdVideoRegs = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspectorVideoRegs, Regs::VID_REG_BASE, 0x70);
     }
     else
     {
@@ -721,17 +721,11 @@ bool GraphicsInspectorWidget::SetAddressFromVideo()
 {
     // Update to current video regs
     const Memory* pVideoRegs = m_pTargetModel->GetMemory(MemorySlot::kVideo);
-    if (pVideoRegs->GetSize() > 0)
-    {
-        uint32_t hi = pVideoRegs->ReadAddressByte(HardwareST::VIDEO_BASE_HI);
-        uint32_t mi = pVideoRegs->ReadAddressByte(HardwareST::VIDEO_BASE_MED);
-        uint32_t lo = pVideoRegs->ReadAddressByte(HardwareST::VIDEO_BASE_LO);
-        // ST machines don't support low byte seting
-        if (IsMachineST(m_pTargetModel->GetMachineType()))
-            lo = 0;
 
-        m_address = (hi << 16) | (mi << 8) | lo;
-        DisplayAddress();
+    uint32_t address;
+    if (HardwareST::GetVideoBase(*pVideoRegs, m_pTargetModel->GetMachineType(), address))
+    {
+        m_address = address;
         return true;
     }
     return false;
@@ -770,7 +764,7 @@ void GraphicsInspectorWidget::UpdatePaletteFromSettings()
 
         for (uint i = 0; i < 16; ++i)
         {
-            uint32_t addr = HardwareST::VIDEO_PALETTE_0 + i*2;
+            uint32_t addr = Regs::VID_PAL_0 + i*2;
             uint32_t  r = pMemOrig->ReadAddressByte(addr + 0) & 0xf;
             uint32_t  g = pMemOrig->ReadAddressByte(addr + 1) >> 4;
             uint32_t  b = pMemOrig->ReadAddressByte(addr + 1) & 0xf;
@@ -853,10 +847,10 @@ GraphicsInspectorWidget::Mode GraphicsInspectorWidget::GetEffectiveMode() const
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
     if (!pMem)
         return Mode::k4Bitplane;
-    uint8_t modeReg = pMem->ReadAddressByte(HardwareST::VIDEO_RESOLUTION) & 3;
-    if (modeReg == 0)
+    Regs::RESOLUTION modeReg = Regs::GetField_VID_SHIFTER_RES_RES(pMem->ReadAddressByte(Regs::VID_SHIFTER_RES));
+    if (modeReg == Regs::RESOLUTION::LOW)
         return Mode::k4Bitplane;
-    else if (modeReg == 1)
+    else if (modeReg == Regs::RESOLUTION::MEDIUM)
         return Mode::k2Bitplane;
 
     return Mode::k1Bitplane;
@@ -870,7 +864,7 @@ int GraphicsInspectorWidget::GetEffectiveWidth() const
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
     if (!pMem)
         return Mode::k4Bitplane;
-    uint8_t modeReg = pMem->ReadAddressByte(HardwareST::VIDEO_RESOLUTION) & 3;
+    Regs::RESOLUTION modeReg = Regs::GetField_VID_SHIFTER_RES_RES(pMem->ReadAddressByte(Regs::VID_SHIFTER_RES));
     if (modeReg == 0)
         return 20;
     else if (modeReg == 1)
@@ -886,7 +880,7 @@ int GraphicsInspectorWidget::GetEffectiveHeight() const
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
     if (!pMem)
         return Mode::k4Bitplane;
-    uint8_t modeReg = pMem->ReadAddressByte(HardwareST::VIDEO_RESOLUTION) & 3;
+    Regs::RESOLUTION modeReg = Regs::GetField_VID_SHIFTER_RES_RES(pMem->ReadAddressByte(Regs::VID_SHIFTER_RES));
     if (modeReg == 0)
         return 200;
     else if (modeReg == 1)

@@ -2,15 +2,51 @@
 #define HARDWAREWINDOW_H
 
 #include <QDockWidget>
-#include <QTableView>
-#include <QFile>
+#include <QAbstractItemModel>
 #include "../models/memory.h"
 
+class QTreeView;
 class TargetModel;
 class Dispatcher;
 class Session;
 
-class HardwareTableModel : public QAbstractTableModel
+class HardwareTreeItem
+{
+public:
+    enum Type
+    {
+      kHeader,
+      kVideoRes,
+      kVideoHz,
+      kVideoBase
+    };
+
+    static const uint32_t kMemTypeVideo = 1 << 0;
+    static const uint32_t kMemTypeMfp   = 1 << 1;
+
+    HardwareTreeItem(const char* headerName, uint32_t memTypes, Type type);
+    ~HardwareTreeItem();
+
+    void appendChild(HardwareTreeItem *child);
+
+    HardwareTreeItem *child(int row);
+    int childCount() const;
+    int columnCount() const;
+    int row() const;
+    HardwareTreeItem *parentItem();
+
+    bool m_isHeader;
+    uint32_t m_memTypes;
+    Type m_type;
+    const char* m_title;
+
+private:
+    QVector<HardwareTreeItem*> m_childItems;
+    HardwareTreeItem *m_parentItem;
+
+};
+
+class HardwareTableModel : public QAbstractItemModel
 {
     Q_OBJECT
 public:
@@ -22,22 +58,36 @@ public:
     };
 
     HardwareTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* pDispatcher);
+    virtual ~HardwareTableModel();
 
     // "When subclassing QAbstractTableModel, you must implement rowCount(), columnCount(), and data()."
     virtual int rowCount(const QModelIndex &parent) const;
     virtual int columnCount(const QModelIndex &parent) const;
+    virtual Qt::ItemFlags flags(const QModelIndex &index) const;
     virtual QVariant data(const QModelIndex &index, int role) const;
     virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const;
+    virtual QModelIndex index(int, int, const QModelIndex&) const;
+    virtual QModelIndex parent(const QModelIndex&) const;
 
 public slots:
     void startStopChangedSlot();
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
 
 private:
+    void emitDataChange(HardwareTreeItem* root, uint32_t memTypes);
+
+    QString getData(HardwareTreeItem::Type type) const;
+
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
-};
 
+    // Memory and requests
+    uint64_t            m_videoRequest;
+
+    Memory              m_videoMem;
+
+    HardwareTreeItem*   m_pRootItem;
+};
 
 class HardwareWindow : public QDockWidget
 {
@@ -58,8 +108,7 @@ private slots:
 
 private:
 
-    QTableView*         m_pTableView;
-
+    QTreeView*          m_pTableView;
     Session*            m_pSession;
     TargetModel*        m_pTargetModel;
     Dispatcher*         m_pDispatcher;

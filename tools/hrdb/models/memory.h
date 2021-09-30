@@ -21,6 +21,8 @@ enum MemorySlot
     kGraphicsInspector = kMemoryView0 + kNumMemoryViews,    // gfx bitmap
     kGraphicsInspectorVideoRegs,                            // same as kVideo but synced with graphics inspector requests
 
+    kHardwareWindow,    // Multiple (overlaid) memory requests -- the view takes a copy
+
     kMemorySlotCount
 };
 
@@ -81,6 +83,7 @@ public:
         return m_pData;
     }
 
+    // Deep copy of the data for caching.
     Memory& operator=(const Memory& other);
 
 private:

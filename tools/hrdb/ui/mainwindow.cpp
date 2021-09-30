@@ -8,7 +8,7 @@
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
 #include "../models/exceptionmask.h"
-#include "../hardware/hardware_st.h"
+#include "../hardware/regs_st.h"
 
 #include "disasmwidget.h"
 #include "memoryviewwidget.h"
@@ -747,7 +747,7 @@ void MainWindow::startStopChangedSlot()
         m_pDispatcher->SendCommandPacket("exmask");
 
         // Video memory is generally handy
-        m_pDispatcher->RequestMemory(MemorySlot::kVideo, HardwareST::VIDEO_REGS_BASE, 0x70);
+        m_pDispatcher->RequestMemory(MemorySlot::kVideo, Regs::VID_REG_BASE, 0x70);
 
         // Only re-request symbols if we didn't find any the first time
         if (m_pTargetModel->GetSymbolTable().GetHatariSubTable().Count() == 0)

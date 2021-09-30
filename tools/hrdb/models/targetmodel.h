@@ -10,18 +10,9 @@
 #include "symboltable.h"
 #include "registers.h"
 #include "exceptionmask.h"
+#include "../hardware/hardware_st.h"
 
 class QTimer;
-
-enum MACHINETYPE
-{
-    MACHINE_ST = 0,
-    MACHINE_MEGA_ST = 1,
-    MACHINE_STE = 2,
-    MACHINE_MEGA_STE = 3,
-    MACHINE_TT = 4,
-    MACHINE_FALCON = 5
-};
 
 class TargetChangedFlags
 {
