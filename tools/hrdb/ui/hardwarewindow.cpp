@@ -15,13 +15,21 @@
 #include "../hardware/regs_st.h"
 #include "quicklayout.h"
 
-#define EXTRACT_REG_ENUM(mem, reg, field)                              \
-    if (m_videoMem.HasAddress(Regs::reg))                              \
+#define EXTRACT_FIELD_ENUM(mem, reg, field)                            \
+    if (mem.HasAddress(Regs::reg))                                     \
     {                                                                  \
         uint8_t byte = mem.ReadAddressByte(Regs::reg);                 \
         return Regs::GetString(Regs::GetField_##reg##_##field(byte));  \
     }                                                                  \
-    return QString("");
+    return QString("no mem?");
+
+#define EXTRACT_FIELD_DEC(mem, reg, field)                             \
+    if (mem.HasAddress(Regs::reg))                                     \
+    {                                                                  \
+        uint8_t byte = mem.ReadAddressByte(Regs::reg);                 \
+        return QString::asprintf("%u", Regs::GetField_##reg##_##field(byte));    \
+    }                                                                  \
+    return QString("no mem?");
 
 //-----------------------------------------------------------------------------
 HardwareTreeItem::HardwareTreeItem(const char* headerName, uint32_t memTypes, Type type)
@@ -58,13 +66,6 @@ int HardwareTreeItem::childCount() const
 }
 
 //-----------------------------------------------------------------------------
-int HardwareTreeItem::columnCount() const
-{
-    // NOTE: we override this, else parent nodes limit their children!
-    return 2;//m_itemData.count();
-}
-
-//-----------------------------------------------------------------------------
 HardwareTreeItem *HardwareTreeItem::parentItem()
 {
     return m_parentItem;
@@ -84,7 +85,8 @@ HardwareTableModel::HardwareTableModel(QObject *parent, TargetModel *pTargetMode
     QAbstractItemModel(parent),
     m_pTargetModel(pTargetModel),
     m_pDispatcher(pDispatcher),
-    m_videoMem(0,0)
+    m_videoMem(0,0),
+    m_mfpMem(0,0)
 {
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &HardwareTableModel::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,    this, &HardwareTableModel::memoryChangedSlot);
@@ -97,6 +99,10 @@ HardwareTableModel::HardwareTableModel(QObject *parent, TargetModel *pTargetMode
     m_pVideo->appendChild(new HardwareTreeItem("Screen Base", HardwareTreeItem::kMemTypeVideo, HardwareTreeItem::kVideoBase));
 
     HardwareTreeItem* m_pMfp = new HardwareTreeItem("MFP", 0, HardwareTreeItem::kHeader);
+    m_pMfp->appendChild(new HardwareTreeItem("Timer A Mode", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerAMode));
+    m_pMfp->appendChild(new HardwareTreeItem("Timer A Data", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerAData));
+    m_pMfp->appendChild(new HardwareTreeItem("Timer B Mode", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerBMode));
+    m_pMfp->appendChild(new HardwareTreeItem("Timer B Data", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerBData));
 
     m_pRootItem->appendChild(m_pVideo);
     m_pRootItem->appendChild(m_pMfp);
@@ -109,11 +115,9 @@ HardwareTableModel::~HardwareTableModel()
 }
 
 //-----------------------------------------------------------------------------
-int HardwareTableModel::columnCount(const QModelIndex &parent) const
+int HardwareTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    if (parent.isValid())
-        return static_cast<HardwareTreeItem*>(parent.internalPointer())->columnCount();
-    return m_pRootItem->columnCount();
+    return 2;
 }
 
 //-----------------------------------------------------------------------------
@@ -213,7 +217,8 @@ void HardwareTableModel::startStopChangedSlot()
 
     }
     else {
-        m_videoRequest = m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::VID_REG_BASE, 0x70);
+        m_videoRequest = m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::VID_REG_BASE,  0x70);
+        m_mfpRequest   = m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::MFP_GPIP,      0x30);
     }
 }
 
@@ -225,6 +230,11 @@ void HardwareTableModel::memoryChangedSlot(int memorySlot, uint64_t commandId)
     {
         m_videoMem = *m_pTargetModel->GetMemory(MemorySlot::kHardwareWindow);
         emitDataChange(m_pRootItem, HardwareTreeItem::kMemTypeVideo);
+    }
+    else if (commandId == m_mfpRequest)
+    {
+        m_mfpMem = *m_pTargetModel->GetMemory(MemorySlot::kHardwareWindow);
+        emitDataChange(m_pRootItem, HardwareTreeItem::kMemTypeMfp);
     }
 }
 
@@ -246,15 +256,23 @@ QString HardwareTableModel::getData(HardwareTreeItem::Type type) const
     case HardwareTreeItem::Type::kHeader:
         return QString("");
     case HardwareTreeItem::Type::kVideoRes:
-        EXTRACT_REG_ENUM(m_videoMem, VID_SHIFTER_RES, RES);
+        EXTRACT_FIELD_ENUM(m_videoMem, VID_SHIFTER_RES, RES);
     case HardwareTreeItem::Type::kVideoHz:
-        EXTRACT_REG_ENUM(m_videoMem, VID_SYNC_MODE, RATE);
+        EXTRACT_FIELD_ENUM(m_videoMem, VID_SYNC_MODE, RATE);
     case HardwareTreeItem::Type::kVideoBase:
         {
             uint32_t address = 0;
             HardwareST::GetVideoBase(m_videoMem, m_pTargetModel->GetMachineType(), address);
             return QString::asprintf("$%x", address);
         }
+    case HardwareTreeItem::Type::kMfpTimerAMode:
+        EXTRACT_FIELD_ENUM(m_mfpMem, MFP_TACR, MODE);
+    case HardwareTreeItem::Type::kMfpTimerBMode:
+        EXTRACT_FIELD_ENUM(m_mfpMem, MFP_TBCR, MODE);
+    case HardwareTreeItem::Type::kMfpTimerAData:
+        EXTRACT_FIELD_DEC(m_mfpMem, MFP_TADR, ALL);
+    case HardwareTreeItem::Type::kMfpTimerBData:
+        EXTRACT_FIELD_DEC(m_mfpMem, MFP_TBDR, ALL);
     }
     return QString();
 }

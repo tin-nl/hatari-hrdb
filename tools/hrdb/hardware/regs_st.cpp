@@ -4,29 +4,69 @@
 namespace Regs {
 const char* GetString(MMU_BANK val)
 {
-	if (val==0) return "128K";
-	if (val==1) return "512K";
-	if (val==2) return "2MB";
-	if (val==3) return "reserved";
+	if (val==MMU_BANK::SIZE_128K) return "128K";
+	if (val==MMU_BANK::SIZE_512K) return "512K";
+	if (val==MMU_BANK::SIZE_2MB) return "2MB";
+	if (val==MMU_BANK::SIZE_RESERVED) return "reserved";
 	return "?";
 }
 const char* GetString(RESOLUTION val)
 {
-	if (val==0) return "ST-Low";
-	if (val==1) return "ST-Medium";
-	if (val==2) return "ST-High";
+	if (val==RESOLUTION::LOW) return "ST-Low";
+	if (val==RESOLUTION::MEDIUM) return "ST-Medium";
+	if (val==RESOLUTION::HIGH) return "ST-High";
 	return "?";
 }
 const char* GetString(SYNC_RATE val)
 {
-	if (val==0) return "60Hz";
-	if (val==1) return "50Hz";
+	if (val==SYNC_RATE::HZ_60) return "60Hz";
+	if (val==SYNC_RATE::HZ_50) return "50Hz";
 	return "?";
 }
 const char* GetString(SYNC_TYPE val)
 {
-	if (val==0) return "Internal Sync";
-	if (val==1) return "External Sync";
+	if (val==SYNC_TYPE::INTERNAL) return "Internal Sync";
+	if (val==SYNC_TYPE::EXTERNAL) return "External Sync";
+	return "?";
+}
+const char* GetString(TIMER_MODE_A val)
+{
+	if (val==TIMER_MODE_A::STOP) return "Stopped";
+	if (val==TIMER_MODE_A::DELAY_4) return "Delay mode, divide by 4";
+	if (val==TIMER_MODE_A::DELAY_10) return "Delay mode, divide by 10";
+	if (val==TIMER_MODE_A::DELAY_16) return "Delay mode, divide by 16";
+	if (val==TIMER_MODE_A::DELAY_50) return "Delay mode, divide by 50";
+	if (val==TIMER_MODE_A::DELAY_64) return "Delay mode, divide by 64";
+	if (val==TIMER_MODE_A::DELAY_100) return "Delay mode, divide by 100";
+	if (val==TIMER_MODE_A::DELAY_200) return "Delay mode, divide by 200";
+	if (val==TIMER_MODE_A::EVENT) return "Event count mode";
+	if (val==TIMER_MODE_A::PULSE_4) return "Pulse extension mode, divide by 4";
+	if (val==TIMER_MODE_A::PULSE_10) return "Pulse extension mode, divide by 10";
+	if (val==TIMER_MODE_A::PULSE_16) return "Pulse extension mode, divide by 16";
+	if (val==TIMER_MODE_A::PULSE_50) return "Pulse extension mode, divide by 50";
+	if (val==TIMER_MODE_A::PULSE_64) return "Pulse extension mode, divide by 64";
+	if (val==TIMER_MODE_A::PULSE_100) return "Pulse extension mode, divide by 100";
+	if (val==TIMER_MODE_A::PULSE_200) return "Pulse extension mode, divide by 200";
+	return "?";
+}
+const char* GetString(TIMER_MODE_B val)
+{
+	if (val==TIMER_MODE_B::STOP) return "Stopped";
+	if (val==TIMER_MODE_B::DELAY_4) return "Delay mode, divide by 4";
+	if (val==TIMER_MODE_B::DELAY_10) return "Delay mode, divide by 10";
+	if (val==TIMER_MODE_B::DELAY_16) return "Delay mode, divide by 16";
+	if (val==TIMER_MODE_B::DELAY_50) return "Delay mode, divide by 50";
+	if (val==TIMER_MODE_B::DELAY_64) return "Delay mode, divide by 64";
+	if (val==TIMER_MODE_B::DELAY_100) return "Delay mode, divide by 100";
+	if (val==TIMER_MODE_B::DELAY_200) return "Delay mode, divide by 200";
+	if (val==TIMER_MODE_B::EVENT) return "Event count mode (HBL events)";
+	if (val==TIMER_MODE_B::PULSE_4) return "Pulse extension mode, divide by 4";
+	if (val==TIMER_MODE_B::PULSE_10) return "Pulse extension mode, divide by 10";
+	if (val==TIMER_MODE_B::PULSE_16) return "Pulse extension mode, divide by 16";
+	if (val==TIMER_MODE_B::PULSE_50) return "Pulse extension mode, divide by 50";
+	if (val==TIMER_MODE_B::PULSE_64) return "Pulse extension mode, divide by 64";
+	if (val==TIMER_MODE_B::PULSE_100) return "Pulse extension mode, divide by 100";
+	if (val==TIMER_MODE_B::PULSE_200) return "Pulse extension mode, divide by 200";
 	return "?";
 }
 } // namespace

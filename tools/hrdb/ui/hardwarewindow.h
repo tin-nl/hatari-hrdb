@@ -15,10 +15,16 @@ class HardwareTreeItem
 public:
     enum Type
     {
-      kHeader,
-      kVideoRes,
-      kVideoHz,
-      kVideoBase
+        kHeader,
+
+        kVideoRes,
+        kVideoHz,
+        kVideoBase,
+
+        kMfpTimerAMode,
+        kMfpTimerAData,
+        kMfpTimerBMode,
+        kMfpTimerBData,
     };
 
     static const uint32_t kMemTypeVideo = 1 << 0;
@@ -31,7 +37,8 @@ public:
 
     HardwareTreeItem *child(int row);
     int childCount() const;
-    int columnCount() const;
+
+    // This is "my own index inside my parent"
     int row() const;
     HardwareTreeItem *parentItem();
 
@@ -43,7 +50,6 @@ public:
 private:
     QVector<HardwareTreeItem*> m_childItems;
     HardwareTreeItem *m_parentItem;
-
 };
 
 class HardwareTableModel : public QAbstractItemModel
@@ -83,8 +89,10 @@ private:
 
     // Memory and requests
     uint64_t            m_videoRequest;
+    uint64_t            m_mfpRequest;
 
     Memory              m_videoMem;
+    Memory              m_mfpMem;
 
     HardwareTreeItem*   m_pRootItem;
 };

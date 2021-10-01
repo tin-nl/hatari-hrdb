@@ -865,9 +865,9 @@ int GraphicsInspectorWidget::GetEffectiveWidth() const
     if (!pMem)
         return Mode::k4Bitplane;
     Regs::RESOLUTION modeReg = Regs::GetField_VID_SHIFTER_RES_RES(pMem->ReadAddressByte(Regs::VID_SHIFTER_RES));
-    if (modeReg == 0)
+    if (modeReg == Regs::RESOLUTION::LOW)
         return 20;
-    else if (modeReg == 1)
+    else if (modeReg == Regs::RESOLUTION::MEDIUM)
         return 40;
     return 40;
 }
@@ -881,9 +881,9 @@ int GraphicsInspectorWidget::GetEffectiveHeight() const
     if (!pMem)
         return Mode::k4Bitplane;
     Regs::RESOLUTION modeReg = Regs::GetField_VID_SHIFTER_RES_RES(pMem->ReadAddressByte(Regs::VID_SHIFTER_RES));
-    if (modeReg == 0)
+    if (modeReg == Regs::RESOLUTION::LOW)
         return 200;
-    else if (modeReg == 1)
+    else if (modeReg == Regs::RESOLUTION::MEDIUM)
         return 200;
     return 400;
 }

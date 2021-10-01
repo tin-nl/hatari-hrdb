@@ -6,7 +6,7 @@
 namespace Regs {
 
 /* Enum MMU_BANK */
-enum MMU_BANK {
+enum class MMU_BANK : uint8_t {
 	SIZE_128K            =      0, /* 128K */
 	SIZE_512K            =      1, /* 512K */
 	SIZE_2MB             =      2, /* 2MB */
@@ -14,22 +14,62 @@ enum MMU_BANK {
 };
 
 /* Enum RESOLUTION */
-enum RESOLUTION {
+enum class RESOLUTION : uint8_t {
 	LOW                  =      0, /* ST-Low */
 	MEDIUM               =      1, /* ST-Medium */
 	HIGH                 =      2  /* ST-High */
 };
 
 /* Enum SYNC_RATE */
-enum SYNC_RATE {
+enum class SYNC_RATE : uint8_t {
 	HZ_60                =      0, /* 60Hz */
 	HZ_50                =      1  /* 50Hz */
 };
 
 /* Enum SYNC_TYPE */
-enum SYNC_TYPE {
+enum class SYNC_TYPE : uint8_t {
 	INTERNAL             =      0, /* Internal Sync */
 	EXTERNAL             =      1  /* External Sync */
+};
+
+/* Enum TIMER_MODE_A */
+enum class TIMER_MODE_A : uint8_t {
+	STOP                 =      0, /* Stopped */
+	DELAY_4              =      1, /* Delay mode, divide by 4 */
+	DELAY_10             =      2, /* Delay mode, divide by 10 */
+	DELAY_16             =      3, /* Delay mode, divide by 16 */
+	DELAY_50             =      4, /* Delay mode, divide by 50 */
+	DELAY_64             =      5, /* Delay mode, divide by 64 */
+	DELAY_100            =      6, /* Delay mode, divide by 100 */
+	DELAY_200            =      7, /* Delay mode, divide by 200 */
+	EVENT                =      8, /* Event count mode */
+	PULSE_4              =      9, /* Pulse extension mode, divide by 4 */
+	PULSE_10             =     10, /* Pulse extension mode, divide by 10 */
+	PULSE_16             =     11, /* Pulse extension mode, divide by 16 */
+	PULSE_50             =     12, /* Pulse extension mode, divide by 50 */
+	PULSE_64             =     13, /* Pulse extension mode, divide by 64 */
+	PULSE_100            =     14, /* Pulse extension mode, divide by 100 */
+	PULSE_200            =     15  /* Pulse extension mode, divide by 200 */
+};
+
+/* Enum TIMER_MODE_B */
+enum class TIMER_MODE_B : uint8_t {
+	STOP                 =      0, /* Stopped */
+	DELAY_4              =      1, /* Delay mode, divide by 4 */
+	DELAY_10             =      2, /* Delay mode, divide by 10 */
+	DELAY_16             =      3, /* Delay mode, divide by 16 */
+	DELAY_50             =      4, /* Delay mode, divide by 50 */
+	DELAY_64             =      5, /* Delay mode, divide by 64 */
+	DELAY_100            =      6, /* Delay mode, divide by 100 */
+	DELAY_200            =      7, /* Delay mode, divide by 200 */
+	EVENT                =      8, /* Event count mode (HBL events) */
+	PULSE_4              =      9, /* Pulse extension mode, divide by 4 */
+	PULSE_10             =     10, /* Pulse extension mode, divide by 10 */
+	PULSE_16             =     11, /* Pulse extension mode, divide by 16 */
+	PULSE_50             =     12, /* Pulse extension mode, divide by 50 */
+	PULSE_64             =     13, /* Pulse extension mode, divide by 64 */
+	PULSE_100            =     14, /* Pulse extension mode, divide by 100 */
+	PULSE_200            =     15  /* Pulse extension mode, divide by 200 */
 };
 
 /* Enum -> string lookup declarations */
@@ -37,6 +77,8 @@ extern const char* GetString(MMU_BANK val);
 extern const char* GetString(RESOLUTION val);
 extern const char* GetString(SYNC_RATE val);
 extern const char* GetString(SYNC_TYPE val);
+extern const char* GetString(TIMER_MODE_A val);
+extern const char* GetString(TIMER_MODE_B val);
 
 /* Register Addresses */
 static const uint32_t MMU_CONFIG                     = 0xff8001;
@@ -69,6 +111,30 @@ static const uint32_t FDC_STATUS                     = 0xff8606;
 static const uint32_t FDC_DMA_BASE_HIGH              = 0xff8609;
 static const uint32_t FDC_DMA_BASE_MID               = 0xff860b;
 static const uint32_t FDC_DMA_BASE_LOW               = 0xff860d;
+static const uint32_t MFP_GPIP                       = 0xfffa01;
+static const uint32_t MFP_AER                        = 0xfffa03;
+static const uint32_t MFP_DDR                        = 0xfffa05;
+static const uint32_t MFP_IERA                       = 0xfffa07;
+static const uint32_t MFP_IERB                       = 0xfffa09;
+static const uint32_t MFP_IPRA                       = 0xfffa0b;
+static const uint32_t MFP_IPRB                       = 0xfffa0d;
+static const uint32_t MFP_ISRA                       = 0xfffa0f;
+static const uint32_t MFP_ISRB                       = 0xfffa11;
+static const uint32_t MFP_IMRA                       = 0xfffa13;
+static const uint32_t MFP_IMRB                       = 0xfffa15;
+static const uint32_t MFP_VR                         = 0xfffa17;
+static const uint32_t MFP_TACR                       = 0xfffa19;
+static const uint32_t MFP_TBCR                       = 0xfffa1b;
+static const uint32_t MFP_TCDCR                      = 0xfffa1d;
+static const uint32_t MFP_TADR                       = 0xfffa1f;
+static const uint32_t MFP_TBDR                       = 0xfffa21;
+static const uint32_t MFP_TCDR                       = 0xfffa23;
+static const uint32_t MFP_TDDR                       = 0xfffa25;
+static const uint32_t MFP_SCR                        = 0xfffa27;
+static const uint32_t MFP_UCR                        = 0xfffa29;
+static const uint32_t MFP_RSR                        = 0xfffa2b;
+static const uint32_t MFP_TSR                        = 0xfffa2d;
+static const uint32_t MFP_UDR                        = 0xfffa2f;
 
 /* Register Field Accessors */
 
@@ -103,6 +169,38 @@ static const uint8_t VID_SYNC_MODE_RATE_MASK = 1;
 inline SYNC_RATE GetField_VID_SYNC_MODE_RATE(uint8_t value) { return static_cast<SYNC_RATE>(((value)>>1) & 1); }
 
 
+/* Register VID_PAL_0 ($ff8240)*/
+/* Field BLUE_ST */
+static const uint8_t VID_PAL_0_BLUE_ST_SHIFT = 0;
+static const uint8_t VID_PAL_0_BLUE_ST_MASK = 7;
+inline uint8_t GetField_VID_PAL_0_BLUE_ST(uint16_t value) { return static_cast<uint8_t>(((value)>>0) & 7); }
+
+/* Field BLUE_STE */
+static const uint8_t VID_PAL_0_BLUE_STE_SHIFT = 0;
+static const uint8_t VID_PAL_0_BLUE_STE_MASK = 15;
+inline uint8_t GetField_VID_PAL_0_BLUE_STE(uint16_t value) { return static_cast<uint8_t>(((value)>>0) & 15); }
+
+/* Field GREEN_ST */
+static const uint8_t VID_PAL_0_GREEN_ST_SHIFT = 4;
+static const uint8_t VID_PAL_0_GREEN_ST_MASK = 7;
+inline uint8_t GetField_VID_PAL_0_GREEN_ST(uint16_t value) { return static_cast<uint8_t>(((value)>>4) & 7); }
+
+/* Field GREEN_STE */
+static const uint8_t VID_PAL_0_GREEN_STE_SHIFT = 4;
+static const uint8_t VID_PAL_0_GREEN_STE_MASK = 15;
+inline uint8_t GetField_VID_PAL_0_GREEN_STE(uint16_t value) { return static_cast<uint8_t>(((value)>>4) & 15); }
+
+/* Field RED_ST */
+static const uint8_t VID_PAL_0_RED_ST_SHIFT = 8;
+static const uint8_t VID_PAL_0_RED_ST_MASK = 7;
+inline uint8_t GetField_VID_PAL_0_RED_ST(uint16_t value) { return static_cast<uint8_t>(((value)>>8) & 7); }
+
+/* Field RED_STE */
+static const uint8_t VID_PAL_0_RED_STE_SHIFT = 8;
+static const uint8_t VID_PAL_0_RED_STE_MASK = 15;
+inline uint8_t GetField_VID_PAL_0_RED_STE(uint16_t value) { return static_cast<uint8_t>(((value)>>8) & 15); }
+
+
 /* Register VID_SHIFTER_RES ($ff8260)*/
 /* Field RES */
 static const uint8_t VID_SHIFTER_RES_RES_SHIFT = 0;
@@ -125,6 +223,433 @@ inline bool GetField_FDC_STATUS_SECT_CNT(uint16_t value) { return static_cast<bo
 static const uint8_t FDC_STATUS_DATA_REQ_SHIFT = 2;
 static const uint8_t FDC_STATUS_DATA_REQ_MASK = 1;
 inline bool GetField_FDC_STATUS_DATA_REQ(uint16_t value) { return static_cast<bool>(((value)>>2) & 1); }
+
+
+/* Register MFP_AER ($fffa03)*/
+/* Field CENT_BUSY */
+static const uint8_t MFP_AER_CENT_BUSY_SHIFT = 0;
+static const uint8_t MFP_AER_CENT_BUSY_MASK = 1;
+inline bool GetField_MFP_AER_CENT_BUSY(uint8_t value) { return static_cast<bool>(((value)>>0) & 1); }
+
+/* Field RS232_DCD */
+static const uint8_t MFP_AER_RS232_DCD_SHIFT = 1;
+static const uint8_t MFP_AER_RS232_DCD_MASK = 1;
+inline bool GetField_MFP_AER_RS232_DCD(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field RS232_CTS */
+static const uint8_t MFP_AER_RS232_CTS_SHIFT = 2;
+static const uint8_t MFP_AER_RS232_CTS_MASK = 1;
+inline bool GetField_MFP_AER_RS232_CTS(uint8_t value) { return static_cast<bool>(((value)>>2) & 1); }
+
+/* Field KBD_MIDI */
+static const uint8_t MFP_AER_KBD_MIDI_SHIFT = 4;
+static const uint8_t MFP_AER_KBD_MIDI_MASK = 1;
+inline bool GetField_MFP_AER_KBD_MIDI(uint8_t value) { return static_cast<bool>(((value)>>4) & 1); }
+
+/* Field FDC_HDC */
+static const uint8_t MFP_AER_FDC_HDC_SHIFT = 5;
+static const uint8_t MFP_AER_FDC_HDC_MASK = 1;
+inline bool GetField_MFP_AER_FDC_HDC(uint8_t value) { return static_cast<bool>(((value)>>5) & 1); }
+
+/* Field RS232_RING */
+static const uint8_t MFP_AER_RS232_RING_SHIFT = 6;
+static const uint8_t MFP_AER_RS232_RING_MASK = 1;
+inline bool GetField_MFP_AER_RS232_RING(uint8_t value) { return static_cast<bool>(((value)>>6) & 1); }
+
+/* Field MONO */
+static const uint8_t MFP_AER_MONO_SHIFT = 7;
+static const uint8_t MFP_AER_MONO_MASK = 1;
+inline bool GetField_MFP_AER_MONO(uint8_t value) { return static_cast<bool>(((value)>>7) & 1); }
+
+
+/* Register MFP_IERA ($fffa07)*/
+/* Field TIMER_B */
+static const uint8_t MFP_IERA_TIMER_B_SHIFT = 0;
+static const uint8_t MFP_IERA_TIMER_B_MASK = 1;
+inline bool GetField_MFP_IERA_TIMER_B(uint8_t value) { return static_cast<bool>(((value)>>0) & 1); }
+
+/* Field SEND_ERR */
+static const uint8_t MFP_IERA_SEND_ERR_SHIFT = 1;
+static const uint8_t MFP_IERA_SEND_ERR_MASK = 1;
+inline bool GetField_MFP_IERA_SEND_ERR(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field SEND_EMPTY */
+static const uint8_t MFP_IERA_SEND_EMPTY_SHIFT = 2;
+static const uint8_t MFP_IERA_SEND_EMPTY_MASK = 1;
+inline bool GetField_MFP_IERA_SEND_EMPTY(uint8_t value) { return static_cast<bool>(((value)>>2) & 1); }
+
+/* Field REC_ERR */
+static const uint8_t MFP_IERA_REC_ERR_SHIFT = 3;
+static const uint8_t MFP_IERA_REC_ERR_MASK = 1;
+inline bool GetField_MFP_IERA_REC_ERR(uint8_t value) { return static_cast<bool>(((value)>>3) & 1); }
+
+/* Field REC_FULL */
+static const uint8_t MFP_IERA_REC_FULL_SHIFT = 4;
+static const uint8_t MFP_IERA_REC_FULL_MASK = 1;
+inline bool GetField_MFP_IERA_REC_FULL(uint8_t value) { return static_cast<bool>(((value)>>4) & 1); }
+
+/* Field TIMER_A */
+static const uint8_t MFP_IERA_TIMER_A_SHIFT = 5;
+static const uint8_t MFP_IERA_TIMER_A_MASK = 1;
+inline bool GetField_MFP_IERA_TIMER_A(uint8_t value) { return static_cast<bool>(((value)>>5) & 1); }
+
+/* Field RS232_RING */
+static const uint8_t MFP_IERA_RS232_RING_SHIFT = 6;
+static const uint8_t MFP_IERA_RS232_RING_MASK = 1;
+inline bool GetField_MFP_IERA_RS232_RING(uint8_t value) { return static_cast<bool>(((value)>>6) & 1); }
+
+/* Field MONO_DETECT */
+static const uint8_t MFP_IERA_MONO_DETECT_SHIFT = 7;
+static const uint8_t MFP_IERA_MONO_DETECT_MASK = 1;
+inline bool GetField_MFP_IERA_MONO_DETECT(uint8_t value) { return static_cast<bool>(((value)>>7) & 1); }
+
+
+/* Register MFP_IERB ($fffa09)*/
+/* Field RS232_DTD */
+static const uint8_t MFP_IERB_RS232_DTD_SHIFT = 1;
+static const uint8_t MFP_IERB_RS232_DTD_MASK = 1;
+inline bool GetField_MFP_IERB_RS232_DTD(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field CENT_BUSY */
+static const uint8_t MFP_IERB_CENT_BUSY_SHIFT = 1;
+static const uint8_t MFP_IERB_CENT_BUSY_MASK = 1;
+inline bool GetField_MFP_IERB_CENT_BUSY(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field RS232_CTS */
+static const uint8_t MFP_IERB_RS232_CTS_SHIFT = 2;
+static const uint8_t MFP_IERB_RS232_CTS_MASK = 1;
+inline bool GetField_MFP_IERB_RS232_CTS(uint8_t value) { return static_cast<bool>(((value)>>2) & 1); }
+
+/* Field BLITTER */
+static const uint8_t MFP_IERB_BLITTER_SHIFT = 3;
+static const uint8_t MFP_IERB_BLITTER_MASK = 1;
+inline bool GetField_MFP_IERB_BLITTER(uint8_t value) { return static_cast<bool>(((value)>>3) & 1); }
+
+/* Field TIMER_D */
+static const uint8_t MFP_IERB_TIMER_D_SHIFT = 4;
+static const uint8_t MFP_IERB_TIMER_D_MASK = 1;
+inline bool GetField_MFP_IERB_TIMER_D(uint8_t value) { return static_cast<bool>(((value)>>4) & 1); }
+
+/* Field TIMER_C */
+static const uint8_t MFP_IERB_TIMER_C_SHIFT = 5;
+static const uint8_t MFP_IERB_TIMER_C_MASK = 1;
+inline bool GetField_MFP_IERB_TIMER_C(uint8_t value) { return static_cast<bool>(((value)>>5) & 1); }
+
+/* Field IKBD_MIDI */
+static const uint8_t MFP_IERB_IKBD_MIDI_SHIFT = 6;
+static const uint8_t MFP_IERB_IKBD_MIDI_MASK = 1;
+inline bool GetField_MFP_IERB_IKBD_MIDI(uint8_t value) { return static_cast<bool>(((value)>>6) & 1); }
+
+/* Field FDC_HDC */
+static const uint8_t MFP_IERB_FDC_HDC_SHIFT = 7;
+static const uint8_t MFP_IERB_FDC_HDC_MASK = 1;
+inline bool GetField_MFP_IERB_FDC_HDC(uint8_t value) { return static_cast<bool>(((value)>>7) & 1); }
+
+
+/* Register MFP_IPRA ($fffa0b)*/
+/* Field TIMER_B */
+static const uint8_t MFP_IPRA_TIMER_B_SHIFT = 0;
+static const uint8_t MFP_IPRA_TIMER_B_MASK = 1;
+inline bool GetField_MFP_IPRA_TIMER_B(uint8_t value) { return static_cast<bool>(((value)>>0) & 1); }
+
+/* Field SEND_ERR */
+static const uint8_t MFP_IPRA_SEND_ERR_SHIFT = 1;
+static const uint8_t MFP_IPRA_SEND_ERR_MASK = 1;
+inline bool GetField_MFP_IPRA_SEND_ERR(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field SEND_EMPTY */
+static const uint8_t MFP_IPRA_SEND_EMPTY_SHIFT = 2;
+static const uint8_t MFP_IPRA_SEND_EMPTY_MASK = 1;
+inline bool GetField_MFP_IPRA_SEND_EMPTY(uint8_t value) { return static_cast<bool>(((value)>>2) & 1); }
+
+/* Field REC_ERR */
+static const uint8_t MFP_IPRA_REC_ERR_SHIFT = 3;
+static const uint8_t MFP_IPRA_REC_ERR_MASK = 1;
+inline bool GetField_MFP_IPRA_REC_ERR(uint8_t value) { return static_cast<bool>(((value)>>3) & 1); }
+
+/* Field REC_FULL */
+static const uint8_t MFP_IPRA_REC_FULL_SHIFT = 4;
+static const uint8_t MFP_IPRA_REC_FULL_MASK = 1;
+inline bool GetField_MFP_IPRA_REC_FULL(uint8_t value) { return static_cast<bool>(((value)>>4) & 1); }
+
+/* Field TIMER_A */
+static const uint8_t MFP_IPRA_TIMER_A_SHIFT = 5;
+static const uint8_t MFP_IPRA_TIMER_A_MASK = 1;
+inline bool GetField_MFP_IPRA_TIMER_A(uint8_t value) { return static_cast<bool>(((value)>>5) & 1); }
+
+/* Field RS232_RING */
+static const uint8_t MFP_IPRA_RS232_RING_SHIFT = 6;
+static const uint8_t MFP_IPRA_RS232_RING_MASK = 1;
+inline bool GetField_MFP_IPRA_RS232_RING(uint8_t value) { return static_cast<bool>(((value)>>6) & 1); }
+
+/* Field MONO_DETECT */
+static const uint8_t MFP_IPRA_MONO_DETECT_SHIFT = 7;
+static const uint8_t MFP_IPRA_MONO_DETECT_MASK = 1;
+inline bool GetField_MFP_IPRA_MONO_DETECT(uint8_t value) { return static_cast<bool>(((value)>>7) & 1); }
+
+
+/* Register MFP_IPRB ($fffa0d)*/
+/* Field RS232_DTD */
+static const uint8_t MFP_IPRB_RS232_DTD_SHIFT = 1;
+static const uint8_t MFP_IPRB_RS232_DTD_MASK = 1;
+inline bool GetField_MFP_IPRB_RS232_DTD(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field CENT_BUSY */
+static const uint8_t MFP_IPRB_CENT_BUSY_SHIFT = 1;
+static const uint8_t MFP_IPRB_CENT_BUSY_MASK = 1;
+inline bool GetField_MFP_IPRB_CENT_BUSY(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field RS232_CTS */
+static const uint8_t MFP_IPRB_RS232_CTS_SHIFT = 2;
+static const uint8_t MFP_IPRB_RS232_CTS_MASK = 1;
+inline bool GetField_MFP_IPRB_RS232_CTS(uint8_t value) { return static_cast<bool>(((value)>>2) & 1); }
+
+/* Field BLITTER */
+static const uint8_t MFP_IPRB_BLITTER_SHIFT = 3;
+static const uint8_t MFP_IPRB_BLITTER_MASK = 1;
+inline bool GetField_MFP_IPRB_BLITTER(uint8_t value) { return static_cast<bool>(((value)>>3) & 1); }
+
+/* Field TIMER_D */
+static const uint8_t MFP_IPRB_TIMER_D_SHIFT = 4;
+static const uint8_t MFP_IPRB_TIMER_D_MASK = 1;
+inline bool GetField_MFP_IPRB_TIMER_D(uint8_t value) { return static_cast<bool>(((value)>>4) & 1); }
+
+/* Field TIMER_C */
+static const uint8_t MFP_IPRB_TIMER_C_SHIFT = 5;
+static const uint8_t MFP_IPRB_TIMER_C_MASK = 1;
+inline bool GetField_MFP_IPRB_TIMER_C(uint8_t value) { return static_cast<bool>(((value)>>5) & 1); }
+
+/* Field IKBD_MIDI */
+static const uint8_t MFP_IPRB_IKBD_MIDI_SHIFT = 6;
+static const uint8_t MFP_IPRB_IKBD_MIDI_MASK = 1;
+inline bool GetField_MFP_IPRB_IKBD_MIDI(uint8_t value) { return static_cast<bool>(((value)>>6) & 1); }
+
+/* Field FDC_HDC */
+static const uint8_t MFP_IPRB_FDC_HDC_SHIFT = 7;
+static const uint8_t MFP_IPRB_FDC_HDC_MASK = 1;
+inline bool GetField_MFP_IPRB_FDC_HDC(uint8_t value) { return static_cast<bool>(((value)>>7) & 1); }
+
+
+/* Register MFP_ISRA ($fffa0f)*/
+/* Field TIMER_B */
+static const uint8_t MFP_ISRA_TIMER_B_SHIFT = 0;
+static const uint8_t MFP_ISRA_TIMER_B_MASK = 1;
+inline bool GetField_MFP_ISRA_TIMER_B(uint8_t value) { return static_cast<bool>(((value)>>0) & 1); }
+
+/* Field SEND_ERR */
+static const uint8_t MFP_ISRA_SEND_ERR_SHIFT = 1;
+static const uint8_t MFP_ISRA_SEND_ERR_MASK = 1;
+inline bool GetField_MFP_ISRA_SEND_ERR(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field SEND_EMPTY */
+static const uint8_t MFP_ISRA_SEND_EMPTY_SHIFT = 2;
+static const uint8_t MFP_ISRA_SEND_EMPTY_MASK = 1;
+inline bool GetField_MFP_ISRA_SEND_EMPTY(uint8_t value) { return static_cast<bool>(((value)>>2) & 1); }
+
+/* Field REC_ERR */
+static const uint8_t MFP_ISRA_REC_ERR_SHIFT = 3;
+static const uint8_t MFP_ISRA_REC_ERR_MASK = 1;
+inline bool GetField_MFP_ISRA_REC_ERR(uint8_t value) { return static_cast<bool>(((value)>>3) & 1); }
+
+/* Field REC_FULL */
+static const uint8_t MFP_ISRA_REC_FULL_SHIFT = 4;
+static const uint8_t MFP_ISRA_REC_FULL_MASK = 1;
+inline bool GetField_MFP_ISRA_REC_FULL(uint8_t value) { return static_cast<bool>(((value)>>4) & 1); }
+
+/* Field TIMER_A */
+static const uint8_t MFP_ISRA_TIMER_A_SHIFT = 5;
+static const uint8_t MFP_ISRA_TIMER_A_MASK = 1;
+inline bool GetField_MFP_ISRA_TIMER_A(uint8_t value) { return static_cast<bool>(((value)>>5) & 1); }
+
+/* Field RS232_RING */
+static const uint8_t MFP_ISRA_RS232_RING_SHIFT = 6;
+static const uint8_t MFP_ISRA_RS232_RING_MASK = 1;
+inline bool GetField_MFP_ISRA_RS232_RING(uint8_t value) { return static_cast<bool>(((value)>>6) & 1); }
+
+/* Field MONO_DETECT */
+static const uint8_t MFP_ISRA_MONO_DETECT_SHIFT = 7;
+static const uint8_t MFP_ISRA_MONO_DETECT_MASK = 1;
+inline bool GetField_MFP_ISRA_MONO_DETECT(uint8_t value) { return static_cast<bool>(((value)>>7) & 1); }
+
+
+/* Register MFP_ISRB ($fffa11)*/
+/* Field RS232_DTD */
+static const uint8_t MFP_ISRB_RS232_DTD_SHIFT = 1;
+static const uint8_t MFP_ISRB_RS232_DTD_MASK = 1;
+inline bool GetField_MFP_ISRB_RS232_DTD(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field CENT_BUSY */
+static const uint8_t MFP_ISRB_CENT_BUSY_SHIFT = 1;
+static const uint8_t MFP_ISRB_CENT_BUSY_MASK = 1;
+inline bool GetField_MFP_ISRB_CENT_BUSY(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field RS232_CTS */
+static const uint8_t MFP_ISRB_RS232_CTS_SHIFT = 2;
+static const uint8_t MFP_ISRB_RS232_CTS_MASK = 1;
+inline bool GetField_MFP_ISRB_RS232_CTS(uint8_t value) { return static_cast<bool>(((value)>>2) & 1); }
+
+/* Field BLITTER */
+static const uint8_t MFP_ISRB_BLITTER_SHIFT = 3;
+static const uint8_t MFP_ISRB_BLITTER_MASK = 1;
+inline bool GetField_MFP_ISRB_BLITTER(uint8_t value) { return static_cast<bool>(((value)>>3) & 1); }
+
+/* Field TIMER_D */
+static const uint8_t MFP_ISRB_TIMER_D_SHIFT = 4;
+static const uint8_t MFP_ISRB_TIMER_D_MASK = 1;
+inline bool GetField_MFP_ISRB_TIMER_D(uint8_t value) { return static_cast<bool>(((value)>>4) & 1); }
+
+/* Field TIMER_C */
+static const uint8_t MFP_ISRB_TIMER_C_SHIFT = 5;
+static const uint8_t MFP_ISRB_TIMER_C_MASK = 1;
+inline bool GetField_MFP_ISRB_TIMER_C(uint8_t value) { return static_cast<bool>(((value)>>5) & 1); }
+
+/* Field IKBD_MIDI */
+static const uint8_t MFP_ISRB_IKBD_MIDI_SHIFT = 6;
+static const uint8_t MFP_ISRB_IKBD_MIDI_MASK = 1;
+inline bool GetField_MFP_ISRB_IKBD_MIDI(uint8_t value) { return static_cast<bool>(((value)>>6) & 1); }
+
+/* Field FDC_HDC */
+static const uint8_t MFP_ISRB_FDC_HDC_SHIFT = 7;
+static const uint8_t MFP_ISRB_FDC_HDC_MASK = 1;
+inline bool GetField_MFP_ISRB_FDC_HDC(uint8_t value) { return static_cast<bool>(((value)>>7) & 1); }
+
+
+/* Register MFP_IMRA ($fffa13)*/
+/* Field TIMER_B */
+static const uint8_t MFP_IMRA_TIMER_B_SHIFT = 0;
+static const uint8_t MFP_IMRA_TIMER_B_MASK = 1;
+inline bool GetField_MFP_IMRA_TIMER_B(uint8_t value) { return static_cast<bool>(((value)>>0) & 1); }
+
+/* Field SEND_ERR */
+static const uint8_t MFP_IMRA_SEND_ERR_SHIFT = 1;
+static const uint8_t MFP_IMRA_SEND_ERR_MASK = 1;
+inline bool GetField_MFP_IMRA_SEND_ERR(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field SEND_EMPTY */
+static const uint8_t MFP_IMRA_SEND_EMPTY_SHIFT = 2;
+static const uint8_t MFP_IMRA_SEND_EMPTY_MASK = 1;
+inline bool GetField_MFP_IMRA_SEND_EMPTY(uint8_t value) { return static_cast<bool>(((value)>>2) & 1); }
+
+/* Field REC_ERR */
+static const uint8_t MFP_IMRA_REC_ERR_SHIFT = 3;
+static const uint8_t MFP_IMRA_REC_ERR_MASK = 1;
+inline bool GetField_MFP_IMRA_REC_ERR(uint8_t value) { return static_cast<bool>(((value)>>3) & 1); }
+
+/* Field REC_FULL */
+static const uint8_t MFP_IMRA_REC_FULL_SHIFT = 4;
+static const uint8_t MFP_IMRA_REC_FULL_MASK = 1;
+inline bool GetField_MFP_IMRA_REC_FULL(uint8_t value) { return static_cast<bool>(((value)>>4) & 1); }
+
+/* Field TIMER_A */
+static const uint8_t MFP_IMRA_TIMER_A_SHIFT = 5;
+static const uint8_t MFP_IMRA_TIMER_A_MASK = 1;
+inline bool GetField_MFP_IMRA_TIMER_A(uint8_t value) { return static_cast<bool>(((value)>>5) & 1); }
+
+/* Field RS232_RING */
+static const uint8_t MFP_IMRA_RS232_RING_SHIFT = 6;
+static const uint8_t MFP_IMRA_RS232_RING_MASK = 1;
+inline bool GetField_MFP_IMRA_RS232_RING(uint8_t value) { return static_cast<bool>(((value)>>6) & 1); }
+
+/* Field MONO_DETECT */
+static const uint8_t MFP_IMRA_MONO_DETECT_SHIFT = 7;
+static const uint8_t MFP_IMRA_MONO_DETECT_MASK = 1;
+inline bool GetField_MFP_IMRA_MONO_DETECT(uint8_t value) { return static_cast<bool>(((value)>>7) & 1); }
+
+
+/* Register MFP_IMRB ($fffa15)*/
+/* Field RS232_DTD */
+static const uint8_t MFP_IMRB_RS232_DTD_SHIFT = 1;
+static const uint8_t MFP_IMRB_RS232_DTD_MASK = 1;
+inline bool GetField_MFP_IMRB_RS232_DTD(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field CENT_BUSY */
+static const uint8_t MFP_IMRB_CENT_BUSY_SHIFT = 1;
+static const uint8_t MFP_IMRB_CENT_BUSY_MASK = 1;
+inline bool GetField_MFP_IMRB_CENT_BUSY(uint8_t value) { return static_cast<bool>(((value)>>1) & 1); }
+
+/* Field RS232_CTS */
+static const uint8_t MFP_IMRB_RS232_CTS_SHIFT = 2;
+static const uint8_t MFP_IMRB_RS232_CTS_MASK = 1;
+inline bool GetField_MFP_IMRB_RS232_CTS(uint8_t value) { return static_cast<bool>(((value)>>2) & 1); }
+
+/* Field BLITTER */
+static const uint8_t MFP_IMRB_BLITTER_SHIFT = 3;
+static const uint8_t MFP_IMRB_BLITTER_MASK = 1;
+inline bool GetField_MFP_IMRB_BLITTER(uint8_t value) { return static_cast<bool>(((value)>>3) & 1); }
+
+/* Field TIMER_D */
+static const uint8_t MFP_IMRB_TIMER_D_SHIFT = 4;
+static const uint8_t MFP_IMRB_TIMER_D_MASK = 1;
+inline bool GetField_MFP_IMRB_TIMER_D(uint8_t value) { return static_cast<bool>(((value)>>4) & 1); }
+
+/* Field TIMER_C */
+static const uint8_t MFP_IMRB_TIMER_C_SHIFT = 5;
+static const uint8_t MFP_IMRB_TIMER_C_MASK = 1;
+inline bool GetField_MFP_IMRB_TIMER_C(uint8_t value) { return static_cast<bool>(((value)>>5) & 1); }
+
+/* Field IKBD_MIDI */
+static const uint8_t MFP_IMRB_IKBD_MIDI_SHIFT = 6;
+static const uint8_t MFP_IMRB_IKBD_MIDI_MASK = 1;
+inline bool GetField_MFP_IMRB_IKBD_MIDI(uint8_t value) { return static_cast<bool>(((value)>>6) & 1); }
+
+/* Field FDC_HDC */
+static const uint8_t MFP_IMRB_FDC_HDC_SHIFT = 7;
+static const uint8_t MFP_IMRB_FDC_HDC_MASK = 1;
+inline bool GetField_MFP_IMRB_FDC_HDC(uint8_t value) { return static_cast<bool>(((value)>>7) & 1); }
+
+
+/* Register MFP_VR ($fffa17)*/
+/* Field SOFTWARE_ENDINT */
+static const uint8_t MFP_VR_SOFTWARE_ENDINT_SHIFT = 3;
+static const uint8_t MFP_VR_SOFTWARE_ENDINT_MASK = 1;
+inline bool GetField_MFP_VR_SOFTWARE_ENDINT(uint8_t value) { return static_cast<bool>(((value)>>3) & 1); }
+
+/* Field VEC_BASE_OFFSET */
+static const uint8_t MFP_VR_VEC_BASE_OFFSET_SHIFT = 5;
+static const uint8_t MFP_VR_VEC_BASE_OFFSET_MASK = 7;
+inline uint8_t GetField_MFP_VR_VEC_BASE_OFFSET(uint8_t value) { return static_cast<uint8_t>(((value)>>5) & 7); }
+
+
+/* Register MFP_TACR ($fffa19)*/
+/* Field MODE */
+static const uint8_t MFP_TACR_MODE_SHIFT = 0;
+static const uint8_t MFP_TACR_MODE_MASK = 15;
+inline TIMER_MODE_A GetField_MFP_TACR_MODE(uint8_t value) { return static_cast<TIMER_MODE_A>(((value)>>0) & 15); }
+
+
+/* Register MFP_TBCR ($fffa1b)*/
+/* Field MODE */
+static const uint8_t MFP_TBCR_MODE_SHIFT = 0;
+static const uint8_t MFP_TBCR_MODE_MASK = 15;
+inline TIMER_MODE_B GetField_MFP_TBCR_MODE(uint8_t value) { return static_cast<TIMER_MODE_B>(((value)>>0) & 15); }
+
+
+/* Register MFP_TADR ($fffa1f)*/
+/* Field ALL */
+static const uint8_t MFP_TADR_ALL_SHIFT = 0;
+static const uint8_t MFP_TADR_ALL_MASK = 255;
+inline uint8_t GetField_MFP_TADR_ALL(uint8_t value) { return static_cast<uint8_t>(((value)>>0) & 255); }
+
+
+/* Register MFP_TBDR ($fffa21)*/
+/* Field ALL */
+static const uint8_t MFP_TBDR_ALL_SHIFT = 0;
+static const uint8_t MFP_TBDR_ALL_MASK = 255;
+inline uint8_t GetField_MFP_TBDR_ALL(uint8_t value) { return static_cast<uint8_t>(((value)>>0) & 255); }
+
+
+/* Register MFP_TCDR ($fffa23)*/
+/* Field ALL */
+static const uint8_t MFP_TCDR_ALL_SHIFT = 0;
+static const uint8_t MFP_TCDR_ALL_MASK = 255;
+inline uint8_t GetField_MFP_TCDR_ALL(uint8_t value) { return static_cast<uint8_t>(((value)>>0) & 255); }
+
+
+/* Register MFP_TDDR ($fffa25)*/
+/* Field ALL */
+static const uint8_t MFP_TDDR_ALL_SHIFT = 0;
+static const uint8_t MFP_TDDR_ALL_MASK = 255;
+inline uint8_t GetField_MFP_TDDR_ALL(uint8_t value) { return static_cast<uint8_t>(((value)>>0) & 255); }
 
 
 } // namespace
