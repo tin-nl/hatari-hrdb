@@ -72,6 +72,18 @@ enum class TIMER_MODE_B : uint8_t {
 	PULSE_200            =     15  /* Pulse extension mode, divide by 200 */
 };
 
+/* Enum TIMER_MODE_CD */
+enum class TIMER_MODE_CD : uint8_t {
+	STOP                 =      0, /* Stopped */
+	DELAY_4              =      1, /* Delay mode, divide by 4 */
+	DELAY_10             =      2, /* Delay mode, divide by 10 */
+	DELAY_16             =      3, /* Delay mode, divide by 16 */
+	DELAY_50             =      4, /* Delay mode, divide by 50 */
+	DELAY_64             =      5, /* Delay mode, divide by 64 */
+	DELAY_100            =      6, /* Delay mode, divide by 100 */
+	DELAY_200            =      7  /* Delay mode, divide by 200 */
+};
+
 /* Enum -> string lookup declarations */
 extern const char* GetString(MMU_BANK val);
 extern const char* GetString(RESOLUTION val);
@@ -79,6 +91,7 @@ extern const char* GetString(SYNC_RATE val);
 extern const char* GetString(SYNC_TYPE val);
 extern const char* GetString(TIMER_MODE_A val);
 extern const char* GetString(TIMER_MODE_B val);
+extern const char* GetString(TIMER_MODE_CD val);
 
 /* Register Addresses */
 static const uint32_t MMU_CONFIG                     = 0xff8001;
@@ -611,17 +624,29 @@ inline uint8_t GetField_MFP_VR_VEC_BASE_OFFSET(uint8_t value) { return static_ca
 
 
 /* Register MFP_TACR ($fffa19)*/
-/* Field MODE */
-static const uint8_t MFP_TACR_MODE_SHIFT = 0;
-static const uint8_t MFP_TACR_MODE_MASK = 15;
-inline TIMER_MODE_A GetField_MFP_TACR_MODE(uint8_t value) { return static_cast<TIMER_MODE_A>(((value)>>0) & 15); }
+/* Field MODE_TIMER_A */
+static const uint8_t MFP_TACR_MODE_TIMER_A_SHIFT = 0;
+static const uint8_t MFP_TACR_MODE_TIMER_A_MASK = 15;
+inline TIMER_MODE_A GetField_MFP_TACR_MODE_TIMER_A(uint8_t value) { return static_cast<TIMER_MODE_A>(((value)>>0) & 15); }
 
 
 /* Register MFP_TBCR ($fffa1b)*/
-/* Field MODE */
-static const uint8_t MFP_TBCR_MODE_SHIFT = 0;
-static const uint8_t MFP_TBCR_MODE_MASK = 15;
-inline TIMER_MODE_B GetField_MFP_TBCR_MODE(uint8_t value) { return static_cast<TIMER_MODE_B>(((value)>>0) & 15); }
+/* Field MODE_TIMER_B */
+static const uint8_t MFP_TBCR_MODE_TIMER_B_SHIFT = 0;
+static const uint8_t MFP_TBCR_MODE_TIMER_B_MASK = 15;
+inline TIMER_MODE_B GetField_MFP_TBCR_MODE_TIMER_B(uint8_t value) { return static_cast<TIMER_MODE_B>(((value)>>0) & 15); }
+
+
+/* Register MFP_TCDCR ($fffa1d)*/
+/* Field MODE_TIMER_D */
+static const uint8_t MFP_TCDCR_MODE_TIMER_D_SHIFT = 0;
+static const uint8_t MFP_TCDCR_MODE_TIMER_D_MASK = 7;
+inline TIMER_MODE_CD GetField_MFP_TCDCR_MODE_TIMER_D(uint8_t value) { return static_cast<TIMER_MODE_CD>(((value)>>0) & 7); }
+
+/* Field MODE_TIMER_C */
+static const uint8_t MFP_TCDCR_MODE_TIMER_C_SHIFT = 4;
+static const uint8_t MFP_TCDCR_MODE_TIMER_C_MASK = 7;
+inline TIMER_MODE_CD GetField_MFP_TCDCR_MODE_TIMER_C(uint8_t value) { return static_cast<TIMER_MODE_CD>(((value)>>4) & 7); }
 
 
 /* Register MFP_TADR ($fffa1f)*/

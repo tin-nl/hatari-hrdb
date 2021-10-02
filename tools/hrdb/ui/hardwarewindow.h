@@ -17,14 +17,29 @@ public:
     {
         kHeader,
 
+        // VIDEO
         kVideoRes,
         kVideoHz,
         kVideoBase,
+
+        // MFP
+        kMfpEnabledA,
+        kMfpMaskA,
+        kMfpPendingA,
+        kMfpInServiceA,
+        kMfpEnabledB,
+        kMfpMaskB,
+        kMfpPendingB,
+        kMfpInServiceB,
 
         kMfpTimerAMode,
         kMfpTimerAData,
         kMfpTimerBMode,
         kMfpTimerBData,
+        kMfpTimerCMode,
+        kMfpTimerCData,
+        kMfpTimerDMode,
+        kMfpTimerDData,
     };
 
     static const uint32_t kMemTypeVideo = 1 << 0;

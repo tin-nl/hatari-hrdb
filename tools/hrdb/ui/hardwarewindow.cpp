@@ -15,6 +15,8 @@
 #include "../hardware/regs_st.h"
 #include "quicklayout.h"
 
+#define stringify(x) #x
+
 #define EXTRACT_FIELD_ENUM(mem, reg, field)                            \
     if (mem.HasAddress(Regs::reg))                                     \
     {                                                                  \
@@ -30,6 +32,48 @@
         return QString::asprintf("%u", Regs::GetField_##reg##_##field(byte));    \
     }                                                                  \
     return QString("no mem?");
+
+#define ADD_MFP_FIELD_NAME(regVal, reg, field)     \
+    if (Regs::GetField_##reg##_##field(regVal))    \
+    { if(str.size()) str+= "|"; str += stringify(field); }
+
+//-----------------------------------------------------------------------------
+QString GetMfpBlockA(const Memory& mem, uint32_t regAddr)
+{
+    QString str;
+    if (!mem.HasAddress(regAddr))
+        return "";
+
+    uint8_t regVal = mem.ReadAddressByte(regAddr);
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERA, MONO_DETECT)
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERA, RS232_RING )
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERA, TIMER_A	)
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERA, REC_FULL   )
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERA, REC_ERR	)
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERA, SEND_EMPTY )
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERA, SEND_ERR   )
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERA, TIMER_B	)
+    return str;
+}
+
+//-----------------------------------------------------------------------------
+QString GetMfpBlockB(const Memory& mem, uint32_t regAddr)
+{
+    QString str;
+    if (!mem.HasAddress(regAddr))
+        return "";
+
+    uint8_t regVal = mem.ReadAddressByte(regAddr);
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERB, FDC_HDC	 )
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERB, IKBD_MIDI   )
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERB, TIMER_C	 )
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERB, TIMER_D	 )
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERB, BLITTER	 )
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERB, RS232_CTS   )
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERB, RS232_DTD   )
+    ADD_MFP_FIELD_NAME(regVal, MFP_IERB, CENT_BUSY   )
+    return str;
+}
 
 //-----------------------------------------------------------------------------
 HardwareTreeItem::HardwareTreeItem(const char* headerName, uint32_t memTypes, Type type)
@@ -99,10 +143,25 @@ HardwareTableModel::HardwareTableModel(QObject *parent, TargetModel *pTargetMode
     m_pVideo->appendChild(new HardwareTreeItem("Screen Base", HardwareTreeItem::kMemTypeVideo, HardwareTreeItem::kVideoBase));
 
     HardwareTreeItem* m_pMfp = new HardwareTreeItem("MFP", 0, HardwareTreeItem::kHeader);
-    m_pMfp->appendChild(new HardwareTreeItem("Timer A Mode", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerAMode));
-    m_pMfp->appendChild(new HardwareTreeItem("Timer A Data", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerAData));
-    m_pMfp->appendChild(new HardwareTreeItem("Timer B Mode", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerBMode));
-    m_pMfp->appendChild(new HardwareTreeItem("Timer B Data", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerBData));
+
+    m_pMfp->appendChild(new HardwareTreeItem("IERA Interrupt Enable A",  HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpEnabledA  ));
+    m_pMfp->appendChild(new HardwareTreeItem("IMRA Interrupt Mask A",    HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpMaskA     ));
+    m_pMfp->appendChild(new HardwareTreeItem("IPRA Interrupt Pending A", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpPendingA  ));
+    m_pMfp->appendChild(new HardwareTreeItem("ISRA Interrupt Service A", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpInServiceA));
+    m_pMfp->appendChild(new HardwareTreeItem("IERB Interrupt Enable B",  HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpEnabledB  ));
+    m_pMfp->appendChild(new HardwareTreeItem("IMRB Interrupt Mask B",    HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpMaskB     ));
+    m_pMfp->appendChild(new HardwareTreeItem("IPRB Interrupt Pending B", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpPendingB  ));
+    m_pMfp->appendChild(new HardwareTreeItem("ISRB Interrupt Service B", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpInServiceB));
+
+    m_pMfp->appendChild(new HardwareTreeItem("TACR Timer A Mode", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerAMode));
+    m_pMfp->appendChild(new HardwareTreeItem("TADR Timer A Data", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerAData));
+    m_pMfp->appendChild(new HardwareTreeItem("TBCR Timer B Mode", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerBMode));
+    m_pMfp->appendChild(new HardwareTreeItem("TBDR Timer B Data", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerBData));
+
+    m_pMfp->appendChild(new HardwareTreeItem("TBCR Timer C Mode", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerCMode));
+    m_pMfp->appendChild(new HardwareTreeItem("TBDR Timer C Data", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerCData));
+    m_pMfp->appendChild(new HardwareTreeItem("TBCR Timer D Mode", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerDMode));
+    m_pMfp->appendChild(new HardwareTreeItem("TBDR Timer D Data", HardwareTreeItem::kMemTypeMfp, HardwareTreeItem::kMfpTimerDData));
 
     m_pRootItem->appendChild(m_pVideo);
     m_pRootItem->appendChild(m_pMfp);
@@ -265,14 +324,40 @@ QString HardwareTableModel::getData(HardwareTreeItem::Type type) const
             HardwareST::GetVideoBase(m_videoMem, m_pTargetModel->GetMachineType(), address);
             return QString::asprintf("$%x", address);
         }
+    case HardwareTreeItem::Type::kMfpEnabledA:
+        return GetMfpBlockA(m_mfpMem, Regs::MFP_IERA);
+    case HardwareTreeItem::Type::kMfpMaskA:
+        return GetMfpBlockA(m_mfpMem, Regs::MFP_IMRA);
+    case HardwareTreeItem::Type::kMfpPendingA:
+        return GetMfpBlockA(m_mfpMem, Regs::MFP_IPRA);
+    case HardwareTreeItem::Type::kMfpInServiceA:
+        return GetMfpBlockA(m_mfpMem, Regs::MFP_ISRA);
+    case HardwareTreeItem::Type::kMfpEnabledB:
+        return GetMfpBlockB(m_mfpMem, Regs::MFP_IERB);
+    case HardwareTreeItem::Type::kMfpMaskB:
+        return GetMfpBlockB(m_mfpMem, Regs::MFP_IMRB);
+    case HardwareTreeItem::Type::kMfpPendingB:
+        return GetMfpBlockB(m_mfpMem, Regs::MFP_IPRB);
+    case HardwareTreeItem::Type::kMfpInServiceB:
+        return GetMfpBlockB(m_mfpMem, Regs::MFP_ISRB);
+
+    // Timer A/B/C/D
     case HardwareTreeItem::Type::kMfpTimerAMode:
-        EXTRACT_FIELD_ENUM(m_mfpMem, MFP_TACR, MODE);
-    case HardwareTreeItem::Type::kMfpTimerBMode:
-        EXTRACT_FIELD_ENUM(m_mfpMem, MFP_TBCR, MODE);
+        EXTRACT_FIELD_ENUM(m_mfpMem, MFP_TACR, MODE_TIMER_A);
     case HardwareTreeItem::Type::kMfpTimerAData:
         EXTRACT_FIELD_DEC(m_mfpMem, MFP_TADR, ALL);
+    case HardwareTreeItem::Type::kMfpTimerBMode:
+        EXTRACT_FIELD_ENUM(m_mfpMem, MFP_TBCR, MODE_TIMER_B);
     case HardwareTreeItem::Type::kMfpTimerBData:
         EXTRACT_FIELD_DEC(m_mfpMem, MFP_TBDR, ALL);
+    case HardwareTreeItem::Type::kMfpTimerCMode:
+        EXTRACT_FIELD_ENUM(m_mfpMem, MFP_TCDCR, MODE_TIMER_C);
+    case HardwareTreeItem::Type::kMfpTimerCData:
+        EXTRACT_FIELD_DEC(m_mfpMem, MFP_TCDR, ALL);
+    case HardwareTreeItem::Type::kMfpTimerDMode:
+        EXTRACT_FIELD_ENUM(m_mfpMem, MFP_TCDCR, MODE_TIMER_D);
+    case HardwareTreeItem::Type::kMfpTimerDData:
+        EXTRACT_FIELD_DEC(m_mfpMem, MFP_TDDR, ALL);
     }
     return QString();
 }
@@ -315,6 +400,10 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
 
     // Refresh font
     settingsChangedSlot();
+
+    m_pTableView->expandAll();
+    m_pTableView->resizeColumnToContents(0);
+    m_pTableView->resizeColumnToContents(1);
 }
 
 HardwareWindow::~HardwareWindow()

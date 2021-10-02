@@ -69,4 +69,16 @@ const char* GetString(TIMER_MODE_B val)
 	if (val==TIMER_MODE_B::PULSE_200) return "Pulse extension mode, divide by 200";
 	return "?";
 }
+const char* GetString(TIMER_MODE_CD val)
+{
+	if (val==TIMER_MODE_CD::STOP) return "Stopped";
+	if (val==TIMER_MODE_CD::DELAY_4) return "Delay mode, divide by 4";
+	if (val==TIMER_MODE_CD::DELAY_10) return "Delay mode, divide by 10";
+	if (val==TIMER_MODE_CD::DELAY_16) return "Delay mode, divide by 16";
+	if (val==TIMER_MODE_CD::DELAY_50) return "Delay mode, divide by 50";
+	if (val==TIMER_MODE_CD::DELAY_64) return "Delay mode, divide by 64";
+	if (val==TIMER_MODE_CD::DELAY_100) return "Delay mode, divide by 100";
+	if (val==TIMER_MODE_CD::DELAY_200) return "Delay mode, divide by 200";
+	return "?";
+}
 } // namespace
