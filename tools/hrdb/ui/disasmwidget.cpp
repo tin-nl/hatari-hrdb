@@ -619,6 +619,7 @@ void DisasmWidget::CalcDisasm()
     // each instruction.
     QVector<int> starts(m_disasm.lines.size());
     QVector<int> stops(m_disasm.lines.size());
+    // NOTE: do not use m_rowCount here, it can be stale!
 
     for (int row = 0; row < m_disasm.lines.size(); ++row)
     {
@@ -708,7 +709,7 @@ void DisasmWidget::CalcDisasm()
                 }
                 else if (target > lastAddr)
                 {
-                    b.stop = m_rowCount - 1;
+                    b.stop = m_disasm.lines.size() - 1;
                     b.type = 2; // bttom
                 }
             }
