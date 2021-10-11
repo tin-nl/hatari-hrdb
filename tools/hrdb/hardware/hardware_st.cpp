@@ -8,16 +8,20 @@ namespace HardwareST
 {
     bool GetVideoBase(const Memory& mem, MACHINETYPE machineType, uint32_t& address)
     {
-        if (mem.GetSize() > 0)
+        if (!mem.HasAddress(Regs::VID_SCREEN_HIGH))
+            return false;
+        if (!mem.HasAddress(Regs::VID_SCREEN_MID))
+            return false;
+        uint32_t hi = mem.ReadAddressByte(Regs::VID_SCREEN_HIGH);
+        uint32_t mi = mem.ReadAddressByte(Regs::VID_SCREEN_MID);
+        uint32_t lo = 0;
+        if (!IsMachineST(machineType))
         {
-            uint32_t hi = mem.ReadAddressByte(Regs::VID_SCREEN_HIGH);
-            uint32_t mi = mem.ReadAddressByte(Regs::VID_SCREEN_MID);
-            uint32_t lo = mem.ReadAddressByte(Regs::VID_SCREEN_LOW_STE);
-            if (IsMachineST(machineType))
-                lo = 0;
-            address = (hi << 16) | (mi << 8) | lo;
-            return true;
+            if (!mem.HasAddress(Regs::VID_SCREEN_LOW_STE))
+                return false;
+            lo = mem.ReadAddressByte(Regs::VID_SCREEN_LOW_STE);
         }
-        return false;
+        address = (hi << 16) | (mi << 8) | lo;
+        return true;
     }
 }

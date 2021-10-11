@@ -102,15 +102,23 @@ class HardwareField
 public:
     HardwareField()
     {
+        m_pLabel = new QLabel();
     }
 
     virtual ~HardwareField();
 
     virtual bool Update(const Memory& mem) = 0;
+
+    virtual QWidget* GetWidget() = 0;
+
+protected:
+    QLabel*                 m_pLabel;
 };
 
+//-----------------------------------------------------------------------------
 HardwareField::~HardwareField()
 {
+    delete m_pLabel;
 }
 
 //-----------------------------------------------------------------------------
@@ -120,18 +128,12 @@ public:
     HardwareFieldRegEnum(const Regs::FieldDef& def) :
         m_def(def)
     {
-        m_pLabel = new QLabel();
-    }
-
-    virtual ~HardwareFieldRegEnum()
-    {
-        delete m_pLabel;
     }
 
     bool Update(const Memory& mem);
-    const Regs::FieldDef&   m_def;
+    virtual QWidget* GetWidget() { return m_pLabel; }
 
-    QLabel*                 m_pLabel;
+    const Regs::FieldDef&   m_def;
     QString                 m_lastVal;
 };
 
@@ -145,16 +147,22 @@ public:
         m_pLabel = new QLabel();
     }
 
-    virtual ~HardwareFieldBitmask()
+    bool Update(const Memory& mem);
+    virtual QWidget* GetWidget() { return m_pLabel; }
+
+    const Regs::FieldDef**  m_pDefs;
+};
+
+//-----------------------------------------------------------------------------
+class HardwareFieldRegScreenbase : public HardwareField
+{
+public:
+    HardwareFieldRegScreenbase()
     {
-        delete m_pLabel;
     }
 
     bool Update(const Memory& mem);
-
-    const Regs::FieldDef**  m_pDefs;
-
-    QLabel*                 m_pLabel;
+    virtual QWidget* GetWidget() { return m_pLabel; }
 };
 
 //-----------------------------------------------------------------------------
@@ -472,10 +480,12 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     //pTopLayout->addWidget(m_pTableView);
     // Make each row a set of widgets?
     Expander* pExpVideo = new Expander(this, "Video");
-    addField(pExpVideo->m_pBottomLayout, "Resolution",              Regs::g_fieldDef_VID_SHIFTER_RES_RES);
-    addField(pExpVideo->m_pBottomLayout, "Sync Rate",               Regs::g_fieldDef_VID_SYNC_MODE_RATE);
-    addField(pExpVideo->m_pBottomLayout, "Horizontal Scroll (STE)", Regs::g_fieldDef_VID_HORIZ_SCROLL_STE_PIXELS);
+    addField(pExpVideo->m_pBottomLayout,  "Resolution",              Regs::g_fieldDef_VID_SHIFTER_RES_RES);
+    addField(pExpVideo->m_pBottomLayout,  "Sync Rate",               Regs::g_fieldDef_VID_SYNC_MODE_RATE);
+    addShared(pExpVideo->m_pBottomLayout, "Video Base",              new HardwareFieldRegScreenbase());
 
+    addField(pExpVideo->m_pBottomLayout, "Horizontal Scroll (STE)", Regs::g_fieldDef_VID_HORIZ_SCROLL_STE_PIXELS);
+    addField(pExpVideo->m_pBottomLayout, "Scanline offset (STE)",   Regs::g_fieldDef_VID_SCANLINE_OFFSET_STE_ALL);
 
     Expander* pExpMfp = new Expander(this, "MFP");
 
@@ -614,26 +624,23 @@ void HardwareWindow::settingsChangedSlot()
 
 void HardwareWindow::addField(QFormLayout* pLayout, const QString& title, const Regs::FieldDef &def)
 {
-    QLabel* pLabel = new QLabel(this);
-    pLabel->setMargin(0);
-    pLabel->setText(title);
-
     HardwareFieldRegEnum* pField = new HardwareFieldRegEnum(def);
-    m_fields.append(pField);
-
-    pLayout->addRow(pLabel, pField->m_pLabel);
+    addShared(pLayout, title, pField);
 }
 
 void HardwareWindow::addBitmask(QFormLayout* pLayout, const QString& title, const Regs::FieldDef** defs)
 {
+    HardwareFieldBitmask* pField = new HardwareFieldBitmask(defs);
+    addShared(pLayout, title, pField);
+}
+
+void HardwareWindow::addShared(QFormLayout *pLayout, const QString &title, HardwareField *pField)
+{
+    m_fields.append(pField);
     QLabel* pLabel = new QLabel(this);
     pLabel->setMargin(0);
     pLabel->setText(title);
-
-    HardwareFieldBitmask* pField = new HardwareFieldBitmask(defs);
-    m_fields.append(pField);
-
-    pLayout->addRow(pLabel, pField->m_pLabel);
+    pLayout->addRow(pLabel, pField->GetWidget());
 }
 
 bool HardwareFieldRegEnum::Update(const Memory &mem)
@@ -754,4 +761,16 @@ bool HardwareFieldBitmask::Update(const Memory &mem)
     }
     m_pLabel->setText(res);
     return true;
+}
+
+bool HardwareFieldRegScreenbase::Update(const Memory &mem)
+{
+    uint32_t address;
+    if (HardwareST::GetVideoBase(mem, MACHINETYPE::MACHINE_ST, address))
+    {
+        m_pLabel->setText(QString::asprintf("$%x", address));
+        return true;
+    }
+    return false;
+
 }

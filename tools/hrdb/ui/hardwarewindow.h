@@ -186,6 +186,7 @@ public slots:
 private:
     void addField(QFormLayout* pLayout, const QString& title, const Regs::FieldDef& def);
     void addBitmask(QFormLayout *pLayout, const QString &title, const Regs::FieldDef** defs);
+    void addShared(QFormLayout *pLayout, const QString &title, HardwareField* pField);
 
     //QTreeView*          m_pTableView;
     Session*            m_pSession;
