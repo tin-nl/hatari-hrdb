@@ -10,6 +10,11 @@ inline void SetMargins(QLayout* pLayout)
     pLayout->setContentsMargins(3, 3, 3, 3);
 }
 
+inline void SetMarginsRows(QLayout* pLayout)
+{
+    pLayout->setContentsMargins(3, 1, 0, 3);
+}
+
 inline QWidget*    CreateHorizLayout(QWidget* parent, QWidget* pWidgets[])
 {
     QHBoxLayout* pLayout = new QHBoxLayout;

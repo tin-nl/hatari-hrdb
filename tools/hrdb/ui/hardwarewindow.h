@@ -3,12 +3,22 @@
 
 #include <QDockWidget>
 #include <QAbstractItemModel>
+#include <QLabel>
 #include "../models/memory.h"
 
 class QTreeView;
+class QFormLayout;
+class QHBoxLayout;
+class QLabel;
+
 class TargetModel;
 class Dispatcher;
 class Session;
+
+namespace Regs
+{
+    struct FieldDef;
+}
 
 class HardwareTreeItem
 {
@@ -66,6 +76,48 @@ private:
     QVector<HardwareTreeItem*> m_childItems;
     HardwareTreeItem *m_parentItem;
 };
+
+class HardwareField;
+
+class ExpandLabel : public QLabel
+{
+    Q_OBJECT
+public:
+    ExpandLabel(QWidget* parent);
+signals:
+    void clicked();
+
+protected:
+    virtual void mousePressEvent(QMouseEvent *event) override;
+private:
+};
+
+
+class Expander : public QWidget
+{
+    Q_OBJECT
+public:
+    // Two widgets, the clickable item
+    QWidget*                m_pTop;
+    QWidget*                m_pBottom;
+    QHBoxLayout*            m_pTopLayout;
+    QFormLayout*            m_pBottomLayout;
+
+    ExpandLabel*            m_pButton;
+
+    // Then the form-layout with child items
+    Expander(QWidget* parent, QString text);
+
+public slots:
+    void buttonPressedSlot();
+
+private:
+    void UpdateState();
+
+    QString m_text;
+    bool m_expanded;
+};
+
 
 class HardwareTableModel : public QAbstractItemModel
 {
@@ -125,16 +177,25 @@ public:
     void loadSettings();
     void saveSettings();
 
-private slots:
+public slots:
     void connectChangedSlot();
+    void startStopChangedSlot();
+    void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void settingsChangedSlot();
 
 private:
+    void addField(QFormLayout* pLayout, const QString& title, const Regs::FieldDef& def);
+    void addBitmask(QFormLayout *pLayout, const QString &title, const Regs::FieldDef** defs);
 
-    QTreeView*          m_pTableView;
+    //QTreeView*          m_pTableView;
     Session*            m_pSession;
     TargetModel*        m_pTargetModel;
     Dispatcher*         m_pDispatcher;
+
+    Memory              m_videoMem;
+    Memory              m_mfpMem;
+
+    QVector<HardwareField*>     m_fields;
 };
 
 #endif // HARDWAREWINDOW_H
