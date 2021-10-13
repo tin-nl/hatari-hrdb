@@ -76,7 +76,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &DisasmWidget::symbolTableChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &DisasmWidget::connectChangedSlot);
     connect(m_pTargetModel, &TargetModel::registersChangedSignal,   this, &DisasmWidget::CalcOpAddresses);
-    connect(m_pTargetModel, &TargetModel::otherMemoryChanged,       this, &DisasmWidget::otherMemoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::otherMemoryChangedSignal,       this, &DisasmWidget::otherMemoryChangedSlot);
 
     // UI connects
     connect(m_pRunUntilAction,       &QAction::triggered, this, &DisasmWidget::runToCursorRightClick);

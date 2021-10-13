@@ -37,6 +37,17 @@ public:
 };
 
 /*
+    Simple container for YM register state
+*/
+class YmState
+{
+public:
+    static const int kNumRegs = 16;
+    void Clear();
+    uint8_t m_regs[kNumRegs];
+};
+
+/*
     Core central data model reflecting the state of the target.
 */
 class TargetModel : public QObject
@@ -59,6 +70,7 @@ public:
     // Set Hatari's subtable of symbols
     void SetSymbolTable(const SymbolSubTable& syms, uint64_t commandId);
     void SetExceptionMask(const ExceptionMask& mask);
+    void SetYm(const YmState& state);
     void NotifyMemoryChanged(uint32_t address, uint32_t size);
 
     // User-added console command. Anything can happen!
@@ -80,6 +92,7 @@ public:
     const Breakpoints& GetBreakpoints() const { return m_breakpoints; }
     const SymbolTable& GetSymbolTable() const { return m_symbolTable; }
     const ExceptionMask& GetExceptionMask() const { return m_exceptionMask; }
+    YmState GetYm() const { return m_ymState; }
 
 public slots:
 
@@ -104,9 +117,10 @@ signals:
     void breakpointsChangedSignal(uint64_t commandId);
     void symbolTableChangedSignal(uint64_t commandId);
     void exceptionMaskChanged();
+    void ymChangedSignal();
 
     // Something edited memory
-    void otherMemoryChanged(uint32_t address, uint32_t size);
+    void otherMemoryChangedSignal(uint32_t address, uint32_t size);
 
 private slots:
 
@@ -127,6 +141,7 @@ private:
     Breakpoints     m_breakpoints;  // Current breakpoint list
     SymbolTable     m_symbolTable;
     ExceptionMask   m_exceptionMask;
+    YmState         m_ymState;
 
     // Actual current memory contents
     const Memory*   m_pMemory[MemorySlot::kMemorySlotCount];

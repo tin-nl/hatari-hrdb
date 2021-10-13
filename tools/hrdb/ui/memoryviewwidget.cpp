@@ -101,7 +101,7 @@ MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryWidget::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryWidget::startStopChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &MemoryWidget::connectChangedSlot);
-    connect(m_pTargetModel, &TargetModel::otherMemoryChanged,       this, &MemoryWidget::otherMemoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::otherMemoryChangedSignal,       this, &MemoryWidget::otherMemoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &MemoryWidget::symbolTableChangedSlot);
     connect(m_pSession,     &Session::settingsChanged,              this, &MemoryWidget::settingsChangedSlot);
 }

@@ -3,6 +3,12 @@
 #include <iostream>
 #include <QTimer>
 
+void YmState::Clear()
+{
+    for (int i = 0; i < kNumRegs; ++i)
+        m_regs[i] = 0;
+}
+
 void TargetChangedFlags::Clear()
 {
     for (int i = 0; i < kChangedStateCount; ++i)
@@ -110,6 +116,12 @@ void TargetModel::SetExceptionMask(const ExceptionMask &mask)
     emit exceptionMaskChanged();
 }
 
+void TargetModel::SetYm(const YmState& state)
+{
+    m_ymState = state;
+    emit ymChanged();
+}
+
 void TargetModel::NotifyMemoryChanged(uint32_t address, uint32_t size)
 {
     m_changedFlags.SetChanged(TargetChangedFlags::kOtherMemory);
@@ -143,4 +155,3 @@ bool IsMachineST(MACHINETYPE type)
 {
     return (type == MACHINE_ST || type == MACHINE_MEGA_ST);
 }
-

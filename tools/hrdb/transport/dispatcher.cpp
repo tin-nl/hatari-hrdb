@@ -88,6 +88,11 @@ uint64_t Dispatcher::DeleteBreakpoint(uint32_t breakpointId)
     return SendCommandPacket("bplist");
 }
 
+uint64_t Dispatcher::InfoYm()
+{
+    return SendCommandPacket("infoym");
+}
+
 uint64_t Dispatcher::SendCommandPacket(const char *command)
 {
     return SendCommandShared(MemorySlot::kNone, command);
@@ -426,6 +431,21 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
     {
         // Anything could have happened here!
         m_pTargetModel->ConsoleCommand();
+    }
+    else if (type == "infoym")
+    {
+        YmState state;
+        for (int i = 0; i < YmState::kNumRegs; ++i)
+        {
+            std::string valueStr = splitResp.Split(SEP_CHAR);
+            if (valueStr.size() == 0)
+                return;
+            uint32_t value;
+            if (!StringParsers::ParseHexString(valueStr.c_str(), value))
+                return;
+            state.m_regs[i] = static_cast<uint8_t>(value);
+        }
+        m_pTargetModel->SetYm(state);
     }
 }
 

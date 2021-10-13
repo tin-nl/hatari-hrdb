@@ -32,6 +32,8 @@ public:
 
     uint64_t DeleteBreakpoint(uint32_t breakpointId);
 
+    uint64_t InfoYm();
+
 private slots:
 
    void connected();

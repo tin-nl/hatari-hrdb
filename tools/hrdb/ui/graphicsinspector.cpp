@@ -306,7 +306,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     connect(m_pTargetModel,  &TargetModel::startStopChangedSignal,        this, &GraphicsInspectorWidget::startStopChangedSlot);
     connect(m_pTargetModel,  &TargetModel::startStopChangedSignalDelayed, this, &GraphicsInspectorWidget::startStopDelayedChangedSlot);
     connect(m_pTargetModel,  &TargetModel::memoryChangedSignal,           this, &GraphicsInspectorWidget::memoryChangedSlot);
-    connect(m_pTargetModel,  &TargetModel::otherMemoryChanged,            this, &GraphicsInspectorWidget::otherMemoryChangedSlot);
+    connect(m_pTargetModel,  &TargetModel::otherMemoryChangedSignal,            this, &GraphicsInspectorWidget::otherMemoryChangedSlot);
 
     connect(m_pAddressLineEdit,             &QLineEdit::returnPressed,    this, &GraphicsInspectorWidget::textEditChangedSlot);
     connect(m_pLockAddressToVideoCheckBox,  &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockAddressToVideoChangedSlot);

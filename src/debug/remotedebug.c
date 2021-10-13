@@ -41,6 +41,7 @@
 #include "vars.h"
 #include "memory.h"
 #include "configuration.h"
+#include "psg.h"
 
 // For status bar updates
 #include "screen.h"
@@ -69,7 +70,7 @@ static bool bRemoteBreakRequest = false;
 static bool bRemoteBreakIsActive = false;
 
 /* ID of a protocol for the transfers, so we can detect hatari<->mismatch in future */
-#define REMOTEDEBUG_PROTOCOL_ID	(0x1001)
+#define REMOTEDEBUG_PROTOCOL_ID	(0x1002)
 
 /* Char ID to denote terminator of a token. This is under the ASCII "normal"
 	character value range so that 32-255 can be used */
@@ -720,6 +721,21 @@ static int RemoteDebug_setstd(int nArgc, char *psArgs[], RemoteDebugState* state
 	}
 	return 1;
 }
+
+// -----------------------------------------------------------------------------
+/* "infoym" returns internal YM/PSG register state */
+/* returns "OK" + 16 register values */
+static int RemoteDebug_infoym(int nArgc, char *psArgs[], RemoteDebugState* state)
+{
+	send_str(state, "OK");
+	for (int i = 0; i < MAX_PSG_REGISTERS; ++i)
+	{
+		send_sep(state);
+		send_hex(state, PSGRegisters[i]);
+	}
+	return 0;
+}
+
 // -----------------------------------------------------------------------------
 /* DebugUI command structure */
 typedef struct
@@ -731,20 +747,21 @@ typedef struct
 
 /* Array of all remote debug command descriptors */
 static const rdbcommand_t remoteDebugCommandList[] = {
-	{ RemoteDebug_Status,   "status"	, true		},
-	{ RemoteDebug_Break,    "break"		, true		},
-	{ RemoteDebug_Step,     "step"		, true		},
-	{ RemoteDebug_Run, 		"run"		, true		},
-	{ RemoteDebug_Regs,     "regs"		, true		},
-	{ RemoteDebug_Mem,      "mem"		, true		},
-	{ RemoteDebug_Memset,   "memset"	, true		},
-	{ RemoteDebug_bp, 		"bp"		, false		},
+	{ RemoteDebug_Status,	"status"	, true		},
+	{ RemoteDebug_Break,	"break"		, true		},
+	{ RemoteDebug_Step,		"step"		, true		},
+	{ RemoteDebug_Run,		"run"		, true		},
+	{ RemoteDebug_Regs,		"regs"		, true		},
+	{ RemoteDebug_Mem,		"mem"		, true		},
+	{ RemoteDebug_Memset,	"memset"	, true		},
+	{ RemoteDebug_bp,		"bp"		, false		},
 	{ RemoteDebug_bplist,	"bplist"	, true		},
 	{ RemoteDebug_bpdel,	"bpdel"		, true		},
 	{ RemoteDebug_symlist,	"symlist"	, true		},
 	{ RemoteDebug_exmask,	"exmask"	, true		},
 	{ RemoteDebug_console,	"console"	, false		},
 	{ RemoteDebug_setstd,	"setstd"	, true		},
+	{ RemoteDebug_infoym,	"infoym"	, false		},
 
 	/* Terminator */
 	{ NULL, NULL }
