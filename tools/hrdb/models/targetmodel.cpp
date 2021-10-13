@@ -119,13 +119,13 @@ void TargetModel::SetExceptionMask(const ExceptionMask &mask)
 void TargetModel::SetYm(const YmState& state)
 {
     m_ymState = state;
-    emit ymChanged();
+    emit ymChangedSignal();
 }
 
 void TargetModel::NotifyMemoryChanged(uint32_t address, uint32_t size)
 {
     m_changedFlags.SetChanged(TargetChangedFlags::kOtherMemory);
-    emit otherMemoryChanged(address, size);
+    emit otherMemoryChangedSignal(address, size);
 }
 
 
@@ -133,7 +133,7 @@ void TargetModel::NotifyMemoryChanged(uint32_t address, uint32_t size)
 // to update
 void TargetModel::ConsoleCommand()
 {
-    emit otherMemoryChanged(0, 0xffffff);
+    emit otherMemoryChangedSignal(0, 0xffffff);
     emit breakpointsChangedSignal(0);
     emit symbolTableChangedSignal(0);
     emit exceptionMaskChanged();

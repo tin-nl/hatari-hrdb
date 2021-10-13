@@ -46,7 +46,7 @@ public:
 
     virtual ~HardwareField();
 
-    virtual bool Update(const Memory& mem) = 0;
+    virtual bool Update(const TargetModel* pTarget) = 0;
 
     virtual QWidget* GetWidget() = 0;
 
@@ -69,7 +69,7 @@ public:
     {
     }
 
-    bool Update(const Memory& mem);
+    bool Update(const TargetModel* pTarget);
     virtual QWidget* GetWidget() { return m_pLabel; }
 
     const Regs::FieldDef&   m_def;
@@ -86,7 +86,7 @@ public:
         m_pLabel = new QLabel();
     }
 
-    bool Update(const Memory& mem);
+    bool Update(const TargetModel* pTarget);
     virtual QWidget* GetWidget() { return m_pLabel; }
 
     const Regs::FieldDef**  m_pDefs;
@@ -100,8 +100,36 @@ public:
     {
     }
 
-    bool Update(const Memory& mem);
+    bool Update(const TargetModel* pTarget);
     virtual QWidget* GetWidget() { return m_pLabel; }
+};
+
+//-----------------------------------------------------------------------------
+class HardwareFieldYm : public HardwareField
+{
+public:
+    HardwareFieldYm(int index) :
+        m_index(index)
+    {
+    }
+
+    bool Update(const TargetModel* pTarget);
+    virtual QWidget* GetWidget() { return m_pLabel; }
+    int m_index;
+};
+
+//-----------------------------------------------------------------------------
+class HardwareFieldYmPeriod : public HardwareField
+{
+public:
+    HardwareFieldYmPeriod(int index) :
+        m_index(index)
+    {
+    }
+
+    bool Update(const TargetModel* pTarget);
+    virtual QWidget* GetWidget() { return m_pLabel; }
+    int m_index;
 };
 
 //-----------------------------------------------------------------------------
@@ -130,11 +158,11 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     //pTopLayout->addWidget(m_pTableView);
     // Make each row a set of widgets?
 
-    Expander* pExpMmu = new Expander(this, "MMU");
+    Expander* pExpMmu = new Expander(this, "MMU - Memory Management Unit");
     addField(pExpMmu->m_pBottomLayout,  "Bank 0",                   Regs::g_fieldDef_MMU_CONFIG_BANK0);
     addField(pExpMmu->m_pBottomLayout,  "Bank 1",                   Regs::g_fieldDef_MMU_CONFIG_BANK1);
 
-    Expander* pExpVideo = new Expander(this, "Video");
+    Expander* pExpVideo = new Expander(this, "Shifter/Glue - Video");
 
     addField(pExpVideo->m_pBottomLayout,  "Resolution",             Regs::g_fieldDef_VID_SHIFTER_RES_RES);
     addField(pExpVideo->m_pBottomLayout,  "Sync Rate",              Regs::g_fieldDef_VID_SYNC_MODE_RATE);
@@ -143,7 +171,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addField(pExpVideo->m_pBottomLayout, "Horizontal Scroll (STE)", Regs::g_fieldDef_VID_HORIZ_SCROLL_STE_PIXELS);
     addField(pExpVideo->m_pBottomLayout, "Scanline offset (STE)",   Regs::g_fieldDef_VID_SCANLINE_OFFSET_STE_ALL);
 
-    Expander* pExpMfp = new Expander(this, "MFP");
+    Expander* pExpMfp = new Expander(this, "MFP 68901 - Multi-Function Peripheral");
 
     addField(pExpMfp->m_pBottomLayout, "Parallel Port Data",        Regs::g_fieldDef_MFP_GPIP_ALL);
     addBitmask(pExpMfp->m_pBottomLayout, "Active Edge low->high",   Regs::g_regFieldsDef_MFP_AER);
@@ -177,9 +205,25 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addBitmask(pExpMfp->m_pBottomLayout, "USART TX Status",         Regs::g_regFieldsDef_MFP_TSR);
     addField(pExpMfp->m_pBottomLayout, "USART Data",                Regs::g_fieldDef_MFP_UDR_ALL);
 
+    Expander* pExpYm = new Expander(this, "YM/PSG");
+    addShared(pExpYm->m_pBottomLayout, "0/1 - Period A",    new HardwareFieldYmPeriod(0));
+    addShared(pExpYm->m_pBottomLayout, "2/3 - Period B",    new HardwareFieldYmPeriod(2));
+    addShared(pExpYm->m_pBottomLayout, "4/5 - Period C",    new HardwareFieldYmPeriod(4));
+    addShared(pExpYm->m_pBottomLayout, "6 - Noise Period",  new HardwareFieldYm(6));
+    addShared(pExpYm->m_pBottomLayout, "7 - Mixer",         new HardwareFieldYm(7));
+    addShared(pExpYm->m_pBottomLayout, "8 - Volume A",      new HardwareFieldYm(8));
+    addShared(pExpYm->m_pBottomLayout, "9 - Volume B",      new HardwareFieldYm(9));
+    addShared(pExpYm->m_pBottomLayout, "10 - Volume C",     new HardwareFieldYm(10));
+    addShared(pExpYm->m_pBottomLayout, "11 - Env Period",   new HardwareFieldYm(11));
+    addShared(pExpYm->m_pBottomLayout, "12 - Env Period",   new HardwareFieldYm(12));
+    addShared(pExpYm->m_pBottomLayout, "13 - Env Shape",    new HardwareFieldYm(13));
+    addShared(pExpYm->m_pBottomLayout, "Reg",               new HardwareFieldYm(14));
+    addShared(pExpYm->m_pBottomLayout, "Reg",               new HardwareFieldYm(15));
+
     pMainLayout->addWidget(pExpMmu);
     pMainLayout->addWidget(pExpVideo);
     pMainLayout->addWidget(pExpMfp);
+    pMainLayout->addWidget(pExpYm);
 
     pMainRegion->setLayout(pMainLayout);
     QScrollArea* sa = new QScrollArea(this);
@@ -269,17 +313,19 @@ void HardwareWindow::memoryChangedSlot(int memorySlot, uint64_t /*commandId*/)
 {
     if (memorySlot == MemorySlot::kHardwareWindow)
     {
-        const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kHardwareWindow);
         for (auto pField : m_fields)
         {
-            pField->Update(*pMem);
+            pField->Update(m_pTargetModel);
         }
     }
 }
 
 void HardwareWindow::ymChangedSlot()
 {
-    // TODO
+    for (auto pField : m_fields)
+    {
+        pField->Update(m_pTargetModel);
+    }
 }
 
 void HardwareWindow::settingsChangedSlot()
@@ -305,21 +351,6 @@ void HardwareWindow::addShared(QFormLayout *pLayout, const QString &title, Hardw
     pLabel->setMargin(0);
     pLabel->setText(title);
     pLayout->addRow(pLabel, pField->GetWidget());
-}
-
-bool HardwareFieldRegEnum::Update(const Memory &mem)
-{
-    QString str;
-    if (!GetField(mem, m_def, str))
-        return false;       // Wrong memory
-
-    if (str != m_lastVal)
-        m_pLabel->setText(QString("<b>") + str + "</b>");
-    else
-        m_pLabel->setText(str);
-
-    m_lastVal = str;
-    return true;
 }
 
 Expander::Expander(QWidget *parent, QString text) :
@@ -390,8 +421,25 @@ void ExpandLabel::mousePressEvent(QMouseEvent *event)
     return QLabel::mousePressEvent(event);
 }
 
-bool HardwareFieldBitmask::Update(const Memory &mem)
+bool HardwareFieldRegEnum::Update(const TargetModel* pTarget)
 {
+    const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
+    QString str;
+    if (!GetField(mem, m_def, str))
+        return false;       // Wrong memory
+
+    if (str != m_lastVal)
+        m_pLabel->setText(QString("<b>") + str + "</b>");
+    else
+        m_pLabel->setText(str);
+
+    m_lastVal = str;
+    return true;
+}
+
+bool HardwareFieldBitmask::Update(const TargetModel* pTarget)
+{
+    const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
     QString res;
     QTextStream ref(&res);
     const Regs::FieldDef** pDef = m_pDefs;
@@ -427,8 +475,9 @@ bool HardwareFieldBitmask::Update(const Memory &mem)
     return true;
 }
 
-bool HardwareFieldRegScreenbase::Update(const Memory &mem)
+bool HardwareFieldRegScreenbase::Update(const TargetModel* pTarget)
 {
+    const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
     uint32_t address;
     if (HardwareST::GetVideoBase(mem, MACHINETYPE::MACHINE_ST, address))
     {
@@ -437,4 +486,20 @@ bool HardwareFieldRegScreenbase::Update(const Memory &mem)
     }
     return false;
 
+}
+
+bool HardwareFieldYm::Update(const TargetModel* pTarget)
+{
+    uint8_t val = pTarget->GetYm().m_regs[m_index];
+    m_pLabel->setText(QString::asprintf("Reg %u = $%x", m_index, val));
+    return true;
+}
+
+bool HardwareFieldYmPeriod::Update(const TargetModel *pTarget)
+{
+    uint16_t val = (pTarget->GetYm().m_regs[m_index + 1]) & 0xf;
+    val <<= 8;
+    val |= pTarget->GetYm().m_regs[m_index];
+    m_pLabel->setText(QString::asprintf("$%x", val));
+    return true;
 }
