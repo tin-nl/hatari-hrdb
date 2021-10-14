@@ -40,8 +40,7 @@ public:
     HardwareField()
     {
         m_pDefaultLabel = new QLabel();
-        m_pDefaultLabel->setTextInteractionFlags(Qt::TextInteractionFlag::TextSelectableByMouse |
-                                          Qt::TextInteractionFlag::TextSelectableByKeyboard);
+        m_pDefaultLabel->setTextInteractionFlags(Qt::TextInteractionFlag::TextSelectableByMouse);
     }
 
     virtual ~HardwareField();
@@ -137,6 +136,40 @@ public:
 };
 
 //-----------------------------------------------------------------------------
+class HardwareFieldYmEnvShape : public HardwareField
+{
+public:
+    HardwareFieldYmEnvShape() {}
+
+    bool Update(const TargetModel* pTarget);
+    virtual QWidget* GetWidget() { return m_pDefaultLabel; }
+};
+
+//-----------------------------------------------------------------------------
+class HardwareFieldYmMixer : public HardwareField
+{
+public:
+    HardwareFieldYmMixer() {}
+
+    bool Update(const TargetModel* pTarget);
+    virtual QWidget* GetWidget() { return m_pDefaultLabel; }
+};
+
+//-----------------------------------------------------------------------------
+class HardwareFieldYmVolume : public HardwareField
+{
+public:
+    HardwareFieldYmVolume(int index) :
+        m_index(index)
+    {
+    }
+
+    bool Update(const TargetModel* pTarget);
+    virtual QWidget* GetWidget() { return m_pDefaultLabel; }
+    int m_index;
+};
+
+//-----------------------------------------------------------------------------
 HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     QDockWidget(parent),
     m_pSession(pSession),
@@ -210,18 +243,18 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addField(pExpMfp->m_pBottomLayout, "USART Data",                Regs::g_fieldDef_MFP_UDR_ALL);
 
     Expander* pExpYm = new Expander(this, "YM/PSG");
-    addShared(pExpYm->m_pBottomLayout, "Period A",     new HardwareFieldYmPeriod(0));
-    addShared(pExpYm->m_pBottomLayout, "Period B",     new HardwareFieldYmPeriod(2));
-    addShared(pExpYm->m_pBottomLayout, "Period C",     new HardwareFieldYmPeriod(4));
-    addShared(pExpYm->m_pBottomLayout, "Noise Period", new HardwareFieldYm(6));
-    addShared(pExpYm->m_pBottomLayout, "Mixer",        new HardwareFieldYm(7));
-    addShared(pExpYm->m_pBottomLayout, "Volume A",     new HardwareFieldYm(8));
-    addShared(pExpYm->m_pBottomLayout, "Volume B",     new HardwareFieldYm(9));
-    addShared(pExpYm->m_pBottomLayout, "Volume C",     new HardwareFieldYm(10));
-    addShared(pExpYm->m_pBottomLayout, "Env Period",   new HardwareFieldYmPeriod(11));
-    addShared(pExpYm->m_pBottomLayout, "Env Shape",    new HardwareFieldYm(13));
-    addShared(pExpYm->m_pBottomLayout, "Reg",          new HardwareFieldYm(14));
-    addShared(pExpYm->m_pBottomLayout, "Reg",          new HardwareFieldYm(15));
+    addShared(pExpYm->m_pBottomLayout, "Period A",     new HardwareFieldYmPeriod(Regs::YM_PERIOD_A_LO));
+    addShared(pExpYm->m_pBottomLayout, "Period B",     new HardwareFieldYmPeriod(Regs::YM_PERIOD_B_LO));
+    addShared(pExpYm->m_pBottomLayout, "Period C",     new HardwareFieldYmPeriod(Regs::YM_PERIOD_C_LO));
+    addShared(pExpYm->m_pBottomLayout, "Noise Period", new HardwareFieldYmPeriod(Regs::YM_PERIOD_NOISE));
+    addShared(pExpYm->m_pBottomLayout, "Mixer",        new HardwareFieldYmMixer());
+    addShared(pExpYm->m_pBottomLayout, "Volume A",     new HardwareFieldYmVolume(Regs::YM_VOLUME_A));
+    addShared(pExpYm->m_pBottomLayout, "Volume B",     new HardwareFieldYmVolume(Regs::YM_VOLUME_B));
+    addShared(pExpYm->m_pBottomLayout, "Volume C",     new HardwareFieldYmVolume(Regs::YM_VOLUME_C));
+    addShared(pExpYm->m_pBottomLayout, "Env Period",   new HardwareFieldYmPeriod(Regs::YM_PERIOD_ENV_LO));
+    addShared(pExpYm->m_pBottomLayout, "Env Shape",    new HardwareFieldYmEnvShape());
+    addShared(pExpYm->m_pBottomLayout, "Port A",       new HardwareFieldYm(Regs::YM_PORT_A));
+    addShared(pExpYm->m_pBottomLayout, "Port B",       new HardwareFieldYm(Regs::YM_PORT_B));
 
     pMainLayout->addWidget(pExpMmu);
     pMainLayout->addWidget(pExpVideo);
@@ -281,9 +314,6 @@ void HardwareWindow::saveSettings()
 
 void HardwareWindow::connectChangedSlot()
 {
-    bool enable = m_pTargetModel->IsConnected();
-    this->setEnabled(enable);
-
     if (m_pTargetModel->IsConnected())
     {
         if (m_pTargetModel->IsConnected())
@@ -354,6 +384,7 @@ void HardwareWindow::addShared(QFormLayout *pLayout, const QString &title, Hardw
     QLabel* pLabel = new QLabel(this);
     pLabel->setMargin(0);
     pLabel->setText(title);
+    pLabel->setTextInteractionFlags(Qt::TextInteractionFlag::TextSelectableByMouse);
     pLayout->addRow(pLabel, pField->GetWidget());
 }
 
@@ -501,10 +532,73 @@ bool HardwareFieldYm::Update(const TargetModel* pTarget)
 
 bool HardwareFieldYmPeriod::Update(const TargetModel *pTarget)
 {
-    uint16_t val = (pTarget->GetYm().m_regs[m_index + 1]) & 0xf;
-    val <<= 8;
-    val |= pTarget->GetYm().m_regs[m_index];
-    double hertz = 125000.f / (val ? val : 1);
-    m_pDefaultLabel->setText(QString::asprintf("$%03x  Approx %.1fHz", val, hertz));
+    uint16_t valLo = (pTarget->GetYm().m_regs[m_index]);
+    uint16_t valHi = (pTarget->GetYm().m_regs[m_index + 1]);
+    uint16_t mask = 0xfff;
+    double clock = 2000000.0;
+
+    // Divisors are taken from the Datasheet.
+    double divisor = clock / 16;
+
+    if (m_index == Regs::YM_PERIOD_ENV_LO)
+    {
+        divisor = clock / 256;
+        mask = 0xffff;
+    }
+    else if (m_index == Regs::YM_PERIOD_NOISE)
+    {
+        mask = 0x1f;
+    }
+
+    // Special cases
+    uint32_t val = (valHi * 256U) | valLo;
+    val &= mask;
+
+    double hertz = divisor / (val ? val : 1);
+    m_pDefaultLabel->setText(QString::asprintf("$%03x  Approx %.0fHz", val, hertz));
+    return true;
+}
+
+bool HardwareFieldYmEnvShape::Update(const TargetModel *pTarget)
+{
+    uint16_t val = (pTarget->GetYm().m_regs[Regs::YM_PERIOD_ENV_SHAPE]);
+    const char* pString = Regs::GetString(static_cast<Regs::ENV_SHAPE>(val));
+    m_pDefaultLabel->setText(pString);
+    return true;
+}
+
+bool HardwareFieldYmMixer::Update(const TargetModel *pTarget)
+{
+    uint16_t val = (pTarget->GetYm().m_regs[Regs::YM_MIXER]);
+
+    QString str;
+    if (!Regs::GetField_YM_MIXER_TONE_A_OFF(val))
+        str += "SQUARE_A ";
+    if (!Regs::GetField_YM_MIXER_TONE_B_OFF(val))
+        str += "SQUARE_B ";
+    if (!Regs::GetField_YM_MIXER_TONE_C_OFF(val))
+        str += "SQUARE_C ";
+
+    if (!Regs::GetField_YM_MIXER_NOISE_A_OFF(val))
+        str += "NOISE_A ";
+    if (!Regs::GetField_YM_MIXER_NOISE_B_OFF(val))
+        str += "NOISE_B ";
+    if (!Regs::GetField_YM_MIXER_NOISE_C_OFF(val))
+        str += "NOISE_C ";
+
+    m_pDefaultLabel->setText(str);
+    return true;
+
+}
+
+bool HardwareFieldYmVolume::Update(const TargetModel *pTarget)
+{
+    uint16_t val = pTarget->GetYm().m_regs[m_index];
+    uint8_t squareVol = Regs::GetField_YM_VOLUME_A_VOL(val);
+    bool useEnv = Regs::GetField_YM_VOLUME_A_ENVELOPE(val);
+
+    m_pDefaultLabel->setText(QString::asprintf("Square Vol = %u%s",
+                                               squareVol,
+                                               useEnv ? " + ENVELOPE" : ""));
     return true;
 }

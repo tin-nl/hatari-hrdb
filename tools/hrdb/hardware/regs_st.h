@@ -118,6 +118,26 @@ enum class USARTLEN : uint16_t {
 	LEN_5                =      3  /* 5 Bits */
 };
 
+/* Enum ENV_SHAPE */
+enum class ENV_SHAPE : uint16_t {
+	ENV_0000             =      0, /* \\___ */
+	ENV_0001             =      1, /* \\___ */
+	ENV_0010             =      2, /* \\___ */
+	ENV_0011             =      3, /* \\___ */
+	ENV_0100             =      4, /* /|__ */
+	ENV_0101             =      5, /* /|__ */
+	ENV_0110             =      6, /* /|__ */
+	ENV_0111             =      7, /* /|__ */
+	ENV_1000             =      8, /* \\|\\| */
+	ENV_1001             =      9, /* \\___ */
+	ENV_1010             =     10, /* \\/\\/ */
+	ENV_1011             =     11, /* \\|-- */
+	ENV_1100             =     12, /* /|/| */
+	ENV_1101             =     13, /* /--- */
+	ENV_1110             =     14, /* /\\/\\ */
+	ENV_1111             =     15  /* /|__ */
+};
+
 /* Enum -> string lookup declarations */
 extern const char* GetString(MMU_BANK val);
 extern const char* GetString(RESOLUTION val);
@@ -128,6 +148,7 @@ extern const char* GetString(TIMER_MODE_B val);
 extern const char* GetString(TIMER_MODE_CD val);
 extern const char* GetString(ENDINT val);
 extern const char* GetString(USARTLEN val);
+extern const char* GetString(ENV_SHAPE val);
 
 /* Register Addresses */
 static const uint32_t MMU_CONFIG                     = 0xff8001;
@@ -184,6 +205,22 @@ static const uint32_t MFP_UCR                        = 0xfffa29;
 static const uint32_t MFP_RSR                        = 0xfffa2b;
 static const uint32_t MFP_TSR                        = 0xfffa2d;
 static const uint32_t MFP_UDR                        = 0xfffa2f;
+static const uint32_t YM_PERIOD_A_LO                 = 0x0;
+static const uint32_t YM_PERIOD_A_HI                 = 0x1;
+static const uint32_t YM_PERIOD_B_LO                 = 0x2;
+static const uint32_t YM_PERIOD_B_HI                 = 0x3;
+static const uint32_t YM_PERIOD_C_LO                 = 0x4;
+static const uint32_t YM_PERIOD_C_HI                 = 0x5;
+static const uint32_t YM_PERIOD_NOISE                = 0x6;
+static const uint32_t YM_MIXER                       = 0x7;
+static const uint32_t YM_VOLUME_A                    = 0x8;
+static const uint32_t YM_VOLUME_B                    = 0x9;
+static const uint32_t YM_VOLUME_C                    = 0xa;
+static const uint32_t YM_PERIOD_ENV_LO               = 0xb;
+static const uint32_t YM_PERIOD_ENV_HI               = 0xc;
+static const uint32_t YM_PERIOD_ENV_SHAPE            = 0xd;
+static const uint32_t YM_PORT_A                      = 0xe;
+static const uint32_t YM_PORT_B                      = 0xf;
 
 /* Register Field Accessors */
 
@@ -1073,6 +1110,106 @@ inline uint8_t GetField_MFP_UDR_ALL(uint16_t value) { return static_cast<uint8_t
 extern const FieldDef g_fieldDef_MFP_UDR_ALL;
 
 
+/* Register YM_MIXER ($7)*/
+/* Field TONE_A_OFF */
+static const uint16_t YM_MIXER_TONE_A_OFF_SHIFT = 0;
+static const uint16_t YM_MIXER_TONE_A_OFF_MASK = 1;
+inline bool GetField_YM_MIXER_TONE_A_OFF(uint16_t value) { return static_cast<bool>(((value)>>0) & 1); }
+extern const FieldDef g_fieldDef_YM_MIXER_TONE_A_OFF;
+
+/* Field TONE_B_OFF */
+static const uint16_t YM_MIXER_TONE_B_OFF_SHIFT = 1;
+static const uint16_t YM_MIXER_TONE_B_OFF_MASK = 1;
+inline bool GetField_YM_MIXER_TONE_B_OFF(uint16_t value) { return static_cast<bool>(((value)>>1) & 1); }
+extern const FieldDef g_fieldDef_YM_MIXER_TONE_B_OFF;
+
+/* Field TONE_C_OFF */
+static const uint16_t YM_MIXER_TONE_C_OFF_SHIFT = 2;
+static const uint16_t YM_MIXER_TONE_C_OFF_MASK = 1;
+inline bool GetField_YM_MIXER_TONE_C_OFF(uint16_t value) { return static_cast<bool>(((value)>>2) & 1); }
+extern const FieldDef g_fieldDef_YM_MIXER_TONE_C_OFF;
+
+/* Field NOISE_A_OFF */
+static const uint16_t YM_MIXER_NOISE_A_OFF_SHIFT = 3;
+static const uint16_t YM_MIXER_NOISE_A_OFF_MASK = 1;
+inline bool GetField_YM_MIXER_NOISE_A_OFF(uint16_t value) { return static_cast<bool>(((value)>>3) & 1); }
+extern const FieldDef g_fieldDef_YM_MIXER_NOISE_A_OFF;
+
+/* Field NOISE_B_OFF */
+static const uint16_t YM_MIXER_NOISE_B_OFF_SHIFT = 4;
+static const uint16_t YM_MIXER_NOISE_B_OFF_MASK = 1;
+inline bool GetField_YM_MIXER_NOISE_B_OFF(uint16_t value) { return static_cast<bool>(((value)>>4) & 1); }
+extern const FieldDef g_fieldDef_YM_MIXER_NOISE_B_OFF;
+
+/* Field NOISE_C_OFF */
+static const uint16_t YM_MIXER_NOISE_C_OFF_SHIFT = 5;
+static const uint16_t YM_MIXER_NOISE_C_OFF_MASK = 1;
+inline bool GetField_YM_MIXER_NOISE_C_OFF(uint16_t value) { return static_cast<bool>(((value)>>5) & 1); }
+extern const FieldDef g_fieldDef_YM_MIXER_NOISE_C_OFF;
+
+/* Field PORT_A_OUT */
+static const uint16_t YM_MIXER_PORT_A_OUT_SHIFT = 6;
+static const uint16_t YM_MIXER_PORT_A_OUT_MASK = 1;
+inline bool GetField_YM_MIXER_PORT_A_OUT(uint16_t value) { return static_cast<bool>(((value)>>6) & 1); }
+extern const FieldDef g_fieldDef_YM_MIXER_PORT_A_OUT;
+
+/* Field PORT_B_OUT */
+static const uint16_t YM_MIXER_PORT_B_OUT_SHIFT = 7;
+static const uint16_t YM_MIXER_PORT_B_OUT_MASK = 1;
+inline bool GetField_YM_MIXER_PORT_B_OUT(uint16_t value) { return static_cast<bool>(((value)>>7) & 1); }
+extern const FieldDef g_fieldDef_YM_MIXER_PORT_B_OUT;
+
+
+/* Register YM_VOLUME_A ($8)*/
+/* Field VOL */
+static const uint16_t YM_VOLUME_A_VOL_SHIFT = 0;
+static const uint16_t YM_VOLUME_A_VOL_MASK = 15;
+inline uint8_t GetField_YM_VOLUME_A_VOL(uint16_t value) { return static_cast<uint8_t>(((value)>>0) & 15); }
+extern const FieldDef g_fieldDef_YM_VOLUME_A_VOL;
+
+/* Field ENVELOPE */
+static const uint16_t YM_VOLUME_A_ENVELOPE_SHIFT = 4;
+static const uint16_t YM_VOLUME_A_ENVELOPE_MASK = 1;
+inline bool GetField_YM_VOLUME_A_ENVELOPE(uint16_t value) { return static_cast<bool>(((value)>>4) & 1); }
+extern const FieldDef g_fieldDef_YM_VOLUME_A_ENVELOPE;
+
+
+/* Register YM_VOLUME_B ($9)*/
+/* Field VOL */
+static const uint16_t YM_VOLUME_B_VOL_SHIFT = 0;
+static const uint16_t YM_VOLUME_B_VOL_MASK = 15;
+inline uint8_t GetField_YM_VOLUME_B_VOL(uint16_t value) { return static_cast<uint8_t>(((value)>>0) & 15); }
+extern const FieldDef g_fieldDef_YM_VOLUME_B_VOL;
+
+/* Field ENVELOPE */
+static const uint16_t YM_VOLUME_B_ENVELOPE_SHIFT = 4;
+static const uint16_t YM_VOLUME_B_ENVELOPE_MASK = 1;
+inline bool GetField_YM_VOLUME_B_ENVELOPE(uint16_t value) { return static_cast<bool>(((value)>>4) & 1); }
+extern const FieldDef g_fieldDef_YM_VOLUME_B_ENVELOPE;
+
+
+/* Register YM_VOLUME_C ($a)*/
+/* Field VOL */
+static const uint16_t YM_VOLUME_C_VOL_SHIFT = 0;
+static const uint16_t YM_VOLUME_C_VOL_MASK = 15;
+inline uint8_t GetField_YM_VOLUME_C_VOL(uint16_t value) { return static_cast<uint8_t>(((value)>>0) & 15); }
+extern const FieldDef g_fieldDef_YM_VOLUME_C_VOL;
+
+/* Field ENVELOPE */
+static const uint16_t YM_VOLUME_C_ENVELOPE_SHIFT = 4;
+static const uint16_t YM_VOLUME_C_ENVELOPE_MASK = 1;
+inline bool GetField_YM_VOLUME_C_ENVELOPE(uint16_t value) { return static_cast<bool>(((value)>>4) & 1); }
+extern const FieldDef g_fieldDef_YM_VOLUME_C_ENVELOPE;
+
+
+/* Register YM_PERIOD_ENV_SHAPE ($d)*/
+/* Field SHAPE */
+static const uint16_t YM_PERIOD_ENV_SHAPE_SHAPE_SHIFT = 0;
+static const uint16_t YM_PERIOD_ENV_SHAPE_SHAPE_MASK = 15;
+inline ENV_SHAPE GetField_YM_PERIOD_ENV_SHAPE_SHAPE(uint16_t value) { return static_cast<ENV_SHAPE>(((value)>>0) & 15); }
+extern const FieldDef g_fieldDef_YM_PERIOD_ENV_SHAPE_SHAPE;
+
+
 /* Register Field Sets */
 
 extern const FieldDef* g_regFieldsDef_MMU_CONFIG[];
@@ -1113,5 +1250,10 @@ extern const FieldDef* g_regFieldsDef_MFP_UCR[];
 extern const FieldDef* g_regFieldsDef_MFP_RSR[];
 extern const FieldDef* g_regFieldsDef_MFP_TSR[];
 extern const FieldDef* g_regFieldsDef_MFP_UDR[];
+extern const FieldDef* g_regFieldsDef_YM_MIXER[];
+extern const FieldDef* g_regFieldsDef_YM_VOLUME_A[];
+extern const FieldDef* g_regFieldsDef_YM_VOLUME_B[];
+extern const FieldDef* g_regFieldsDef_YM_VOLUME_C[];
+extern const FieldDef* g_regFieldsDef_YM_PERIOD_ENV_SHAPE[];
 } // namespace
 #endif

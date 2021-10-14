@@ -108,6 +108,26 @@ const char* GetString(USARTLEN val)
 	if (val==USARTLEN::LEN_5) return "5 Bits";
 	return "?";
 }
+const char* GetString(ENV_SHAPE val)
+{
+	if (val==ENV_SHAPE::ENV_0000) return "\\___";
+	if (val==ENV_SHAPE::ENV_0001) return "\\___";
+	if (val==ENV_SHAPE::ENV_0010) return "\\___";
+	if (val==ENV_SHAPE::ENV_0011) return "\\___";
+	if (val==ENV_SHAPE::ENV_0100) return "/|__";
+	if (val==ENV_SHAPE::ENV_0101) return "/|__";
+	if (val==ENV_SHAPE::ENV_0110) return "/|__";
+	if (val==ENV_SHAPE::ENV_0111) return "/|__";
+	if (val==ENV_SHAPE::ENV_1000) return "\\|\\|";
+	if (val==ENV_SHAPE::ENV_1001) return "\\___";
+	if (val==ENV_SHAPE::ENV_1010) return "\\/\\/";
+	if (val==ENV_SHAPE::ENV_1011) return "\\|--";
+	if (val==ENV_SHAPE::ENV_1100) return "/|/|";
+	if (val==ENV_SHAPE::ENV_1101) return "/---";
+	if (val==ENV_SHAPE::ENV_1110) return "/\\/\\";
+	if (val==ENV_SHAPE::ENV_1111) return "/|__";
+	return "?";
+}
 const StringDef g_enumStringsMMU_BANK[] = {
 	{ 0, "128K" },
 	{ 1, "512K" },
@@ -190,6 +210,25 @@ const StringDef g_enumStringsUSARTLEN[] = {
 	{ 1, "7 Bits" },
 	{ 2, "6 Bits" },
 	{ 3, "5 Bits" },
+	{ 0, nullptr }
+};
+const StringDef g_enumStringsENV_SHAPE[] = {
+	{ 0, "\\___" },
+	{ 1, "\\___" },
+	{ 2, "\\___" },
+	{ 3, "\\___" },
+	{ 4, "/|__" },
+	{ 5, "/|__" },
+	{ 6, "/|__" },
+	{ 7, "/|__" },
+	{ 8, "\\|\\|" },
+	{ 9, "\\___" },
+	{ 10, "\\/\\/" },
+	{ 11, "\\|--" },
+	{ 12, "/|/|" },
+	{ 13, "/---" },
+	{ 14, "/\\/\\" },
+	{ 15, "/|__" },
 	{ 0, nullptr }
 };
 const FieldDef g_fieldDef_MMU_CONFIG_BANK1 = { Regs::MMU_CONFIG, "BANK1", Regs::MMU_CONFIG_BANK1_SHIFT, Regs::MMU_CONFIG_BANK1_MASK, g_enumStringsMMU_BANK };
@@ -327,6 +366,21 @@ const FieldDef g_fieldDef_MFP_TSR_AUTO_TURN = { Regs::MFP_TSR, "AUTO_TURN", Regs
 const FieldDef g_fieldDef_MFP_TSR_UNDERRUN_ERR = { Regs::MFP_TSR, "UNDERRUN_ERR", Regs::MFP_TSR_UNDERRUN_ERR_SHIFT, Regs::MFP_TSR_UNDERRUN_ERR_MASK, nullptr };
 const FieldDef g_fieldDef_MFP_TSR_BUFFER_EMPTY = { Regs::MFP_TSR, "BUFFER_EMPTY", Regs::MFP_TSR_BUFFER_EMPTY_SHIFT, Regs::MFP_TSR_BUFFER_EMPTY_MASK, nullptr };
 const FieldDef g_fieldDef_MFP_UDR_ALL = { Regs::MFP_UDR, "ALL", Regs::MFP_UDR_ALL_SHIFT, Regs::MFP_UDR_ALL_MASK, nullptr };
+const FieldDef g_fieldDef_YM_MIXER_TONE_A_OFF = { Regs::YM_MIXER, "TONE_A_OFF", Regs::YM_MIXER_TONE_A_OFF_SHIFT, Regs::YM_MIXER_TONE_A_OFF_MASK, nullptr };
+const FieldDef g_fieldDef_YM_MIXER_TONE_B_OFF = { Regs::YM_MIXER, "TONE_B_OFF", Regs::YM_MIXER_TONE_B_OFF_SHIFT, Regs::YM_MIXER_TONE_B_OFF_MASK, nullptr };
+const FieldDef g_fieldDef_YM_MIXER_TONE_C_OFF = { Regs::YM_MIXER, "TONE_C_OFF", Regs::YM_MIXER_TONE_C_OFF_SHIFT, Regs::YM_MIXER_TONE_C_OFF_MASK, nullptr };
+const FieldDef g_fieldDef_YM_MIXER_NOISE_A_OFF = { Regs::YM_MIXER, "NOISE_A_OFF", Regs::YM_MIXER_NOISE_A_OFF_SHIFT, Regs::YM_MIXER_NOISE_A_OFF_MASK, nullptr };
+const FieldDef g_fieldDef_YM_MIXER_NOISE_B_OFF = { Regs::YM_MIXER, "NOISE_B_OFF", Regs::YM_MIXER_NOISE_B_OFF_SHIFT, Regs::YM_MIXER_NOISE_B_OFF_MASK, nullptr };
+const FieldDef g_fieldDef_YM_MIXER_NOISE_C_OFF = { Regs::YM_MIXER, "NOISE_C_OFF", Regs::YM_MIXER_NOISE_C_OFF_SHIFT, Regs::YM_MIXER_NOISE_C_OFF_MASK, nullptr };
+const FieldDef g_fieldDef_YM_MIXER_PORT_A_OUT = { Regs::YM_MIXER, "PORT_A_OUT", Regs::YM_MIXER_PORT_A_OUT_SHIFT, Regs::YM_MIXER_PORT_A_OUT_MASK, nullptr };
+const FieldDef g_fieldDef_YM_MIXER_PORT_B_OUT = { Regs::YM_MIXER, "PORT_B_OUT", Regs::YM_MIXER_PORT_B_OUT_SHIFT, Regs::YM_MIXER_PORT_B_OUT_MASK, nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_A_VOL = { Regs::YM_VOLUME_A, "VOL", Regs::YM_VOLUME_A_VOL_SHIFT, Regs::YM_VOLUME_A_VOL_MASK, nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_A_ENVELOPE = { Regs::YM_VOLUME_A, "ENVELOPE", Regs::YM_VOLUME_A_ENVELOPE_SHIFT, Regs::YM_VOLUME_A_ENVELOPE_MASK, nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_B_VOL = { Regs::YM_VOLUME_B, "VOL", Regs::YM_VOLUME_B_VOL_SHIFT, Regs::YM_VOLUME_B_VOL_MASK, nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_B_ENVELOPE = { Regs::YM_VOLUME_B, "ENVELOPE", Regs::YM_VOLUME_B_ENVELOPE_SHIFT, Regs::YM_VOLUME_B_ENVELOPE_MASK, nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_C_VOL = { Regs::YM_VOLUME_C, "VOL", Regs::YM_VOLUME_C_VOL_SHIFT, Regs::YM_VOLUME_C_VOL_MASK, nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_C_ENVELOPE = { Regs::YM_VOLUME_C, "ENVELOPE", Regs::YM_VOLUME_C_ENVELOPE_SHIFT, Regs::YM_VOLUME_C_ENVELOPE_MASK, nullptr };
+const FieldDef g_fieldDef_YM_PERIOD_ENV_SHAPE_SHAPE = { Regs::YM_PERIOD_ENV_SHAPE, "SHAPE", Regs::YM_PERIOD_ENV_SHAPE_SHAPE_SHIFT, Regs::YM_PERIOD_ENV_SHAPE_SHAPE_MASK, g_enumStringsENV_SHAPE };
 /* Register Field Sets */
 
 const FieldDef* g_regFieldsDef_MMU_CONFIG[] = {
@@ -576,6 +630,36 @@ const FieldDef* g_regFieldsDef_MFP_TSR[] = {
 };
 const FieldDef* g_regFieldsDef_MFP_UDR[] = {
 	 &g_fieldDef_MFP_UDR_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_YM_MIXER[] = {
+	 &g_fieldDef_YM_MIXER_TONE_A_OFF,
+	 &g_fieldDef_YM_MIXER_TONE_B_OFF,
+	 &g_fieldDef_YM_MIXER_TONE_C_OFF,
+	 &g_fieldDef_YM_MIXER_NOISE_A_OFF,
+	 &g_fieldDef_YM_MIXER_NOISE_B_OFF,
+	 &g_fieldDef_YM_MIXER_NOISE_C_OFF,
+	 &g_fieldDef_YM_MIXER_PORT_A_OUT,
+	 &g_fieldDef_YM_MIXER_PORT_B_OUT,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_YM_VOLUME_A[] = {
+	 &g_fieldDef_YM_VOLUME_A_VOL,
+	 &g_fieldDef_YM_VOLUME_A_ENVELOPE,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_YM_VOLUME_B[] = {
+	 &g_fieldDef_YM_VOLUME_B_VOL,
+	 &g_fieldDef_YM_VOLUME_B_ENVELOPE,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_YM_VOLUME_C[] = {
+	 &g_fieldDef_YM_VOLUME_C_VOL,
+	 &g_fieldDef_YM_VOLUME_C_ENVELOPE,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_YM_PERIOD_ENV_SHAPE[] = {
+	 &g_fieldDef_YM_PERIOD_ENV_SHAPE_SHAPE,
 	nullptr
 };
 } // namespace
