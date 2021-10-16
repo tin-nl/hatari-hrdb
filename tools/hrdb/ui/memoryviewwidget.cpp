@@ -682,9 +682,11 @@ void MemoryWidget::contextMenuEvent(QContextMenuEvent *event)
         return;
 
     // Read a longword
-    uint32_t longContents = 0;
-    if (!mem->ReadAddressMulti(addr, 4, longContents))
+    if (!mem->HasAddressMulti(addr, 4))
         return;
+
+    uint32_t longContents = mem->ReadAddressMulti(addr, 4);
+
     longContents &= 0xffffff;
     m_showAddressActions.setAddress(longContents);
 
@@ -775,9 +777,10 @@ QString MemoryWidget::CalcMouseoverText(int mouseX, int mouseY)
     uint32_t addr = m_rows[row].m_address + m_columnMap[col].byteOffset;
     uint8_t byteVal = mem->ReadAddressByte(addr);
 
-    uint32_t wordVal;
-    if (!mem->ReadAddressMulti(addr & 0xfffffe, 2, wordVal))
+    if (!mem->HasAddressMulti(addr & 0xfffffe, 2))
         return QString();
+
+    uint32_t wordVal = mem->ReadAddressMulti(addr & 0xfffffe, 2);
 
     // Work out what's under the mouse
 
@@ -789,10 +792,10 @@ QString MemoryWidget::CalcMouseoverText(int mouseX, int mouseY)
         byteOffset &= ~3U;
 
     uint32_t addrLong = m_rows[row].m_address + byteOffset;
-    uint32_t longVal;
-    if (!mem->ReadAddressMulti(addrLong, 4, longVal))
+    if (!mem->HasAddressMulti(addrLong, 4))
         return QString();
 
+    uint32_t longVal = mem->ReadAddressMulti(addrLong, 4);
     return CreateTooltip(addr, m_pTargetModel->GetSymbolTable(), byteVal, wordVal, longVal);
 }
 

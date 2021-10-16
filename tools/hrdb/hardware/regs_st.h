@@ -15,6 +15,7 @@ struct StringDef
 struct FieldDef
 {
     uint32_t regAddr;
+    uint8_t size;
     const char* name;
     uint16_t shift;
     uint16_t mask;

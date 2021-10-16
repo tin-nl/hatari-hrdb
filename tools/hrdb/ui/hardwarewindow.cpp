@@ -23,13 +23,12 @@ bool GetField(const Memory& mem, const Regs::FieldDef& def, QString& result)
     if (!mem.HasAddress(def.regAddr))
         return false;
 
-    uint8_t regVal = mem.ReadAddressByte(def.regAddr);
-    uint8_t extracted = (regVal >> def.shift) & def.mask;
+    uint32_t regVal = mem.ReadAddressMulti(def.regAddr, def.size);
+    uint16_t extracted = (regVal >> def.shift) & def.mask;
     if (def.strings)
         result = GetString(def.strings, extracted);
-    else {
+    else
         result = QString::asprintf("%u ($%x)", extracted, extracted);
-    }
     return true;
 }
 
