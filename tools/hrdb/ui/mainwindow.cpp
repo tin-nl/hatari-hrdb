@@ -519,13 +519,11 @@ int RegisterWidget::AddReg32(int x, int y, uint32_t regIndex, const Registers& p
     return AddToken(x + label.size() + 1, y, value, TokenType::kRegister, regIndex, highlight);
 }
 
-int RegisterWidget::AddSR(int x, int y, const Registers& prevRegs, const Registers& regs, uint32_t bit, const char* pName)
+int RegisterWidget::AddSR(int x, int y, const Registers& /*prevRegs*/, const Registers& regs, uint32_t bit, const char* pName)
 {
     uint32_t mask = 1U << bit;
     uint32_t valNew = regs.m_value[Registers::SR] & mask;
-//    uint32_t valOld = prevRegs.m_value[Registers::SR] & mask;
     TokenColour highlight = valNew ? TokenColour::kNormal : TokenColour::kInactive;
-//    char text = valNew != 0 ? pName[0] : '.';
     char text = pName[0];
 
     return AddToken(x, y, QString(text), TokenType::kStatusRegisterBit, bit, highlight);
