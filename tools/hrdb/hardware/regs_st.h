@@ -252,14 +252,14 @@ static const uint32_t YM_PERIOD_ENV_HI               = 0xc;
 static const uint32_t YM_PERIOD_ENV_SHAPE            = 0xd;
 static const uint32_t YM_PORT_A                      = 0xe;
 static const uint32_t YM_PORT_B                      = 0xf;
-static const uint32_t BLT_SRC_XINC                   = 0xff8a20;
-static const uint32_t BLT_SRC_YINC                   = 0xff8a22;
+static const uint32_t BLT_SRC_INC_X                  = 0xff8a20;
+static const uint32_t BLT_SRC_INC_Y                  = 0xff8a22;
 static const uint32_t BLT_SRC_ADDR                   = 0xff8a24;
 static const uint32_t BLT_ENDMASK_1                  = 0xff8a28;
 static const uint32_t BLT_ENDMASK_2                  = 0xff8a2a;
 static const uint32_t BLT_ENDMASK_3                  = 0xff8a2c;
-static const uint32_t BLT_DST_XINC                   = 0xff8a2e;
-static const uint32_t BLT_DST_YINC                   = 0xff8a30;
+static const uint32_t BLT_DST_INC_X                  = 0xff8a2e;
+static const uint32_t BLT_DST_INC_Y                  = 0xff8a30;
 static const uint32_t BLT_DST_ADDR                   = 0xff8a32;
 static const uint32_t BLT_XCOUNT                     = 0xff8a36;
 static const uint32_t BLT_YCOUNT                     = 0xff8a38;
@@ -1256,20 +1256,20 @@ inline ENV_SHAPE GetField_YM_PERIOD_ENV_SHAPE_SHAPE(uint32_t value) { return sta
 extern const FieldDef g_fieldDef_YM_PERIOD_ENV_SHAPE_SHAPE;
 
 
-/* Register BLT_SRC_XINC ($ff8a20)*/
+/* Register BLT_SRC_INC_X ($ff8a20)*/
 /* Field ALL */
-static const uint32_t BLT_SRC_XINC_ALL_SHIFT = 0;
-static const uint32_t BLT_SRC_XINC_ALL_MASK = 65535;
-inline int16_t GetField_BLT_SRC_XINC_ALL(uint32_t value) { return static_cast<int16_t>(((value)>>0) & 65535); }
-extern const FieldDef g_fieldDef_BLT_SRC_XINC_ALL;
+static const uint32_t BLT_SRC_INC_X_ALL_SHIFT = 0;
+static const uint32_t BLT_SRC_INC_X_ALL_MASK = 65535;
+inline int16_t GetField_BLT_SRC_INC_X_ALL(uint32_t value) { return static_cast<int16_t>(((value)>>0) & 65535); }
+extern const FieldDef g_fieldDef_BLT_SRC_INC_X_ALL;
 
 
-/* Register BLT_SRC_YINC ($ff8a22)*/
+/* Register BLT_SRC_INC_Y ($ff8a22)*/
 /* Field ALL */
-static const uint32_t BLT_SRC_YINC_ALL_SHIFT = 0;
-static const uint32_t BLT_SRC_YINC_ALL_MASK = 65535;
-inline int16_t GetField_BLT_SRC_YINC_ALL(uint32_t value) { return static_cast<int16_t>(((value)>>0) & 65535); }
-extern const FieldDef g_fieldDef_BLT_SRC_YINC_ALL;
+static const uint32_t BLT_SRC_INC_Y_ALL_SHIFT = 0;
+static const uint32_t BLT_SRC_INC_Y_ALL_MASK = 65535;
+inline int16_t GetField_BLT_SRC_INC_Y_ALL(uint32_t value) { return static_cast<int16_t>(((value)>>0) & 65535); }
+extern const FieldDef g_fieldDef_BLT_SRC_INC_Y_ALL;
 
 
 /* Register BLT_SRC_ADDR ($ff8a24)*/
@@ -1304,20 +1304,20 @@ inline int16_t GetField_BLT_ENDMASK_3_ALL(uint32_t value) { return static_cast<i
 extern const FieldDef g_fieldDef_BLT_ENDMASK_3_ALL;
 
 
-/* Register BLT_DST_XINC ($ff8a2e)*/
+/* Register BLT_DST_INC_X ($ff8a2e)*/
 /* Field ALL */
-static const uint32_t BLT_DST_XINC_ALL_SHIFT = 0;
-static const uint32_t BLT_DST_XINC_ALL_MASK = 65535;
-inline int16_t GetField_BLT_DST_XINC_ALL(uint32_t value) { return static_cast<int16_t>(((value)>>0) & 65535); }
-extern const FieldDef g_fieldDef_BLT_DST_XINC_ALL;
+static const uint32_t BLT_DST_INC_X_ALL_SHIFT = 0;
+static const uint32_t BLT_DST_INC_X_ALL_MASK = 65535;
+inline int16_t GetField_BLT_DST_INC_X_ALL(uint32_t value) { return static_cast<int16_t>(((value)>>0) & 65535); }
+extern const FieldDef g_fieldDef_BLT_DST_INC_X_ALL;
 
 
-/* Register BLT_DST_YINC ($ff8a30)*/
+/* Register BLT_DST_INC_Y ($ff8a30)*/
 /* Field ALL */
-static const uint32_t BLT_DST_YINC_ALL_SHIFT = 0;
-static const uint32_t BLT_DST_YINC_ALL_MASK = 65535;
-inline int16_t GetField_BLT_DST_YINC_ALL(uint32_t value) { return static_cast<int16_t>(((value)>>0) & 65535); }
-extern const FieldDef g_fieldDef_BLT_DST_YINC_ALL;
+static const uint32_t BLT_DST_INC_Y_ALL_SHIFT = 0;
+static const uint32_t BLT_DST_INC_Y_ALL_MASK = 65535;
+inline int16_t GetField_BLT_DST_INC_Y_ALL(uint32_t value) { return static_cast<int16_t>(((value)>>0) & 65535); }
+extern const FieldDef g_fieldDef_BLT_DST_INC_Y_ALL;
 
 
 /* Register BLT_DST_ADDR ($ff8a32)*/
@@ -1451,14 +1451,14 @@ extern const FieldDef* g_regFieldsDef_YM_VOLUME_A[];
 extern const FieldDef* g_regFieldsDef_YM_VOLUME_B[];
 extern const FieldDef* g_regFieldsDef_YM_VOLUME_C[];
 extern const FieldDef* g_regFieldsDef_YM_PERIOD_ENV_SHAPE[];
-extern const FieldDef* g_regFieldsDef_BLT_SRC_XINC[];
-extern const FieldDef* g_regFieldsDef_BLT_SRC_YINC[];
+extern const FieldDef* g_regFieldsDef_BLT_SRC_INC_X[];
+extern const FieldDef* g_regFieldsDef_BLT_SRC_INC_Y[];
 extern const FieldDef* g_regFieldsDef_BLT_SRC_ADDR[];
 extern const FieldDef* g_regFieldsDef_BLT_ENDMASK_1[];
 extern const FieldDef* g_regFieldsDef_BLT_ENDMASK_2[];
 extern const FieldDef* g_regFieldsDef_BLT_ENDMASK_3[];
-extern const FieldDef* g_regFieldsDef_BLT_DST_XINC[];
-extern const FieldDef* g_regFieldsDef_BLT_DST_YINC[];
+extern const FieldDef* g_regFieldsDef_BLT_DST_INC_X[];
+extern const FieldDef* g_regFieldsDef_BLT_DST_INC_Y[];
 extern const FieldDef* g_regFieldsDef_BLT_DST_ADDR[];
 extern const FieldDef* g_regFieldsDef_BLT_XCOUNT[];
 extern const FieldDef* g_regFieldsDef_BLT_YCOUNT[];

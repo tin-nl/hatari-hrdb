@@ -435,14 +435,14 @@ const FieldDef g_fieldDef_YM_VOLUME_B_ENVELOPE = { Regs::YM_VOLUME_B, Regs::YM_V
 const FieldDef g_fieldDef_YM_VOLUME_C_VOL = { Regs::YM_VOLUME_C, Regs::YM_VOLUME_C_VOL_MASK, 1, Regs::YM_VOLUME_C_VOL_SHIFT, "VOL", nullptr };
 const FieldDef g_fieldDef_YM_VOLUME_C_ENVELOPE = { Regs::YM_VOLUME_C, Regs::YM_VOLUME_C_ENVELOPE_MASK, 1, Regs::YM_VOLUME_C_ENVELOPE_SHIFT, "ENVELOPE", nullptr };
 const FieldDef g_fieldDef_YM_PERIOD_ENV_SHAPE_SHAPE = { Regs::YM_PERIOD_ENV_SHAPE, Regs::YM_PERIOD_ENV_SHAPE_SHAPE_MASK, 1, Regs::YM_PERIOD_ENV_SHAPE_SHAPE_SHIFT, "SHAPE", g_enumStringsENV_SHAPE };
-const FieldDef g_fieldDef_BLT_SRC_XINC_ALL = { Regs::BLT_SRC_XINC, Regs::BLT_SRC_XINC_ALL_MASK, 2, Regs::BLT_SRC_XINC_ALL_SHIFT, "ALL", nullptr };
-const FieldDef g_fieldDef_BLT_SRC_YINC_ALL = { Regs::BLT_SRC_YINC, Regs::BLT_SRC_YINC_ALL_MASK, 2, Regs::BLT_SRC_YINC_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_SRC_INC_X_ALL = { Regs::BLT_SRC_INC_X, Regs::BLT_SRC_INC_X_ALL_MASK, 2, Regs::BLT_SRC_INC_X_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_SRC_INC_Y_ALL = { Regs::BLT_SRC_INC_Y, Regs::BLT_SRC_INC_Y_ALL_MASK, 2, Regs::BLT_SRC_INC_Y_ALL_SHIFT, "ALL", nullptr };
 const FieldDef g_fieldDef_BLT_SRC_ADDR_ALL = { Regs::BLT_SRC_ADDR, Regs::BLT_SRC_ADDR_ALL_MASK, 4, Regs::BLT_SRC_ADDR_ALL_SHIFT, "ALL", nullptr };
 const FieldDef g_fieldDef_BLT_ENDMASK_1_ALL = { Regs::BLT_ENDMASK_1, Regs::BLT_ENDMASK_1_ALL_MASK, 2, Regs::BLT_ENDMASK_1_ALL_SHIFT, "ALL", nullptr };
 const FieldDef g_fieldDef_BLT_ENDMASK_2_ALL = { Regs::BLT_ENDMASK_2, Regs::BLT_ENDMASK_2_ALL_MASK, 2, Regs::BLT_ENDMASK_2_ALL_SHIFT, "ALL", nullptr };
 const FieldDef g_fieldDef_BLT_ENDMASK_3_ALL = { Regs::BLT_ENDMASK_3, Regs::BLT_ENDMASK_3_ALL_MASK, 2, Regs::BLT_ENDMASK_3_ALL_SHIFT, "ALL", nullptr };
-const FieldDef g_fieldDef_BLT_DST_XINC_ALL = { Regs::BLT_DST_XINC, Regs::BLT_DST_XINC_ALL_MASK, 2, Regs::BLT_DST_XINC_ALL_SHIFT, "ALL", nullptr };
-const FieldDef g_fieldDef_BLT_DST_YINC_ALL = { Regs::BLT_DST_YINC, Regs::BLT_DST_YINC_ALL_MASK, 2, Regs::BLT_DST_YINC_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_DST_INC_X_ALL = { Regs::BLT_DST_INC_X, Regs::BLT_DST_INC_X_ALL_MASK, 2, Regs::BLT_DST_INC_X_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_DST_INC_Y_ALL = { Regs::BLT_DST_INC_Y, Regs::BLT_DST_INC_Y_ALL_MASK, 2, Regs::BLT_DST_INC_Y_ALL_SHIFT, "ALL", nullptr };
 const FieldDef g_fieldDef_BLT_DST_ADDR_ALL = { Regs::BLT_DST_ADDR, Regs::BLT_DST_ADDR_ALL_MASK, 4, Regs::BLT_DST_ADDR_ALL_SHIFT, "ALL", nullptr };
 const FieldDef g_fieldDef_BLT_XCOUNT_ALL = { Regs::BLT_XCOUNT, Regs::BLT_XCOUNT_ALL_MASK, 2, Regs::BLT_XCOUNT_ALL_SHIFT, "ALL", nullptr };
 const FieldDef g_fieldDef_BLT_YCOUNT_ALL = { Regs::BLT_YCOUNT, Regs::BLT_YCOUNT_ALL_MASK, 2, Regs::BLT_YCOUNT_ALL_SHIFT, "ALL", nullptr };
@@ -736,12 +736,12 @@ const FieldDef* g_regFieldsDef_YM_PERIOD_ENV_SHAPE[] = {
 	 &g_fieldDef_YM_PERIOD_ENV_SHAPE_SHAPE,
 	nullptr
 };
-const FieldDef* g_regFieldsDef_BLT_SRC_XINC[] = {
-	 &g_fieldDef_BLT_SRC_XINC_ALL,
+const FieldDef* g_regFieldsDef_BLT_SRC_INC_X[] = {
+	 &g_fieldDef_BLT_SRC_INC_X_ALL,
 	nullptr
 };
-const FieldDef* g_regFieldsDef_BLT_SRC_YINC[] = {
-	 &g_fieldDef_BLT_SRC_YINC_ALL,
+const FieldDef* g_regFieldsDef_BLT_SRC_INC_Y[] = {
+	 &g_fieldDef_BLT_SRC_INC_Y_ALL,
 	nullptr
 };
 const FieldDef* g_regFieldsDef_BLT_SRC_ADDR[] = {
@@ -760,12 +760,12 @@ const FieldDef* g_regFieldsDef_BLT_ENDMASK_3[] = {
 	 &g_fieldDef_BLT_ENDMASK_3_ALL,
 	nullptr
 };
-const FieldDef* g_regFieldsDef_BLT_DST_XINC[] = {
-	 &g_fieldDef_BLT_DST_XINC_ALL,
+const FieldDef* g_regFieldsDef_BLT_DST_INC_X[] = {
+	 &g_fieldDef_BLT_DST_INC_X_ALL,
 	nullptr
 };
-const FieldDef* g_regFieldsDef_BLT_DST_YINC[] = {
-	 &g_fieldDef_BLT_DST_YINC_ALL,
+const FieldDef* g_regFieldsDef_BLT_DST_INC_Y[] = {
+	 &g_fieldDef_BLT_DST_INC_Y_ALL,
 	nullptr
 };
 const FieldDef* g_regFieldsDef_BLT_DST_ADDR[] = {
