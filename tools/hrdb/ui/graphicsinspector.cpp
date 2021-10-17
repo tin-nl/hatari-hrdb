@@ -388,8 +388,6 @@ void GraphicsInspectorWidget::keyPressEvent(QKeyEvent* ev)
     EffectiveData data;
     GetEffectiveData(data);
 
-    int32_t bytes = BytesPerMode(GetEffectiveMode());
-    int32_t width = GetEffectiveWidth();
     int32_t height = GetEffectiveHeight();
 
     bool shift = (ev->modifiers().testFlag(Qt::KeyboardModifier::ShiftModifier));
