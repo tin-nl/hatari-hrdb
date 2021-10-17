@@ -20,11 +20,11 @@
 //-----------------------------------------------------------------------------
 bool GetField(const Memory& mem, const Regs::FieldDef& def, QString& result)
 {
-    if (!mem.HasAddress(def.regAddr))
+    if (!mem.HasAddressMulti(def.regAddr, def.size))
         return false;
 
     uint32_t regVal = mem.ReadAddressMulti(def.regAddr, def.size);
-    uint16_t extracted = (regVal >> def.shift) & def.mask;
+    uint32_t extracted = (regVal >> def.shift) & def.mask;
     if (def.strings)
         result = GetString(def.strings, extracted);
     else
@@ -80,10 +80,10 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-class HardwareFieldBitmask : public HardwareField
+class HardwareFieldMultiField : public HardwareField
 {
 public:
-    HardwareFieldBitmask(const Regs::FieldDef** defs) :
+    HardwareFieldMultiField(const Regs::FieldDef** defs) :
         m_pDefs(defs)
     {
     }
@@ -210,18 +210,18 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     Expander* pExpMfp = new Expander(this, "MFP 68901 - Multi-Function Peripheral");
 
     addField(pExpMfp->m_pBottomLayout, "Parallel Port Data",        Regs::g_fieldDef_MFP_GPIP_ALL);
-    addBitmask(pExpMfp->m_pBottomLayout, "Active Edge low->high",   Regs::g_regFieldsDef_MFP_AER);
-    addBitmask(pExpMfp->m_pBottomLayout, "Data Direction output",   Regs::g_regFieldsDef_MFP_DDR);
+    addMultiField(pExpMfp->m_pBottomLayout, "Active Edge low->high",   Regs::g_regFieldsDef_MFP_AER);
+    addMultiField(pExpMfp->m_pBottomLayout, "Data Direction output",   Regs::g_regFieldsDef_MFP_DDR);
 
-    addBitmask(pExpMfp->m_pBottomLayout, "IERA (Enable)",           Regs::g_regFieldsDef_MFP_IERA);
-    addBitmask(pExpMfp->m_pBottomLayout, "IMRA (Mask)",             Regs::g_regFieldsDef_MFP_IMRA);
-    addBitmask(pExpMfp->m_pBottomLayout, "IPRA (Pending)",          Regs::g_regFieldsDef_MFP_IPRA);
-    addBitmask(pExpMfp->m_pBottomLayout, "ISRA (Service)",          Regs::g_regFieldsDef_MFP_ISRA);
+    addMultiField(pExpMfp->m_pBottomLayout, "IERA (Enable)",           Regs::g_regFieldsDef_MFP_IERA);
+    addMultiField(pExpMfp->m_pBottomLayout, "IMRA (Mask)",             Regs::g_regFieldsDef_MFP_IMRA);
+    addMultiField(pExpMfp->m_pBottomLayout, "IPRA (Pending)",          Regs::g_regFieldsDef_MFP_IPRA);
+    addMultiField(pExpMfp->m_pBottomLayout, "ISRA (Service)",          Regs::g_regFieldsDef_MFP_ISRA);
 
-    addBitmask(pExpMfp->m_pBottomLayout, "IERB (Enable)",           Regs::g_regFieldsDef_MFP_IERB);
-    addBitmask(pExpMfp->m_pBottomLayout, "IMRB (Mask)",             Regs::g_regFieldsDef_MFP_IMRB);
-    addBitmask(pExpMfp->m_pBottomLayout, "IPRB (Pending)",          Regs::g_regFieldsDef_MFP_IPRB);
-    addBitmask(pExpMfp->m_pBottomLayout, "ISRB (Service)",          Regs::g_regFieldsDef_MFP_ISRB);
+    addMultiField(pExpMfp->m_pBottomLayout, "IERB (Enable)",           Regs::g_regFieldsDef_MFP_IERB);
+    addMultiField(pExpMfp->m_pBottomLayout, "IMRB (Mask)",             Regs::g_regFieldsDef_MFP_IMRB);
+    addMultiField(pExpMfp->m_pBottomLayout, "IPRB (Pending)",          Regs::g_regFieldsDef_MFP_IPRB);
+    addMultiField(pExpMfp->m_pBottomLayout, "ISRB (Service)",          Regs::g_regFieldsDef_MFP_ISRB);
 
     addField(pExpMfp->m_pBottomLayout, "Vector Base offset",        Regs::g_fieldDef_MFP_VR_VEC_BASE_OFFSET);
     addField(pExpMfp->m_pBottomLayout, "End-of-Interrupt",          Regs::g_fieldDef_MFP_VR_ENDINT);
@@ -236,9 +236,9 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addField(pExpMfp->m_pBottomLayout, "Timer D Data",              Regs::g_fieldDef_MFP_TDDR_ALL);
 
     addField(pExpMfp->m_pBottomLayout, "Sync Char",                 Regs::g_fieldDef_MFP_SCR_ALL);
-    addBitmask(pExpMfp->m_pBottomLayout, "USART Control",           Regs::g_regFieldsDef_MFP_UCR);
-    addBitmask(pExpMfp->m_pBottomLayout, "USART RX Status",         Regs::g_regFieldsDef_MFP_RSR);
-    addBitmask(pExpMfp->m_pBottomLayout, "USART TX Status",         Regs::g_regFieldsDef_MFP_TSR);
+    addMultiField(pExpMfp->m_pBottomLayout, "USART Control",           Regs::g_regFieldsDef_MFP_UCR);
+    addMultiField(pExpMfp->m_pBottomLayout, "USART RX Status",         Regs::g_regFieldsDef_MFP_RSR);
+    addMultiField(pExpMfp->m_pBottomLayout, "USART TX Status",         Regs::g_regFieldsDef_MFP_TSR);
     addField(pExpMfp->m_pBottomLayout, "USART Data",                Regs::g_fieldDef_MFP_UDR_ALL);
 
     Expander* pExpYm = new Expander(this, "YM/PSG");
@@ -255,10 +255,30 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addShared(pExpYm->m_pBottomLayout, "Port A",       new HardwareFieldYm(Regs::YM_PORT_A));
     addShared(pExpYm->m_pBottomLayout, "Port B",       new HardwareFieldYm(Regs::YM_PORT_B));
 
+    Expander* pExpBlt = new Expander(this, "Blitter");
+
+    // TODO these need sign expansion etc
+    addField(pExpBlt->m_pBottomLayout, "Src X Inc",         Regs::g_fieldDef_BLT_SRC_XINC_ALL);
+    addField(pExpBlt->m_pBottomLayout, "Src Y Inc",         Regs::g_fieldDef_BLT_SRC_YINC_ALL);
+    addField(pExpBlt->m_pBottomLayout, "Src Addr",          Regs::g_fieldDef_BLT_SRC_ADDR_ALL);
+    addField(pExpBlt->m_pBottomLayout, "Dst X Inc",         Regs::g_fieldDef_BLT_DST_XINC_ALL);
+    addField(pExpBlt->m_pBottomLayout, "Dst Y Inc",         Regs::g_fieldDef_BLT_DST_YINC_ALL);
+    addField(pExpBlt->m_pBottomLayout, "Dsr Addr",          Regs::g_fieldDef_BLT_DST_ADDR_ALL);
+
+    addField(pExpBlt->m_pBottomLayout, "X Count",           Regs::g_fieldDef_BLT_XCOUNT_ALL);
+    addField(pExpBlt->m_pBottomLayout, "Y Count",           Regs::g_fieldDef_BLT_YCOUNT_ALL);
+
+    addField(pExpBlt->m_pBottomLayout, "Halftone Op",       Regs::g_fieldDef_BLT_HALFTONE_OP_OP);
+    addField(pExpBlt->m_pBottomLayout, "Logical Op",        Regs::g_fieldDef_BLT_LOGICAL_OP_OP);
+
+    addMultiField(pExpBlt->m_pBottomLayout, "Control 1",    Regs::g_regFieldsDef_BLT_CTRL_1);
+    addMultiField(pExpBlt->m_pBottomLayout, "Control 2",    Regs::g_regFieldsDef_BLT_CTRL_2);
+
     pMainLayout->addWidget(pExpMmu);
     pMainLayout->addWidget(pExpVideo);
     pMainLayout->addWidget(pExpMfp);
     pMainLayout->addWidget(pExpYm);
+    pMainLayout->addWidget(pExpBlt);
 
     pMainRegion->setLayout(pMainLayout);
     QScrollArea* sa = new QScrollArea(this);
@@ -335,6 +355,7 @@ void HardwareWindow::startStopChangedSlot()
         m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::MMU_CONFIG,    0x1);
         m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::VID_REG_BASE,  0x70);
         m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::MFP_GPIP,      0x30);
+        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::BLT_SRC_XINC,  0x20);
 
         m_pDispatcher->InfoYm();
     }
@@ -371,9 +392,9 @@ void HardwareWindow::addField(QFormLayout* pLayout, const QString& title, const 
     addShared(pLayout, title, pField);
 }
 
-void HardwareWindow::addBitmask(QFormLayout* pLayout, const QString& title, const Regs::FieldDef** defs)
+void HardwareWindow::addMultiField(QFormLayout* pLayout, const QString& title, const Regs::FieldDef** defs)
 {
-    HardwareFieldBitmask* pField = new HardwareFieldBitmask(defs);
+    HardwareFieldMultiField* pField = new HardwareFieldMultiField(defs);
     addShared(pLayout, title, pField);
 }
 
@@ -471,7 +492,7 @@ bool HardwareFieldRegEnum::Update(const TargetModel* pTarget)
     return true;
 }
 
-bool HardwareFieldBitmask::Update(const TargetModel* pTarget)
+bool HardwareFieldMultiField::Update(const TargetModel* pTarget)
 {
     const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
     QString res;
@@ -568,7 +589,7 @@ bool HardwareFieldYmEnvShape::Update(const TargetModel *pTarget)
 
 bool HardwareFieldYmMixer::Update(const TargetModel *pTarget)
 {
-    uint16_t val = (pTarget->GetYm().m_regs[Regs::YM_MIXER]);
+    uint32_t val = (pTarget->GetYm().m_regs[Regs::YM_MIXER]);
 
     QString str;
     if (!Regs::GetField_YM_MIXER_TONE_A_OFF(val))

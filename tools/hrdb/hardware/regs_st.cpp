@@ -4,7 +4,7 @@
 
 namespace Regs {
     
-    const char* GetString(const StringDef* strings, uint16_t value)
+    const char* GetString(const StringDef* strings, uint32_t value)
     {
         while (strings->string)
         {
@@ -128,6 +128,34 @@ const char* GetString(ENV_SHAPE val)
 	if (val==ENV_SHAPE::ENV_1111) return "/|__";
 	return "?";
 }
+const char* GetString(BLT_HOP val)
+{
+	if (val==BLT_HOP::ONES) return "All Ones";
+	if (val==BLT_HOP::HALFTONE) return "Halftone only";
+	if (val==BLT_HOP::SOURCE) return "Source only";
+	if (val==BLT_HOP::SOURCE_AND_HALFTONE) return "Source AND halftone";
+	return "?";
+}
+const char* GetString(BLT_OP val)
+{
+	if (val==BLT_OP::ZERO) return "All zeros";
+	if (val==BLT_OP::AND) return "Source AND destination";
+	if (val==BLT_OP::AND_NOT) return "Source AND NOT destination";
+	if (val==BLT_OP::SOURCE) return "Source";
+	if (val==BLT_OP::NOT_AND) return "NOT source AND destination";
+	if (val==BLT_OP::DEST) return "Destination";
+	if (val==BLT_OP::XOR) return "Source XOR destination";
+	if (val==BLT_OP::OR) return "Source OR destination";
+	if (val==BLT_OP::NOT_AND_NOT) return "NOT source AND NOT destination";
+	if (val==BLT_OP::NOT_XOR) return "NOT source XOR destination";
+	if (val==BLT_OP::NOT_DEST) return "NOT destination";
+	if (val==BLT_OP::OR_NOT_DEST) return "Source OR NOT destination";
+	if (val==BLT_OP::NOT_SOURCE) return "NOT source";
+	if (val==BLT_OP::NOT_SOURCE_OR) return "NOT source OR destination";
+	if (val==BLT_OP::NOT_SOURCE_OR_NOT) return "NOT source OR NOT destination";
+	if (val==BLT_OP::ONES) return "All ones";
+	return "?";
+}
 const StringDef g_enumStringsMMU_BANK[] = {
 	{ 0, "128K" },
 	{ 1, "512K" },
@@ -231,156 +259,202 @@ const StringDef g_enumStringsENV_SHAPE[] = {
 	{ 15, "/|__" },
 	{ 0, nullptr }
 };
-const FieldDef g_fieldDef_MMU_CONFIG_BANK1 = { Regs::MMU_CONFIG, 1, "BANK1", Regs::MMU_CONFIG_BANK1_SHIFT, Regs::MMU_CONFIG_BANK1_MASK, g_enumStringsMMU_BANK };
-const FieldDef g_fieldDef_MMU_CONFIG_BANK0 = { Regs::MMU_CONFIG, 1, "BANK0", Regs::MMU_CONFIG_BANK0_SHIFT, Regs::MMU_CONFIG_BANK0_MASK, g_enumStringsMMU_BANK };
-const FieldDef g_fieldDef_VID_SCREEN_HIGH_ALL = { Regs::VID_SCREEN_HIGH, 1, "ALL", Regs::VID_SCREEN_HIGH_ALL_SHIFT, Regs::VID_SCREEN_HIGH_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_VID_SCREEN_MID_ALL = { Regs::VID_SCREEN_MID, 1, "ALL", Regs::VID_SCREEN_MID_ALL_SHIFT, Regs::VID_SCREEN_MID_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_VID_SCREEN_LOW_STE_ALL = { Regs::VID_SCREEN_LOW_STE, 1, "ALL", Regs::VID_SCREEN_LOW_STE_ALL_SHIFT, Regs::VID_SCREEN_LOW_STE_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_VID_SCANLINE_OFFSET_STE_ALL = { Regs::VID_SCANLINE_OFFSET_STE, 1, "ALL", Regs::VID_SCANLINE_OFFSET_STE_ALL_SHIFT, Regs::VID_SCANLINE_OFFSET_STE_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_VID_HORIZ_SCROLL_STE_PIXELS = { Regs::VID_HORIZ_SCROLL_STE, 1, "PIXELS", Regs::VID_HORIZ_SCROLL_STE_PIXELS_SHIFT, Regs::VID_HORIZ_SCROLL_STE_PIXELS_MASK, nullptr };
-const FieldDef g_fieldDef_VID_SYNC_MODE_TYPE = { Regs::VID_SYNC_MODE, 1, "TYPE", Regs::VID_SYNC_MODE_TYPE_SHIFT, Regs::VID_SYNC_MODE_TYPE_MASK, g_enumStringsSYNC_TYPE };
-const FieldDef g_fieldDef_VID_SYNC_MODE_RATE = { Regs::VID_SYNC_MODE, 1, "RATE", Regs::VID_SYNC_MODE_RATE_SHIFT, Regs::VID_SYNC_MODE_RATE_MASK, g_enumStringsSYNC_RATE };
-const FieldDef g_fieldDef_VID_PAL_0_BLUE_ST = { Regs::VID_PAL_0, 2, "BLUE_ST", Regs::VID_PAL_0_BLUE_ST_SHIFT, Regs::VID_PAL_0_BLUE_ST_MASK, nullptr };
-const FieldDef g_fieldDef_VID_PAL_0_BLUE_STE = { Regs::VID_PAL_0, 2, "BLUE_STE", Regs::VID_PAL_0_BLUE_STE_SHIFT, Regs::VID_PAL_0_BLUE_STE_MASK, nullptr };
-const FieldDef g_fieldDef_VID_PAL_0_GREEN_ST = { Regs::VID_PAL_0, 2, "GREEN_ST", Regs::VID_PAL_0_GREEN_ST_SHIFT, Regs::VID_PAL_0_GREEN_ST_MASK, nullptr };
-const FieldDef g_fieldDef_VID_PAL_0_GREEN_STE = { Regs::VID_PAL_0, 2, "GREEN_STE", Regs::VID_PAL_0_GREEN_STE_SHIFT, Regs::VID_PAL_0_GREEN_STE_MASK, nullptr };
-const FieldDef g_fieldDef_VID_PAL_0_RED_ST = { Regs::VID_PAL_0, 2, "RED_ST", Regs::VID_PAL_0_RED_ST_SHIFT, Regs::VID_PAL_0_RED_ST_MASK, nullptr };
-const FieldDef g_fieldDef_VID_PAL_0_RED_STE = { Regs::VID_PAL_0, 2, "RED_STE", Regs::VID_PAL_0_RED_STE_SHIFT, Regs::VID_PAL_0_RED_STE_MASK, nullptr };
-const FieldDef g_fieldDef_VID_SHIFTER_RES_RES = { Regs::VID_SHIFTER_RES, 1, "RES", Regs::VID_SHIFTER_RES_RES_SHIFT, Regs::VID_SHIFTER_RES_RES_MASK, g_enumStringsRESOLUTION };
-const FieldDef g_fieldDef_FDC_ACCESS_ALL = { Regs::FDC_ACCESS, 2, "ALL", Regs::FDC_ACCESS_ALL_SHIFT, Regs::FDC_ACCESS_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_FDC_STATUS_ERROR = { Regs::FDC_STATUS, 2, "ERROR", Regs::FDC_STATUS_ERROR_SHIFT, Regs::FDC_STATUS_ERROR_MASK, nullptr };
-const FieldDef g_fieldDef_FDC_STATUS_SECT_CNT = { Regs::FDC_STATUS, 2, "SECT_CNT", Regs::FDC_STATUS_SECT_CNT_SHIFT, Regs::FDC_STATUS_SECT_CNT_MASK, nullptr };
-const FieldDef g_fieldDef_FDC_STATUS_DATA_REQ = { Regs::FDC_STATUS, 2, "DATA_REQ", Regs::FDC_STATUS_DATA_REQ_SHIFT, Regs::FDC_STATUS_DATA_REQ_MASK, nullptr };
-const FieldDef g_fieldDef_FDC_DMA_BASE_HIGH_ALL = { Regs::FDC_DMA_BASE_HIGH, 1, "ALL", Regs::FDC_DMA_BASE_HIGH_ALL_SHIFT, Regs::FDC_DMA_BASE_HIGH_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_FDC_DMA_BASE_MID_ALL = { Regs::FDC_DMA_BASE_MID, 1, "ALL", Regs::FDC_DMA_BASE_MID_ALL_SHIFT, Regs::FDC_DMA_BASE_MID_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_FDC_DMA_BASE_LOW_ALL = { Regs::FDC_DMA_BASE_LOW, 1, "ALL", Regs::FDC_DMA_BASE_LOW_ALL_SHIFT, Regs::FDC_DMA_BASE_LOW_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_GPIP_ALL = { Regs::MFP_GPIP, 1, "ALL", Regs::MFP_GPIP_ALL_SHIFT, Regs::MFP_GPIP_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_AER_CENT_BUSY = { Regs::MFP_AER, 1, "CENT_BUSY", Regs::MFP_AER_CENT_BUSY_SHIFT, Regs::MFP_AER_CENT_BUSY_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_AER_RS232_DCD = { Regs::MFP_AER, 1, "RS232_DCD", Regs::MFP_AER_RS232_DCD_SHIFT, Regs::MFP_AER_RS232_DCD_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_AER_RS232_CTS = { Regs::MFP_AER, 1, "RS232_CTS", Regs::MFP_AER_RS232_CTS_SHIFT, Regs::MFP_AER_RS232_CTS_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_AER_KBD_MIDI = { Regs::MFP_AER, 1, "KBD_MIDI", Regs::MFP_AER_KBD_MIDI_SHIFT, Regs::MFP_AER_KBD_MIDI_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_AER_FDC_HDC = { Regs::MFP_AER, 1, "FDC_HDC", Regs::MFP_AER_FDC_HDC_SHIFT, Regs::MFP_AER_FDC_HDC_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_AER_RS232_RING = { Regs::MFP_AER, 1, "RS232_RING", Regs::MFP_AER_RS232_RING_SHIFT, Regs::MFP_AER_RS232_RING_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_AER_MONO = { Regs::MFP_AER, 1, "MONO", Regs::MFP_AER_MONO_SHIFT, Regs::MFP_AER_MONO_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_DDR_CENT_BUSY = { Regs::MFP_DDR, 1, "CENT_BUSY", Regs::MFP_DDR_CENT_BUSY_SHIFT, Regs::MFP_DDR_CENT_BUSY_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_DDR_RS232_DCD = { Regs::MFP_DDR, 1, "RS232_DCD", Regs::MFP_DDR_RS232_DCD_SHIFT, Regs::MFP_DDR_RS232_DCD_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_DDR_RS232_CTS = { Regs::MFP_DDR, 1, "RS232_CTS", Regs::MFP_DDR_RS232_CTS_SHIFT, Regs::MFP_DDR_RS232_CTS_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_DDR_KBD_MIDI = { Regs::MFP_DDR, 1, "KBD_MIDI", Regs::MFP_DDR_KBD_MIDI_SHIFT, Regs::MFP_DDR_KBD_MIDI_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_DDR_FDC_HDC = { Regs::MFP_DDR, 1, "FDC_HDC", Regs::MFP_DDR_FDC_HDC_SHIFT, Regs::MFP_DDR_FDC_HDC_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_DDR_RS232_RING = { Regs::MFP_DDR, 1, "RS232_RING", Regs::MFP_DDR_RS232_RING_SHIFT, Regs::MFP_DDR_RS232_RING_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_DDR_MONO = { Regs::MFP_DDR, 1, "MONO", Regs::MFP_DDR_MONO_SHIFT, Regs::MFP_DDR_MONO_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERA_TIMER_B = { Regs::MFP_IERA, 1, "TIMER_B", Regs::MFP_IERA_TIMER_B_SHIFT, Regs::MFP_IERA_TIMER_B_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERA_SEND_ERR = { Regs::MFP_IERA, 1, "SEND_ERR", Regs::MFP_IERA_SEND_ERR_SHIFT, Regs::MFP_IERA_SEND_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERA_SEND_EMPTY = { Regs::MFP_IERA, 1, "SEND_EMPTY", Regs::MFP_IERA_SEND_EMPTY_SHIFT, Regs::MFP_IERA_SEND_EMPTY_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERA_REC_ERR = { Regs::MFP_IERA, 1, "REC_ERR", Regs::MFP_IERA_REC_ERR_SHIFT, Regs::MFP_IERA_REC_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERA_REC_FULL = { Regs::MFP_IERA, 1, "REC_FULL", Regs::MFP_IERA_REC_FULL_SHIFT, Regs::MFP_IERA_REC_FULL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERA_TIMER_A = { Regs::MFP_IERA, 1, "TIMER_A", Regs::MFP_IERA_TIMER_A_SHIFT, Regs::MFP_IERA_TIMER_A_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERA_RS232_RING = { Regs::MFP_IERA, 1, "RS232_RING", Regs::MFP_IERA_RS232_RING_SHIFT, Regs::MFP_IERA_RS232_RING_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERA_MONO_DETECT = { Regs::MFP_IERA, 1, "MONO_DETECT", Regs::MFP_IERA_MONO_DETECT_SHIFT, Regs::MFP_IERA_MONO_DETECT_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERB_RS232_DTD = { Regs::MFP_IERB, 1, "RS232_DTD", Regs::MFP_IERB_RS232_DTD_SHIFT, Regs::MFP_IERB_RS232_DTD_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERB_CENT_BUSY = { Regs::MFP_IERB, 1, "CENT_BUSY", Regs::MFP_IERB_CENT_BUSY_SHIFT, Regs::MFP_IERB_CENT_BUSY_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERB_RS232_CTS = { Regs::MFP_IERB, 1, "RS232_CTS", Regs::MFP_IERB_RS232_CTS_SHIFT, Regs::MFP_IERB_RS232_CTS_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERB_BLITTER = { Regs::MFP_IERB, 1, "BLITTER", Regs::MFP_IERB_BLITTER_SHIFT, Regs::MFP_IERB_BLITTER_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERB_TIMER_D = { Regs::MFP_IERB, 1, "TIMER_D", Regs::MFP_IERB_TIMER_D_SHIFT, Regs::MFP_IERB_TIMER_D_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERB_TIMER_C = { Regs::MFP_IERB, 1, "TIMER_C", Regs::MFP_IERB_TIMER_C_SHIFT, Regs::MFP_IERB_TIMER_C_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERB_IKBD_MIDI = { Regs::MFP_IERB, 1, "IKBD_MIDI", Regs::MFP_IERB_IKBD_MIDI_SHIFT, Regs::MFP_IERB_IKBD_MIDI_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IERB_FDC_HDC = { Regs::MFP_IERB, 1, "FDC_HDC", Regs::MFP_IERB_FDC_HDC_SHIFT, Regs::MFP_IERB_FDC_HDC_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRA_TIMER_B = { Regs::MFP_IPRA, 1, "TIMER_B", Regs::MFP_IPRA_TIMER_B_SHIFT, Regs::MFP_IPRA_TIMER_B_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRA_SEND_ERR = { Regs::MFP_IPRA, 1, "SEND_ERR", Regs::MFP_IPRA_SEND_ERR_SHIFT, Regs::MFP_IPRA_SEND_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRA_SEND_EMPTY = { Regs::MFP_IPRA, 1, "SEND_EMPTY", Regs::MFP_IPRA_SEND_EMPTY_SHIFT, Regs::MFP_IPRA_SEND_EMPTY_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRA_REC_ERR = { Regs::MFP_IPRA, 1, "REC_ERR", Regs::MFP_IPRA_REC_ERR_SHIFT, Regs::MFP_IPRA_REC_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRA_REC_FULL = { Regs::MFP_IPRA, 1, "REC_FULL", Regs::MFP_IPRA_REC_FULL_SHIFT, Regs::MFP_IPRA_REC_FULL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRA_TIMER_A = { Regs::MFP_IPRA, 1, "TIMER_A", Regs::MFP_IPRA_TIMER_A_SHIFT, Regs::MFP_IPRA_TIMER_A_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRA_RS232_RING = { Regs::MFP_IPRA, 1, "RS232_RING", Regs::MFP_IPRA_RS232_RING_SHIFT, Regs::MFP_IPRA_RS232_RING_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRA_MONO_DETECT = { Regs::MFP_IPRA, 1, "MONO_DETECT", Regs::MFP_IPRA_MONO_DETECT_SHIFT, Regs::MFP_IPRA_MONO_DETECT_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRB_RS232_DTD = { Regs::MFP_IPRB, 1, "RS232_DTD", Regs::MFP_IPRB_RS232_DTD_SHIFT, Regs::MFP_IPRB_RS232_DTD_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRB_CENT_BUSY = { Regs::MFP_IPRB, 1, "CENT_BUSY", Regs::MFP_IPRB_CENT_BUSY_SHIFT, Regs::MFP_IPRB_CENT_BUSY_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRB_RS232_CTS = { Regs::MFP_IPRB, 1, "RS232_CTS", Regs::MFP_IPRB_RS232_CTS_SHIFT, Regs::MFP_IPRB_RS232_CTS_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRB_BLITTER = { Regs::MFP_IPRB, 1, "BLITTER", Regs::MFP_IPRB_BLITTER_SHIFT, Regs::MFP_IPRB_BLITTER_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRB_TIMER_D = { Regs::MFP_IPRB, 1, "TIMER_D", Regs::MFP_IPRB_TIMER_D_SHIFT, Regs::MFP_IPRB_TIMER_D_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRB_TIMER_C = { Regs::MFP_IPRB, 1, "TIMER_C", Regs::MFP_IPRB_TIMER_C_SHIFT, Regs::MFP_IPRB_TIMER_C_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRB_IKBD_MIDI = { Regs::MFP_IPRB, 1, "IKBD_MIDI", Regs::MFP_IPRB_IKBD_MIDI_SHIFT, Regs::MFP_IPRB_IKBD_MIDI_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IPRB_FDC_HDC = { Regs::MFP_IPRB, 1, "FDC_HDC", Regs::MFP_IPRB_FDC_HDC_SHIFT, Regs::MFP_IPRB_FDC_HDC_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRA_TIMER_B = { Regs::MFP_ISRA, 1, "TIMER_B", Regs::MFP_ISRA_TIMER_B_SHIFT, Regs::MFP_ISRA_TIMER_B_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRA_SEND_ERR = { Regs::MFP_ISRA, 1, "SEND_ERR", Regs::MFP_ISRA_SEND_ERR_SHIFT, Regs::MFP_ISRA_SEND_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRA_SEND_EMPTY = { Regs::MFP_ISRA, 1, "SEND_EMPTY", Regs::MFP_ISRA_SEND_EMPTY_SHIFT, Regs::MFP_ISRA_SEND_EMPTY_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRA_REC_ERR = { Regs::MFP_ISRA, 1, "REC_ERR", Regs::MFP_ISRA_REC_ERR_SHIFT, Regs::MFP_ISRA_REC_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRA_REC_FULL = { Regs::MFP_ISRA, 1, "REC_FULL", Regs::MFP_ISRA_REC_FULL_SHIFT, Regs::MFP_ISRA_REC_FULL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRA_TIMER_A = { Regs::MFP_ISRA, 1, "TIMER_A", Regs::MFP_ISRA_TIMER_A_SHIFT, Regs::MFP_ISRA_TIMER_A_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRA_RS232_RING = { Regs::MFP_ISRA, 1, "RS232_RING", Regs::MFP_ISRA_RS232_RING_SHIFT, Regs::MFP_ISRA_RS232_RING_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRA_MONO_DETECT = { Regs::MFP_ISRA, 1, "MONO_DETECT", Regs::MFP_ISRA_MONO_DETECT_SHIFT, Regs::MFP_ISRA_MONO_DETECT_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRB_RS232_DTD = { Regs::MFP_ISRB, 1, "RS232_DTD", Regs::MFP_ISRB_RS232_DTD_SHIFT, Regs::MFP_ISRB_RS232_DTD_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRB_CENT_BUSY = { Regs::MFP_ISRB, 1, "CENT_BUSY", Regs::MFP_ISRB_CENT_BUSY_SHIFT, Regs::MFP_ISRB_CENT_BUSY_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRB_RS232_CTS = { Regs::MFP_ISRB, 1, "RS232_CTS", Regs::MFP_ISRB_RS232_CTS_SHIFT, Regs::MFP_ISRB_RS232_CTS_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRB_BLITTER = { Regs::MFP_ISRB, 1, "BLITTER", Regs::MFP_ISRB_BLITTER_SHIFT, Regs::MFP_ISRB_BLITTER_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRB_TIMER_D = { Regs::MFP_ISRB, 1, "TIMER_D", Regs::MFP_ISRB_TIMER_D_SHIFT, Regs::MFP_ISRB_TIMER_D_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRB_TIMER_C = { Regs::MFP_ISRB, 1, "TIMER_C", Regs::MFP_ISRB_TIMER_C_SHIFT, Regs::MFP_ISRB_TIMER_C_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRB_IKBD_MIDI = { Regs::MFP_ISRB, 1, "IKBD_MIDI", Regs::MFP_ISRB_IKBD_MIDI_SHIFT, Regs::MFP_ISRB_IKBD_MIDI_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_ISRB_FDC_HDC = { Regs::MFP_ISRB, 1, "FDC_HDC", Regs::MFP_ISRB_FDC_HDC_SHIFT, Regs::MFP_ISRB_FDC_HDC_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRA_TIMER_B = { Regs::MFP_IMRA, 1, "TIMER_B", Regs::MFP_IMRA_TIMER_B_SHIFT, Regs::MFP_IMRA_TIMER_B_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRA_SEND_ERR = { Regs::MFP_IMRA, 1, "SEND_ERR", Regs::MFP_IMRA_SEND_ERR_SHIFT, Regs::MFP_IMRA_SEND_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRA_SEND_EMPTY = { Regs::MFP_IMRA, 1, "SEND_EMPTY", Regs::MFP_IMRA_SEND_EMPTY_SHIFT, Regs::MFP_IMRA_SEND_EMPTY_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRA_REC_ERR = { Regs::MFP_IMRA, 1, "REC_ERR", Regs::MFP_IMRA_REC_ERR_SHIFT, Regs::MFP_IMRA_REC_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRA_REC_FULL = { Regs::MFP_IMRA, 1, "REC_FULL", Regs::MFP_IMRA_REC_FULL_SHIFT, Regs::MFP_IMRA_REC_FULL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRA_TIMER_A = { Regs::MFP_IMRA, 1, "TIMER_A", Regs::MFP_IMRA_TIMER_A_SHIFT, Regs::MFP_IMRA_TIMER_A_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRA_RS232_RING = { Regs::MFP_IMRA, 1, "RS232_RING", Regs::MFP_IMRA_RS232_RING_SHIFT, Regs::MFP_IMRA_RS232_RING_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRA_MONO_DETECT = { Regs::MFP_IMRA, 1, "MONO_DETECT", Regs::MFP_IMRA_MONO_DETECT_SHIFT, Regs::MFP_IMRA_MONO_DETECT_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRB_RS232_DTD = { Regs::MFP_IMRB, 1, "RS232_DTD", Regs::MFP_IMRB_RS232_DTD_SHIFT, Regs::MFP_IMRB_RS232_DTD_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRB_CENT_BUSY = { Regs::MFP_IMRB, 1, "CENT_BUSY", Regs::MFP_IMRB_CENT_BUSY_SHIFT, Regs::MFP_IMRB_CENT_BUSY_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRB_RS232_CTS = { Regs::MFP_IMRB, 1, "RS232_CTS", Regs::MFP_IMRB_RS232_CTS_SHIFT, Regs::MFP_IMRB_RS232_CTS_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRB_BLITTER = { Regs::MFP_IMRB, 1, "BLITTER", Regs::MFP_IMRB_BLITTER_SHIFT, Regs::MFP_IMRB_BLITTER_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRB_TIMER_D = { Regs::MFP_IMRB, 1, "TIMER_D", Regs::MFP_IMRB_TIMER_D_SHIFT, Regs::MFP_IMRB_TIMER_D_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRB_TIMER_C = { Regs::MFP_IMRB, 1, "TIMER_C", Regs::MFP_IMRB_TIMER_C_SHIFT, Regs::MFP_IMRB_TIMER_C_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRB_IKBD_MIDI = { Regs::MFP_IMRB, 1, "IKBD_MIDI", Regs::MFP_IMRB_IKBD_MIDI_SHIFT, Regs::MFP_IMRB_IKBD_MIDI_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_IMRB_FDC_HDC = { Regs::MFP_IMRB, 1, "FDC_HDC", Regs::MFP_IMRB_FDC_HDC_SHIFT, Regs::MFP_IMRB_FDC_HDC_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_VR_ENDINT = { Regs::MFP_VR, 1, "ENDINT", Regs::MFP_VR_ENDINT_SHIFT, Regs::MFP_VR_ENDINT_MASK, g_enumStringsENDINT };
-const FieldDef g_fieldDef_MFP_VR_VEC_BASE_OFFSET = { Regs::MFP_VR, 1, "VEC_BASE_OFFSET", Regs::MFP_VR_VEC_BASE_OFFSET_SHIFT, Regs::MFP_VR_VEC_BASE_OFFSET_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TACR_MODE_TIMER_A = { Regs::MFP_TACR, 1, "MODE_TIMER_A", Regs::MFP_TACR_MODE_TIMER_A_SHIFT, Regs::MFP_TACR_MODE_TIMER_A_MASK, g_enumStringsTIMER_MODE_A };
-const FieldDef g_fieldDef_MFP_TBCR_MODE_TIMER_B = { Regs::MFP_TBCR, 1, "MODE_TIMER_B", Regs::MFP_TBCR_MODE_TIMER_B_SHIFT, Regs::MFP_TBCR_MODE_TIMER_B_MASK, g_enumStringsTIMER_MODE_B };
-const FieldDef g_fieldDef_MFP_TCDCR_MODE_TIMER_D = { Regs::MFP_TCDCR, 1, "MODE_TIMER_D", Regs::MFP_TCDCR_MODE_TIMER_D_SHIFT, Regs::MFP_TCDCR_MODE_TIMER_D_MASK, g_enumStringsTIMER_MODE_CD };
-const FieldDef g_fieldDef_MFP_TCDCR_MODE_TIMER_C = { Regs::MFP_TCDCR, 1, "MODE_TIMER_C", Regs::MFP_TCDCR_MODE_TIMER_C_SHIFT, Regs::MFP_TCDCR_MODE_TIMER_C_MASK, g_enumStringsTIMER_MODE_CD };
-const FieldDef g_fieldDef_MFP_TADR_ALL = { Regs::MFP_TADR, 1, "ALL", Regs::MFP_TADR_ALL_SHIFT, Regs::MFP_TADR_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TBDR_ALL = { Regs::MFP_TBDR, 1, "ALL", Regs::MFP_TBDR_ALL_SHIFT, Regs::MFP_TBDR_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TCDR_ALL = { Regs::MFP_TCDR, 1, "ALL", Regs::MFP_TCDR_ALL_SHIFT, Regs::MFP_TCDR_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TDDR_ALL = { Regs::MFP_TDDR, 1, "ALL", Regs::MFP_TDDR_ALL_SHIFT, Regs::MFP_TDDR_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_SCR_ALL = { Regs::MFP_SCR, 1, "ALL", Regs::MFP_SCR_ALL_SHIFT, Regs::MFP_SCR_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_UCR_PARITY_EVEN = { Regs::MFP_UCR, 1, "PARITY_EVEN", Regs::MFP_UCR_PARITY_EVEN_SHIFT, Regs::MFP_UCR_PARITY_EVEN_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_UCR_PARITY_IGNORE = { Regs::MFP_UCR, 1, "PARITY_IGNORE", Regs::MFP_UCR_PARITY_IGNORE_SHIFT, Regs::MFP_UCR_PARITY_IGNORE_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_UCR_FORMAT = { Regs::MFP_UCR, 1, "FORMAT", Regs::MFP_UCR_FORMAT_SHIFT, Regs::MFP_UCR_FORMAT_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_UCR_WORD_LEN = { Regs::MFP_UCR, 1, "WORD_LEN", Regs::MFP_UCR_WORD_LEN_SHIFT, Regs::MFP_UCR_WORD_LEN_MASK, g_enumStringsUSARTLEN };
-const FieldDef g_fieldDef_MFP_UCR_CLOCK_DIV = { Regs::MFP_UCR, 1, "CLOCK_DIV", Regs::MFP_UCR_CLOCK_DIV_SHIFT, Regs::MFP_UCR_CLOCK_DIV_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_RSR_REC_ENABLE = { Regs::MFP_RSR, 1, "REC_ENABLE", Regs::MFP_RSR_REC_ENABLE_SHIFT, Regs::MFP_RSR_REC_ENABLE_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_RSR_STRIP = { Regs::MFP_RSR, 1, "STRIP", Regs::MFP_RSR_STRIP_SHIFT, Regs::MFP_RSR_STRIP_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_RSR_MATCH = { Regs::MFP_RSR, 1, "MATCH", Regs::MFP_RSR_MATCH_SHIFT, Regs::MFP_RSR_MATCH_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_RSR_FOUND = { Regs::MFP_RSR, 1, "FOUND", Regs::MFP_RSR_FOUND_SHIFT, Regs::MFP_RSR_FOUND_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_RSR_FRAME_ERR = { Regs::MFP_RSR, 1, "FRAME_ERR", Regs::MFP_RSR_FRAME_ERR_SHIFT, Regs::MFP_RSR_FRAME_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_RSR_PARITY_ERR = { Regs::MFP_RSR, 1, "PARITY_ERR", Regs::MFP_RSR_PARITY_ERR_SHIFT, Regs::MFP_RSR_PARITY_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_RSR_OVERRUN_ERR = { Regs::MFP_RSR, 1, "OVERRUN_ERR", Regs::MFP_RSR_OVERRUN_ERR_SHIFT, Regs::MFP_RSR_OVERRUN_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_RSR_BUFFER_FULL = { Regs::MFP_RSR, 1, "BUFFER_FULL", Regs::MFP_RSR_BUFFER_FULL_SHIFT, Regs::MFP_RSR_BUFFER_FULL_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TSR_TRANS_ENABLE = { Regs::MFP_TSR, 1, "TRANS_ENABLE", Regs::MFP_TSR_TRANS_ENABLE_SHIFT, Regs::MFP_TSR_TRANS_ENABLE_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TSR_LOW = { Regs::MFP_TSR, 1, "LOW", Regs::MFP_TSR_LOW_SHIFT, Regs::MFP_TSR_LOW_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TSR_HIGH = { Regs::MFP_TSR, 1, "HIGH", Regs::MFP_TSR_HIGH_SHIFT, Regs::MFP_TSR_HIGH_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TSR_BREAK = { Regs::MFP_TSR, 1, "BREAK", Regs::MFP_TSR_BREAK_SHIFT, Regs::MFP_TSR_BREAK_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TSR_EOT = { Regs::MFP_TSR, 1, "EOT", Regs::MFP_TSR_EOT_SHIFT, Regs::MFP_TSR_EOT_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TSR_AUTO_TURN = { Regs::MFP_TSR, 1, "AUTO_TURN", Regs::MFP_TSR_AUTO_TURN_SHIFT, Regs::MFP_TSR_AUTO_TURN_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TSR_UNDERRUN_ERR = { Regs::MFP_TSR, 1, "UNDERRUN_ERR", Regs::MFP_TSR_UNDERRUN_ERR_SHIFT, Regs::MFP_TSR_UNDERRUN_ERR_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_TSR_BUFFER_EMPTY = { Regs::MFP_TSR, 1, "BUFFER_EMPTY", Regs::MFP_TSR_BUFFER_EMPTY_SHIFT, Regs::MFP_TSR_BUFFER_EMPTY_MASK, nullptr };
-const FieldDef g_fieldDef_MFP_UDR_ALL = { Regs::MFP_UDR, 1, "ALL", Regs::MFP_UDR_ALL_SHIFT, Regs::MFP_UDR_ALL_MASK, nullptr };
-const FieldDef g_fieldDef_YM_MIXER_TONE_A_OFF = { Regs::YM_MIXER, 1, "TONE_A_OFF", Regs::YM_MIXER_TONE_A_OFF_SHIFT, Regs::YM_MIXER_TONE_A_OFF_MASK, nullptr };
-const FieldDef g_fieldDef_YM_MIXER_TONE_B_OFF = { Regs::YM_MIXER, 1, "TONE_B_OFF", Regs::YM_MIXER_TONE_B_OFF_SHIFT, Regs::YM_MIXER_TONE_B_OFF_MASK, nullptr };
-const FieldDef g_fieldDef_YM_MIXER_TONE_C_OFF = { Regs::YM_MIXER, 1, "TONE_C_OFF", Regs::YM_MIXER_TONE_C_OFF_SHIFT, Regs::YM_MIXER_TONE_C_OFF_MASK, nullptr };
-const FieldDef g_fieldDef_YM_MIXER_NOISE_A_OFF = { Regs::YM_MIXER, 1, "NOISE_A_OFF", Regs::YM_MIXER_NOISE_A_OFF_SHIFT, Regs::YM_MIXER_NOISE_A_OFF_MASK, nullptr };
-const FieldDef g_fieldDef_YM_MIXER_NOISE_B_OFF = { Regs::YM_MIXER, 1, "NOISE_B_OFF", Regs::YM_MIXER_NOISE_B_OFF_SHIFT, Regs::YM_MIXER_NOISE_B_OFF_MASK, nullptr };
-const FieldDef g_fieldDef_YM_MIXER_NOISE_C_OFF = { Regs::YM_MIXER, 1, "NOISE_C_OFF", Regs::YM_MIXER_NOISE_C_OFF_SHIFT, Regs::YM_MIXER_NOISE_C_OFF_MASK, nullptr };
-const FieldDef g_fieldDef_YM_MIXER_PORT_A_OUT = { Regs::YM_MIXER, 1, "PORT_A_OUT", Regs::YM_MIXER_PORT_A_OUT_SHIFT, Regs::YM_MIXER_PORT_A_OUT_MASK, nullptr };
-const FieldDef g_fieldDef_YM_MIXER_PORT_B_OUT = { Regs::YM_MIXER, 1, "PORT_B_OUT", Regs::YM_MIXER_PORT_B_OUT_SHIFT, Regs::YM_MIXER_PORT_B_OUT_MASK, nullptr };
-const FieldDef g_fieldDef_YM_VOLUME_A_VOL = { Regs::YM_VOLUME_A, 1, "VOL", Regs::YM_VOLUME_A_VOL_SHIFT, Regs::YM_VOLUME_A_VOL_MASK, nullptr };
-const FieldDef g_fieldDef_YM_VOLUME_A_ENVELOPE = { Regs::YM_VOLUME_A, 1, "ENVELOPE", Regs::YM_VOLUME_A_ENVELOPE_SHIFT, Regs::YM_VOLUME_A_ENVELOPE_MASK, nullptr };
-const FieldDef g_fieldDef_YM_VOLUME_B_VOL = { Regs::YM_VOLUME_B, 1, "VOL", Regs::YM_VOLUME_B_VOL_SHIFT, Regs::YM_VOLUME_B_VOL_MASK, nullptr };
-const FieldDef g_fieldDef_YM_VOLUME_B_ENVELOPE = { Regs::YM_VOLUME_B, 1, "ENVELOPE", Regs::YM_VOLUME_B_ENVELOPE_SHIFT, Regs::YM_VOLUME_B_ENVELOPE_MASK, nullptr };
-const FieldDef g_fieldDef_YM_VOLUME_C_VOL = { Regs::YM_VOLUME_C, 1, "VOL", Regs::YM_VOLUME_C_VOL_SHIFT, Regs::YM_VOLUME_C_VOL_MASK, nullptr };
-const FieldDef g_fieldDef_YM_VOLUME_C_ENVELOPE = { Regs::YM_VOLUME_C, 1, "ENVELOPE", Regs::YM_VOLUME_C_ENVELOPE_SHIFT, Regs::YM_VOLUME_C_ENVELOPE_MASK, nullptr };
-const FieldDef g_fieldDef_YM_PERIOD_ENV_SHAPE_SHAPE = { Regs::YM_PERIOD_ENV_SHAPE, 1, "SHAPE", Regs::YM_PERIOD_ENV_SHAPE_SHAPE_SHIFT, Regs::YM_PERIOD_ENV_SHAPE_SHAPE_MASK, g_enumStringsENV_SHAPE };
+const StringDef g_enumStringsBLT_HOP[] = {
+	{ 0, "All Ones" },
+	{ 1, "Halftone only" },
+	{ 2, "Source only" },
+	{ 3, "Source AND halftone" },
+	{ 0, nullptr }
+};
+const StringDef g_enumStringsBLT_OP[] = {
+	{ 0, "All zeros" },
+	{ 1, "Source AND destination" },
+	{ 2, "Source AND NOT destination" },
+	{ 3, "Source" },
+	{ 4, "NOT source AND destination" },
+	{ 5, "Destination" },
+	{ 6, "Source XOR destination" },
+	{ 7, "Source OR destination" },
+	{ 8, "NOT source AND NOT destination" },
+	{ 9, "NOT source XOR destination" },
+	{ 10, "NOT destination" },
+	{ 11, "Source OR NOT destination" },
+	{ 12, "NOT source" },
+	{ 13, "NOT source OR destination" },
+	{ 14, "NOT source OR NOT destination" },
+	{ 15, "All ones" },
+	{ 0, nullptr }
+};
+const FieldDef g_fieldDef_MMU_CONFIG_BANK1 = { Regs::MMU_CONFIG, Regs::MMU_CONFIG_BANK1_MASK, 1, Regs::MMU_CONFIG_BANK1_SHIFT, "BANK1", g_enumStringsMMU_BANK };
+const FieldDef g_fieldDef_MMU_CONFIG_BANK0 = { Regs::MMU_CONFIG, Regs::MMU_CONFIG_BANK0_MASK, 1, Regs::MMU_CONFIG_BANK0_SHIFT, "BANK0", g_enumStringsMMU_BANK };
+const FieldDef g_fieldDef_VID_SCREEN_HIGH_ALL = { Regs::VID_SCREEN_HIGH, Regs::VID_SCREEN_HIGH_ALL_MASK, 1, Regs::VID_SCREEN_HIGH_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_VID_SCREEN_MID_ALL = { Regs::VID_SCREEN_MID, Regs::VID_SCREEN_MID_ALL_MASK, 1, Regs::VID_SCREEN_MID_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_VID_SCREEN_LOW_STE_ALL = { Regs::VID_SCREEN_LOW_STE, Regs::VID_SCREEN_LOW_STE_ALL_MASK, 1, Regs::VID_SCREEN_LOW_STE_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_VID_SCANLINE_OFFSET_STE_ALL = { Regs::VID_SCANLINE_OFFSET_STE, Regs::VID_SCANLINE_OFFSET_STE_ALL_MASK, 1, Regs::VID_SCANLINE_OFFSET_STE_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_VID_HORIZ_SCROLL_STE_PIXELS = { Regs::VID_HORIZ_SCROLL_STE, Regs::VID_HORIZ_SCROLL_STE_PIXELS_MASK, 1, Regs::VID_HORIZ_SCROLL_STE_PIXELS_SHIFT, "PIXELS", nullptr };
+const FieldDef g_fieldDef_VID_SYNC_MODE_TYPE = { Regs::VID_SYNC_MODE, Regs::VID_SYNC_MODE_TYPE_MASK, 1, Regs::VID_SYNC_MODE_TYPE_SHIFT, "TYPE", g_enumStringsSYNC_TYPE };
+const FieldDef g_fieldDef_VID_SYNC_MODE_RATE = { Regs::VID_SYNC_MODE, Regs::VID_SYNC_MODE_RATE_MASK, 1, Regs::VID_SYNC_MODE_RATE_SHIFT, "RATE", g_enumStringsSYNC_RATE };
+const FieldDef g_fieldDef_VID_PAL_0_BLUE_ST = { Regs::VID_PAL_0, Regs::VID_PAL_0_BLUE_ST_MASK, 2, Regs::VID_PAL_0_BLUE_ST_SHIFT, "BLUE_ST", nullptr };
+const FieldDef g_fieldDef_VID_PAL_0_BLUE_STE = { Regs::VID_PAL_0, Regs::VID_PAL_0_BLUE_STE_MASK, 2, Regs::VID_PAL_0_BLUE_STE_SHIFT, "BLUE_STE", nullptr };
+const FieldDef g_fieldDef_VID_PAL_0_GREEN_ST = { Regs::VID_PAL_0, Regs::VID_PAL_0_GREEN_ST_MASK, 2, Regs::VID_PAL_0_GREEN_ST_SHIFT, "GREEN_ST", nullptr };
+const FieldDef g_fieldDef_VID_PAL_0_GREEN_STE = { Regs::VID_PAL_0, Regs::VID_PAL_0_GREEN_STE_MASK, 2, Regs::VID_PAL_0_GREEN_STE_SHIFT, "GREEN_STE", nullptr };
+const FieldDef g_fieldDef_VID_PAL_0_RED_ST = { Regs::VID_PAL_0, Regs::VID_PAL_0_RED_ST_MASK, 2, Regs::VID_PAL_0_RED_ST_SHIFT, "RED_ST", nullptr };
+const FieldDef g_fieldDef_VID_PAL_0_RED_STE = { Regs::VID_PAL_0, Regs::VID_PAL_0_RED_STE_MASK, 2, Regs::VID_PAL_0_RED_STE_SHIFT, "RED_STE", nullptr };
+const FieldDef g_fieldDef_VID_SHIFTER_RES_RES = { Regs::VID_SHIFTER_RES, Regs::VID_SHIFTER_RES_RES_MASK, 1, Regs::VID_SHIFTER_RES_RES_SHIFT, "RES", g_enumStringsRESOLUTION };
+const FieldDef g_fieldDef_FDC_ACCESS_ALL = { Regs::FDC_ACCESS, Regs::FDC_ACCESS_ALL_MASK, 2, Regs::FDC_ACCESS_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_FDC_STATUS_ERROR = { Regs::FDC_STATUS, Regs::FDC_STATUS_ERROR_MASK, 2, Regs::FDC_STATUS_ERROR_SHIFT, "ERROR", nullptr };
+const FieldDef g_fieldDef_FDC_STATUS_SECT_CNT = { Regs::FDC_STATUS, Regs::FDC_STATUS_SECT_CNT_MASK, 2, Regs::FDC_STATUS_SECT_CNT_SHIFT, "SECT_CNT", nullptr };
+const FieldDef g_fieldDef_FDC_STATUS_DATA_REQ = { Regs::FDC_STATUS, Regs::FDC_STATUS_DATA_REQ_MASK, 2, Regs::FDC_STATUS_DATA_REQ_SHIFT, "DATA_REQ", nullptr };
+const FieldDef g_fieldDef_FDC_DMA_BASE_HIGH_ALL = { Regs::FDC_DMA_BASE_HIGH, Regs::FDC_DMA_BASE_HIGH_ALL_MASK, 1, Regs::FDC_DMA_BASE_HIGH_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_FDC_DMA_BASE_MID_ALL = { Regs::FDC_DMA_BASE_MID, Regs::FDC_DMA_BASE_MID_ALL_MASK, 1, Regs::FDC_DMA_BASE_MID_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_FDC_DMA_BASE_LOW_ALL = { Regs::FDC_DMA_BASE_LOW, Regs::FDC_DMA_BASE_LOW_ALL_MASK, 1, Regs::FDC_DMA_BASE_LOW_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_MFP_GPIP_ALL = { Regs::MFP_GPIP, Regs::MFP_GPIP_ALL_MASK, 1, Regs::MFP_GPIP_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_MFP_AER_CENT_BUSY = { Regs::MFP_AER, Regs::MFP_AER_CENT_BUSY_MASK, 1, Regs::MFP_AER_CENT_BUSY_SHIFT, "CENT_BUSY", nullptr };
+const FieldDef g_fieldDef_MFP_AER_RS232_DCD = { Regs::MFP_AER, Regs::MFP_AER_RS232_DCD_MASK, 1, Regs::MFP_AER_RS232_DCD_SHIFT, "RS232_DCD", nullptr };
+const FieldDef g_fieldDef_MFP_AER_RS232_CTS = { Regs::MFP_AER, Regs::MFP_AER_RS232_CTS_MASK, 1, Regs::MFP_AER_RS232_CTS_SHIFT, "RS232_CTS", nullptr };
+const FieldDef g_fieldDef_MFP_AER_KBD_MIDI = { Regs::MFP_AER, Regs::MFP_AER_KBD_MIDI_MASK, 1, Regs::MFP_AER_KBD_MIDI_SHIFT, "KBD_MIDI", nullptr };
+const FieldDef g_fieldDef_MFP_AER_FDC_HDC = { Regs::MFP_AER, Regs::MFP_AER_FDC_HDC_MASK, 1, Regs::MFP_AER_FDC_HDC_SHIFT, "FDC_HDC", nullptr };
+const FieldDef g_fieldDef_MFP_AER_RS232_RING = { Regs::MFP_AER, Regs::MFP_AER_RS232_RING_MASK, 1, Regs::MFP_AER_RS232_RING_SHIFT, "RS232_RING", nullptr };
+const FieldDef g_fieldDef_MFP_AER_MONO = { Regs::MFP_AER, Regs::MFP_AER_MONO_MASK, 1, Regs::MFP_AER_MONO_SHIFT, "MONO", nullptr };
+const FieldDef g_fieldDef_MFP_DDR_CENT_BUSY = { Regs::MFP_DDR, Regs::MFP_DDR_CENT_BUSY_MASK, 1, Regs::MFP_DDR_CENT_BUSY_SHIFT, "CENT_BUSY", nullptr };
+const FieldDef g_fieldDef_MFP_DDR_RS232_DCD = { Regs::MFP_DDR, Regs::MFP_DDR_RS232_DCD_MASK, 1, Regs::MFP_DDR_RS232_DCD_SHIFT, "RS232_DCD", nullptr };
+const FieldDef g_fieldDef_MFP_DDR_RS232_CTS = { Regs::MFP_DDR, Regs::MFP_DDR_RS232_CTS_MASK, 1, Regs::MFP_DDR_RS232_CTS_SHIFT, "RS232_CTS", nullptr };
+const FieldDef g_fieldDef_MFP_DDR_KBD_MIDI = { Regs::MFP_DDR, Regs::MFP_DDR_KBD_MIDI_MASK, 1, Regs::MFP_DDR_KBD_MIDI_SHIFT, "KBD_MIDI", nullptr };
+const FieldDef g_fieldDef_MFP_DDR_FDC_HDC = { Regs::MFP_DDR, Regs::MFP_DDR_FDC_HDC_MASK, 1, Regs::MFP_DDR_FDC_HDC_SHIFT, "FDC_HDC", nullptr };
+const FieldDef g_fieldDef_MFP_DDR_RS232_RING = { Regs::MFP_DDR, Regs::MFP_DDR_RS232_RING_MASK, 1, Regs::MFP_DDR_RS232_RING_SHIFT, "RS232_RING", nullptr };
+const FieldDef g_fieldDef_MFP_DDR_MONO = { Regs::MFP_DDR, Regs::MFP_DDR_MONO_MASK, 1, Regs::MFP_DDR_MONO_SHIFT, "MONO", nullptr };
+const FieldDef g_fieldDef_MFP_IERA_TIMER_B = { Regs::MFP_IERA, Regs::MFP_IERA_TIMER_B_MASK, 1, Regs::MFP_IERA_TIMER_B_SHIFT, "TIMER_B", nullptr };
+const FieldDef g_fieldDef_MFP_IERA_SEND_ERR = { Regs::MFP_IERA, Regs::MFP_IERA_SEND_ERR_MASK, 1, Regs::MFP_IERA_SEND_ERR_SHIFT, "SEND_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_IERA_SEND_EMPTY = { Regs::MFP_IERA, Regs::MFP_IERA_SEND_EMPTY_MASK, 1, Regs::MFP_IERA_SEND_EMPTY_SHIFT, "SEND_EMPTY", nullptr };
+const FieldDef g_fieldDef_MFP_IERA_REC_ERR = { Regs::MFP_IERA, Regs::MFP_IERA_REC_ERR_MASK, 1, Regs::MFP_IERA_REC_ERR_SHIFT, "REC_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_IERA_REC_FULL = { Regs::MFP_IERA, Regs::MFP_IERA_REC_FULL_MASK, 1, Regs::MFP_IERA_REC_FULL_SHIFT, "REC_FULL", nullptr };
+const FieldDef g_fieldDef_MFP_IERA_TIMER_A = { Regs::MFP_IERA, Regs::MFP_IERA_TIMER_A_MASK, 1, Regs::MFP_IERA_TIMER_A_SHIFT, "TIMER_A", nullptr };
+const FieldDef g_fieldDef_MFP_IERA_RS232_RING = { Regs::MFP_IERA, Regs::MFP_IERA_RS232_RING_MASK, 1, Regs::MFP_IERA_RS232_RING_SHIFT, "RS232_RING", nullptr };
+const FieldDef g_fieldDef_MFP_IERA_MONO_DETECT = { Regs::MFP_IERA, Regs::MFP_IERA_MONO_DETECT_MASK, 1, Regs::MFP_IERA_MONO_DETECT_SHIFT, "MONO_DETECT", nullptr };
+const FieldDef g_fieldDef_MFP_IERB_RS232_DTD = { Regs::MFP_IERB, Regs::MFP_IERB_RS232_DTD_MASK, 1, Regs::MFP_IERB_RS232_DTD_SHIFT, "RS232_DTD", nullptr };
+const FieldDef g_fieldDef_MFP_IERB_CENT_BUSY = { Regs::MFP_IERB, Regs::MFP_IERB_CENT_BUSY_MASK, 1, Regs::MFP_IERB_CENT_BUSY_SHIFT, "CENT_BUSY", nullptr };
+const FieldDef g_fieldDef_MFP_IERB_RS232_CTS = { Regs::MFP_IERB, Regs::MFP_IERB_RS232_CTS_MASK, 1, Regs::MFP_IERB_RS232_CTS_SHIFT, "RS232_CTS", nullptr };
+const FieldDef g_fieldDef_MFP_IERB_BLITTER = { Regs::MFP_IERB, Regs::MFP_IERB_BLITTER_MASK, 1, Regs::MFP_IERB_BLITTER_SHIFT, "BLITTER", nullptr };
+const FieldDef g_fieldDef_MFP_IERB_TIMER_D = { Regs::MFP_IERB, Regs::MFP_IERB_TIMER_D_MASK, 1, Regs::MFP_IERB_TIMER_D_SHIFT, "TIMER_D", nullptr };
+const FieldDef g_fieldDef_MFP_IERB_TIMER_C = { Regs::MFP_IERB, Regs::MFP_IERB_TIMER_C_MASK, 1, Regs::MFP_IERB_TIMER_C_SHIFT, "TIMER_C", nullptr };
+const FieldDef g_fieldDef_MFP_IERB_IKBD_MIDI = { Regs::MFP_IERB, Regs::MFP_IERB_IKBD_MIDI_MASK, 1, Regs::MFP_IERB_IKBD_MIDI_SHIFT, "IKBD_MIDI", nullptr };
+const FieldDef g_fieldDef_MFP_IERB_FDC_HDC = { Regs::MFP_IERB, Regs::MFP_IERB_FDC_HDC_MASK, 1, Regs::MFP_IERB_FDC_HDC_SHIFT, "FDC_HDC", nullptr };
+const FieldDef g_fieldDef_MFP_IPRA_TIMER_B = { Regs::MFP_IPRA, Regs::MFP_IPRA_TIMER_B_MASK, 1, Regs::MFP_IPRA_TIMER_B_SHIFT, "TIMER_B", nullptr };
+const FieldDef g_fieldDef_MFP_IPRA_SEND_ERR = { Regs::MFP_IPRA, Regs::MFP_IPRA_SEND_ERR_MASK, 1, Regs::MFP_IPRA_SEND_ERR_SHIFT, "SEND_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_IPRA_SEND_EMPTY = { Regs::MFP_IPRA, Regs::MFP_IPRA_SEND_EMPTY_MASK, 1, Regs::MFP_IPRA_SEND_EMPTY_SHIFT, "SEND_EMPTY", nullptr };
+const FieldDef g_fieldDef_MFP_IPRA_REC_ERR = { Regs::MFP_IPRA, Regs::MFP_IPRA_REC_ERR_MASK, 1, Regs::MFP_IPRA_REC_ERR_SHIFT, "REC_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_IPRA_REC_FULL = { Regs::MFP_IPRA, Regs::MFP_IPRA_REC_FULL_MASK, 1, Regs::MFP_IPRA_REC_FULL_SHIFT, "REC_FULL", nullptr };
+const FieldDef g_fieldDef_MFP_IPRA_TIMER_A = { Regs::MFP_IPRA, Regs::MFP_IPRA_TIMER_A_MASK, 1, Regs::MFP_IPRA_TIMER_A_SHIFT, "TIMER_A", nullptr };
+const FieldDef g_fieldDef_MFP_IPRA_RS232_RING = { Regs::MFP_IPRA, Regs::MFP_IPRA_RS232_RING_MASK, 1, Regs::MFP_IPRA_RS232_RING_SHIFT, "RS232_RING", nullptr };
+const FieldDef g_fieldDef_MFP_IPRA_MONO_DETECT = { Regs::MFP_IPRA, Regs::MFP_IPRA_MONO_DETECT_MASK, 1, Regs::MFP_IPRA_MONO_DETECT_SHIFT, "MONO_DETECT", nullptr };
+const FieldDef g_fieldDef_MFP_IPRB_RS232_DTD = { Regs::MFP_IPRB, Regs::MFP_IPRB_RS232_DTD_MASK, 1, Regs::MFP_IPRB_RS232_DTD_SHIFT, "RS232_DTD", nullptr };
+const FieldDef g_fieldDef_MFP_IPRB_CENT_BUSY = { Regs::MFP_IPRB, Regs::MFP_IPRB_CENT_BUSY_MASK, 1, Regs::MFP_IPRB_CENT_BUSY_SHIFT, "CENT_BUSY", nullptr };
+const FieldDef g_fieldDef_MFP_IPRB_RS232_CTS = { Regs::MFP_IPRB, Regs::MFP_IPRB_RS232_CTS_MASK, 1, Regs::MFP_IPRB_RS232_CTS_SHIFT, "RS232_CTS", nullptr };
+const FieldDef g_fieldDef_MFP_IPRB_BLITTER = { Regs::MFP_IPRB, Regs::MFP_IPRB_BLITTER_MASK, 1, Regs::MFP_IPRB_BLITTER_SHIFT, "BLITTER", nullptr };
+const FieldDef g_fieldDef_MFP_IPRB_TIMER_D = { Regs::MFP_IPRB, Regs::MFP_IPRB_TIMER_D_MASK, 1, Regs::MFP_IPRB_TIMER_D_SHIFT, "TIMER_D", nullptr };
+const FieldDef g_fieldDef_MFP_IPRB_TIMER_C = { Regs::MFP_IPRB, Regs::MFP_IPRB_TIMER_C_MASK, 1, Regs::MFP_IPRB_TIMER_C_SHIFT, "TIMER_C", nullptr };
+const FieldDef g_fieldDef_MFP_IPRB_IKBD_MIDI = { Regs::MFP_IPRB, Regs::MFP_IPRB_IKBD_MIDI_MASK, 1, Regs::MFP_IPRB_IKBD_MIDI_SHIFT, "IKBD_MIDI", nullptr };
+const FieldDef g_fieldDef_MFP_IPRB_FDC_HDC = { Regs::MFP_IPRB, Regs::MFP_IPRB_FDC_HDC_MASK, 1, Regs::MFP_IPRB_FDC_HDC_SHIFT, "FDC_HDC", nullptr };
+const FieldDef g_fieldDef_MFP_ISRA_TIMER_B = { Regs::MFP_ISRA, Regs::MFP_ISRA_TIMER_B_MASK, 1, Regs::MFP_ISRA_TIMER_B_SHIFT, "TIMER_B", nullptr };
+const FieldDef g_fieldDef_MFP_ISRA_SEND_ERR = { Regs::MFP_ISRA, Regs::MFP_ISRA_SEND_ERR_MASK, 1, Regs::MFP_ISRA_SEND_ERR_SHIFT, "SEND_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_ISRA_SEND_EMPTY = { Regs::MFP_ISRA, Regs::MFP_ISRA_SEND_EMPTY_MASK, 1, Regs::MFP_ISRA_SEND_EMPTY_SHIFT, "SEND_EMPTY", nullptr };
+const FieldDef g_fieldDef_MFP_ISRA_REC_ERR = { Regs::MFP_ISRA, Regs::MFP_ISRA_REC_ERR_MASK, 1, Regs::MFP_ISRA_REC_ERR_SHIFT, "REC_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_ISRA_REC_FULL = { Regs::MFP_ISRA, Regs::MFP_ISRA_REC_FULL_MASK, 1, Regs::MFP_ISRA_REC_FULL_SHIFT, "REC_FULL", nullptr };
+const FieldDef g_fieldDef_MFP_ISRA_TIMER_A = { Regs::MFP_ISRA, Regs::MFP_ISRA_TIMER_A_MASK, 1, Regs::MFP_ISRA_TIMER_A_SHIFT, "TIMER_A", nullptr };
+const FieldDef g_fieldDef_MFP_ISRA_RS232_RING = { Regs::MFP_ISRA, Regs::MFP_ISRA_RS232_RING_MASK, 1, Regs::MFP_ISRA_RS232_RING_SHIFT, "RS232_RING", nullptr };
+const FieldDef g_fieldDef_MFP_ISRA_MONO_DETECT = { Regs::MFP_ISRA, Regs::MFP_ISRA_MONO_DETECT_MASK, 1, Regs::MFP_ISRA_MONO_DETECT_SHIFT, "MONO_DETECT", nullptr };
+const FieldDef g_fieldDef_MFP_ISRB_RS232_DTD = { Regs::MFP_ISRB, Regs::MFP_ISRB_RS232_DTD_MASK, 1, Regs::MFP_ISRB_RS232_DTD_SHIFT, "RS232_DTD", nullptr };
+const FieldDef g_fieldDef_MFP_ISRB_CENT_BUSY = { Regs::MFP_ISRB, Regs::MFP_ISRB_CENT_BUSY_MASK, 1, Regs::MFP_ISRB_CENT_BUSY_SHIFT, "CENT_BUSY", nullptr };
+const FieldDef g_fieldDef_MFP_ISRB_RS232_CTS = { Regs::MFP_ISRB, Regs::MFP_ISRB_RS232_CTS_MASK, 1, Regs::MFP_ISRB_RS232_CTS_SHIFT, "RS232_CTS", nullptr };
+const FieldDef g_fieldDef_MFP_ISRB_BLITTER = { Regs::MFP_ISRB, Regs::MFP_ISRB_BLITTER_MASK, 1, Regs::MFP_ISRB_BLITTER_SHIFT, "BLITTER", nullptr };
+const FieldDef g_fieldDef_MFP_ISRB_TIMER_D = { Regs::MFP_ISRB, Regs::MFP_ISRB_TIMER_D_MASK, 1, Regs::MFP_ISRB_TIMER_D_SHIFT, "TIMER_D", nullptr };
+const FieldDef g_fieldDef_MFP_ISRB_TIMER_C = { Regs::MFP_ISRB, Regs::MFP_ISRB_TIMER_C_MASK, 1, Regs::MFP_ISRB_TIMER_C_SHIFT, "TIMER_C", nullptr };
+const FieldDef g_fieldDef_MFP_ISRB_IKBD_MIDI = { Regs::MFP_ISRB, Regs::MFP_ISRB_IKBD_MIDI_MASK, 1, Regs::MFP_ISRB_IKBD_MIDI_SHIFT, "IKBD_MIDI", nullptr };
+const FieldDef g_fieldDef_MFP_ISRB_FDC_HDC = { Regs::MFP_ISRB, Regs::MFP_ISRB_FDC_HDC_MASK, 1, Regs::MFP_ISRB_FDC_HDC_SHIFT, "FDC_HDC", nullptr };
+const FieldDef g_fieldDef_MFP_IMRA_TIMER_B = { Regs::MFP_IMRA, Regs::MFP_IMRA_TIMER_B_MASK, 1, Regs::MFP_IMRA_TIMER_B_SHIFT, "TIMER_B", nullptr };
+const FieldDef g_fieldDef_MFP_IMRA_SEND_ERR = { Regs::MFP_IMRA, Regs::MFP_IMRA_SEND_ERR_MASK, 1, Regs::MFP_IMRA_SEND_ERR_SHIFT, "SEND_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_IMRA_SEND_EMPTY = { Regs::MFP_IMRA, Regs::MFP_IMRA_SEND_EMPTY_MASK, 1, Regs::MFP_IMRA_SEND_EMPTY_SHIFT, "SEND_EMPTY", nullptr };
+const FieldDef g_fieldDef_MFP_IMRA_REC_ERR = { Regs::MFP_IMRA, Regs::MFP_IMRA_REC_ERR_MASK, 1, Regs::MFP_IMRA_REC_ERR_SHIFT, "REC_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_IMRA_REC_FULL = { Regs::MFP_IMRA, Regs::MFP_IMRA_REC_FULL_MASK, 1, Regs::MFP_IMRA_REC_FULL_SHIFT, "REC_FULL", nullptr };
+const FieldDef g_fieldDef_MFP_IMRA_TIMER_A = { Regs::MFP_IMRA, Regs::MFP_IMRA_TIMER_A_MASK, 1, Regs::MFP_IMRA_TIMER_A_SHIFT, "TIMER_A", nullptr };
+const FieldDef g_fieldDef_MFP_IMRA_RS232_RING = { Regs::MFP_IMRA, Regs::MFP_IMRA_RS232_RING_MASK, 1, Regs::MFP_IMRA_RS232_RING_SHIFT, "RS232_RING", nullptr };
+const FieldDef g_fieldDef_MFP_IMRA_MONO_DETECT = { Regs::MFP_IMRA, Regs::MFP_IMRA_MONO_DETECT_MASK, 1, Regs::MFP_IMRA_MONO_DETECT_SHIFT, "MONO_DETECT", nullptr };
+const FieldDef g_fieldDef_MFP_IMRB_RS232_DTD = { Regs::MFP_IMRB, Regs::MFP_IMRB_RS232_DTD_MASK, 1, Regs::MFP_IMRB_RS232_DTD_SHIFT, "RS232_DTD", nullptr };
+const FieldDef g_fieldDef_MFP_IMRB_CENT_BUSY = { Regs::MFP_IMRB, Regs::MFP_IMRB_CENT_BUSY_MASK, 1, Regs::MFP_IMRB_CENT_BUSY_SHIFT, "CENT_BUSY", nullptr };
+const FieldDef g_fieldDef_MFP_IMRB_RS232_CTS = { Regs::MFP_IMRB, Regs::MFP_IMRB_RS232_CTS_MASK, 1, Regs::MFP_IMRB_RS232_CTS_SHIFT, "RS232_CTS", nullptr };
+const FieldDef g_fieldDef_MFP_IMRB_BLITTER = { Regs::MFP_IMRB, Regs::MFP_IMRB_BLITTER_MASK, 1, Regs::MFP_IMRB_BLITTER_SHIFT, "BLITTER", nullptr };
+const FieldDef g_fieldDef_MFP_IMRB_TIMER_D = { Regs::MFP_IMRB, Regs::MFP_IMRB_TIMER_D_MASK, 1, Regs::MFP_IMRB_TIMER_D_SHIFT, "TIMER_D", nullptr };
+const FieldDef g_fieldDef_MFP_IMRB_TIMER_C = { Regs::MFP_IMRB, Regs::MFP_IMRB_TIMER_C_MASK, 1, Regs::MFP_IMRB_TIMER_C_SHIFT, "TIMER_C", nullptr };
+const FieldDef g_fieldDef_MFP_IMRB_IKBD_MIDI = { Regs::MFP_IMRB, Regs::MFP_IMRB_IKBD_MIDI_MASK, 1, Regs::MFP_IMRB_IKBD_MIDI_SHIFT, "IKBD_MIDI", nullptr };
+const FieldDef g_fieldDef_MFP_IMRB_FDC_HDC = { Regs::MFP_IMRB, Regs::MFP_IMRB_FDC_HDC_MASK, 1, Regs::MFP_IMRB_FDC_HDC_SHIFT, "FDC_HDC", nullptr };
+const FieldDef g_fieldDef_MFP_VR_ENDINT = { Regs::MFP_VR, Regs::MFP_VR_ENDINT_MASK, 1, Regs::MFP_VR_ENDINT_SHIFT, "ENDINT", g_enumStringsENDINT };
+const FieldDef g_fieldDef_MFP_VR_VEC_BASE_OFFSET = { Regs::MFP_VR, Regs::MFP_VR_VEC_BASE_OFFSET_MASK, 1, Regs::MFP_VR_VEC_BASE_OFFSET_SHIFT, "VEC_BASE_OFFSET", nullptr };
+const FieldDef g_fieldDef_MFP_TACR_MODE_TIMER_A = { Regs::MFP_TACR, Regs::MFP_TACR_MODE_TIMER_A_MASK, 1, Regs::MFP_TACR_MODE_TIMER_A_SHIFT, "MODE_TIMER_A", g_enumStringsTIMER_MODE_A };
+const FieldDef g_fieldDef_MFP_TBCR_MODE_TIMER_B = { Regs::MFP_TBCR, Regs::MFP_TBCR_MODE_TIMER_B_MASK, 1, Regs::MFP_TBCR_MODE_TIMER_B_SHIFT, "MODE_TIMER_B", g_enumStringsTIMER_MODE_B };
+const FieldDef g_fieldDef_MFP_TCDCR_MODE_TIMER_D = { Regs::MFP_TCDCR, Regs::MFP_TCDCR_MODE_TIMER_D_MASK, 1, Regs::MFP_TCDCR_MODE_TIMER_D_SHIFT, "MODE_TIMER_D", g_enumStringsTIMER_MODE_CD };
+const FieldDef g_fieldDef_MFP_TCDCR_MODE_TIMER_C = { Regs::MFP_TCDCR, Regs::MFP_TCDCR_MODE_TIMER_C_MASK, 1, Regs::MFP_TCDCR_MODE_TIMER_C_SHIFT, "MODE_TIMER_C", g_enumStringsTIMER_MODE_CD };
+const FieldDef g_fieldDef_MFP_TADR_ALL = { Regs::MFP_TADR, Regs::MFP_TADR_ALL_MASK, 1, Regs::MFP_TADR_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_MFP_TBDR_ALL = { Regs::MFP_TBDR, Regs::MFP_TBDR_ALL_MASK, 1, Regs::MFP_TBDR_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_MFP_TCDR_ALL = { Regs::MFP_TCDR, Regs::MFP_TCDR_ALL_MASK, 1, Regs::MFP_TCDR_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_MFP_TDDR_ALL = { Regs::MFP_TDDR, Regs::MFP_TDDR_ALL_MASK, 1, Regs::MFP_TDDR_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_MFP_SCR_ALL = { Regs::MFP_SCR, Regs::MFP_SCR_ALL_MASK, 1, Regs::MFP_SCR_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_MFP_UCR_PARITY_EVEN = { Regs::MFP_UCR, Regs::MFP_UCR_PARITY_EVEN_MASK, 1, Regs::MFP_UCR_PARITY_EVEN_SHIFT, "PARITY_EVEN", nullptr };
+const FieldDef g_fieldDef_MFP_UCR_PARITY_IGNORE = { Regs::MFP_UCR, Regs::MFP_UCR_PARITY_IGNORE_MASK, 1, Regs::MFP_UCR_PARITY_IGNORE_SHIFT, "PARITY_IGNORE", nullptr };
+const FieldDef g_fieldDef_MFP_UCR_FORMAT = { Regs::MFP_UCR, Regs::MFP_UCR_FORMAT_MASK, 1, Regs::MFP_UCR_FORMAT_SHIFT, "FORMAT", nullptr };
+const FieldDef g_fieldDef_MFP_UCR_WORD_LEN = { Regs::MFP_UCR, Regs::MFP_UCR_WORD_LEN_MASK, 1, Regs::MFP_UCR_WORD_LEN_SHIFT, "WORD_LEN", g_enumStringsUSARTLEN };
+const FieldDef g_fieldDef_MFP_UCR_CLOCK_DIV = { Regs::MFP_UCR, Regs::MFP_UCR_CLOCK_DIV_MASK, 1, Regs::MFP_UCR_CLOCK_DIV_SHIFT, "CLOCK_DIV", nullptr };
+const FieldDef g_fieldDef_MFP_RSR_REC_ENABLE = { Regs::MFP_RSR, Regs::MFP_RSR_REC_ENABLE_MASK, 1, Regs::MFP_RSR_REC_ENABLE_SHIFT, "REC_ENABLE", nullptr };
+const FieldDef g_fieldDef_MFP_RSR_STRIP = { Regs::MFP_RSR, Regs::MFP_RSR_STRIP_MASK, 1, Regs::MFP_RSR_STRIP_SHIFT, "STRIP", nullptr };
+const FieldDef g_fieldDef_MFP_RSR_MATCH = { Regs::MFP_RSR, Regs::MFP_RSR_MATCH_MASK, 1, Regs::MFP_RSR_MATCH_SHIFT, "MATCH", nullptr };
+const FieldDef g_fieldDef_MFP_RSR_FOUND = { Regs::MFP_RSR, Regs::MFP_RSR_FOUND_MASK, 1, Regs::MFP_RSR_FOUND_SHIFT, "FOUND", nullptr };
+const FieldDef g_fieldDef_MFP_RSR_FRAME_ERR = { Regs::MFP_RSR, Regs::MFP_RSR_FRAME_ERR_MASK, 1, Regs::MFP_RSR_FRAME_ERR_SHIFT, "FRAME_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_RSR_PARITY_ERR = { Regs::MFP_RSR, Regs::MFP_RSR_PARITY_ERR_MASK, 1, Regs::MFP_RSR_PARITY_ERR_SHIFT, "PARITY_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_RSR_OVERRUN_ERR = { Regs::MFP_RSR, Regs::MFP_RSR_OVERRUN_ERR_MASK, 1, Regs::MFP_RSR_OVERRUN_ERR_SHIFT, "OVERRUN_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_RSR_BUFFER_FULL = { Regs::MFP_RSR, Regs::MFP_RSR_BUFFER_FULL_MASK, 1, Regs::MFP_RSR_BUFFER_FULL_SHIFT, "BUFFER_FULL", nullptr };
+const FieldDef g_fieldDef_MFP_TSR_TRANS_ENABLE = { Regs::MFP_TSR, Regs::MFP_TSR_TRANS_ENABLE_MASK, 1, Regs::MFP_TSR_TRANS_ENABLE_SHIFT, "TRANS_ENABLE", nullptr };
+const FieldDef g_fieldDef_MFP_TSR_LOW = { Regs::MFP_TSR, Regs::MFP_TSR_LOW_MASK, 1, Regs::MFP_TSR_LOW_SHIFT, "LOW", nullptr };
+const FieldDef g_fieldDef_MFP_TSR_HIGH = { Regs::MFP_TSR, Regs::MFP_TSR_HIGH_MASK, 1, Regs::MFP_TSR_HIGH_SHIFT, "HIGH", nullptr };
+const FieldDef g_fieldDef_MFP_TSR_BREAK = { Regs::MFP_TSR, Regs::MFP_TSR_BREAK_MASK, 1, Regs::MFP_TSR_BREAK_SHIFT, "BREAK", nullptr };
+const FieldDef g_fieldDef_MFP_TSR_EOT = { Regs::MFP_TSR, Regs::MFP_TSR_EOT_MASK, 1, Regs::MFP_TSR_EOT_SHIFT, "EOT", nullptr };
+const FieldDef g_fieldDef_MFP_TSR_AUTO_TURN = { Regs::MFP_TSR, Regs::MFP_TSR_AUTO_TURN_MASK, 1, Regs::MFP_TSR_AUTO_TURN_SHIFT, "AUTO_TURN", nullptr };
+const FieldDef g_fieldDef_MFP_TSR_UNDERRUN_ERR = { Regs::MFP_TSR, Regs::MFP_TSR_UNDERRUN_ERR_MASK, 1, Regs::MFP_TSR_UNDERRUN_ERR_SHIFT, "UNDERRUN_ERR", nullptr };
+const FieldDef g_fieldDef_MFP_TSR_BUFFER_EMPTY = { Regs::MFP_TSR, Regs::MFP_TSR_BUFFER_EMPTY_MASK, 1, Regs::MFP_TSR_BUFFER_EMPTY_SHIFT, "BUFFER_EMPTY", nullptr };
+const FieldDef g_fieldDef_MFP_UDR_ALL = { Regs::MFP_UDR, Regs::MFP_UDR_ALL_MASK, 1, Regs::MFP_UDR_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_YM_MIXER_TONE_A_OFF = { Regs::YM_MIXER, Regs::YM_MIXER_TONE_A_OFF_MASK, 1, Regs::YM_MIXER_TONE_A_OFF_SHIFT, "TONE_A_OFF", nullptr };
+const FieldDef g_fieldDef_YM_MIXER_TONE_B_OFF = { Regs::YM_MIXER, Regs::YM_MIXER_TONE_B_OFF_MASK, 1, Regs::YM_MIXER_TONE_B_OFF_SHIFT, "TONE_B_OFF", nullptr };
+const FieldDef g_fieldDef_YM_MIXER_TONE_C_OFF = { Regs::YM_MIXER, Regs::YM_MIXER_TONE_C_OFF_MASK, 1, Regs::YM_MIXER_TONE_C_OFF_SHIFT, "TONE_C_OFF", nullptr };
+const FieldDef g_fieldDef_YM_MIXER_NOISE_A_OFF = { Regs::YM_MIXER, Regs::YM_MIXER_NOISE_A_OFF_MASK, 1, Regs::YM_MIXER_NOISE_A_OFF_SHIFT, "NOISE_A_OFF", nullptr };
+const FieldDef g_fieldDef_YM_MIXER_NOISE_B_OFF = { Regs::YM_MIXER, Regs::YM_MIXER_NOISE_B_OFF_MASK, 1, Regs::YM_MIXER_NOISE_B_OFF_SHIFT, "NOISE_B_OFF", nullptr };
+const FieldDef g_fieldDef_YM_MIXER_NOISE_C_OFF = { Regs::YM_MIXER, Regs::YM_MIXER_NOISE_C_OFF_MASK, 1, Regs::YM_MIXER_NOISE_C_OFF_SHIFT, "NOISE_C_OFF", nullptr };
+const FieldDef g_fieldDef_YM_MIXER_PORT_A_OUT = { Regs::YM_MIXER, Regs::YM_MIXER_PORT_A_OUT_MASK, 1, Regs::YM_MIXER_PORT_A_OUT_SHIFT, "PORT_A_OUT", nullptr };
+const FieldDef g_fieldDef_YM_MIXER_PORT_B_OUT = { Regs::YM_MIXER, Regs::YM_MIXER_PORT_B_OUT_MASK, 1, Regs::YM_MIXER_PORT_B_OUT_SHIFT, "PORT_B_OUT", nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_A_VOL = { Regs::YM_VOLUME_A, Regs::YM_VOLUME_A_VOL_MASK, 1, Regs::YM_VOLUME_A_VOL_SHIFT, "VOL", nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_A_ENVELOPE = { Regs::YM_VOLUME_A, Regs::YM_VOLUME_A_ENVELOPE_MASK, 1, Regs::YM_VOLUME_A_ENVELOPE_SHIFT, "ENVELOPE", nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_B_VOL = { Regs::YM_VOLUME_B, Regs::YM_VOLUME_B_VOL_MASK, 1, Regs::YM_VOLUME_B_VOL_SHIFT, "VOL", nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_B_ENVELOPE = { Regs::YM_VOLUME_B, Regs::YM_VOLUME_B_ENVELOPE_MASK, 1, Regs::YM_VOLUME_B_ENVELOPE_SHIFT, "ENVELOPE", nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_C_VOL = { Regs::YM_VOLUME_C, Regs::YM_VOLUME_C_VOL_MASK, 1, Regs::YM_VOLUME_C_VOL_SHIFT, "VOL", nullptr };
+const FieldDef g_fieldDef_YM_VOLUME_C_ENVELOPE = { Regs::YM_VOLUME_C, Regs::YM_VOLUME_C_ENVELOPE_MASK, 1, Regs::YM_VOLUME_C_ENVELOPE_SHIFT, "ENVELOPE", nullptr };
+const FieldDef g_fieldDef_YM_PERIOD_ENV_SHAPE_SHAPE = { Regs::YM_PERIOD_ENV_SHAPE, Regs::YM_PERIOD_ENV_SHAPE_SHAPE_MASK, 1, Regs::YM_PERIOD_ENV_SHAPE_SHAPE_SHIFT, "SHAPE", g_enumStringsENV_SHAPE };
+const FieldDef g_fieldDef_BLT_SRC_XINC_ALL = { Regs::BLT_SRC_XINC, Regs::BLT_SRC_XINC_ALL_MASK, 2, Regs::BLT_SRC_XINC_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_SRC_YINC_ALL = { Regs::BLT_SRC_YINC, Regs::BLT_SRC_YINC_ALL_MASK, 2, Regs::BLT_SRC_YINC_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_SRC_ADDR_ALL = { Regs::BLT_SRC_ADDR, Regs::BLT_SRC_ADDR_ALL_MASK, 4, Regs::BLT_SRC_ADDR_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_ENDMASK_1_ALL = { Regs::BLT_ENDMASK_1, Regs::BLT_ENDMASK_1_ALL_MASK, 2, Regs::BLT_ENDMASK_1_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_ENDMASK_2_ALL = { Regs::BLT_ENDMASK_2, Regs::BLT_ENDMASK_2_ALL_MASK, 2, Regs::BLT_ENDMASK_2_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_ENDMASK_3_ALL = { Regs::BLT_ENDMASK_3, Regs::BLT_ENDMASK_3_ALL_MASK, 2, Regs::BLT_ENDMASK_3_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_DST_XINC_ALL = { Regs::BLT_DST_XINC, Regs::BLT_DST_XINC_ALL_MASK, 2, Regs::BLT_DST_XINC_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_DST_YINC_ALL = { Regs::BLT_DST_YINC, Regs::BLT_DST_YINC_ALL_MASK, 2, Regs::BLT_DST_YINC_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_DST_ADDR_ALL = { Regs::BLT_DST_ADDR, Regs::BLT_DST_ADDR_ALL_MASK, 4, Regs::BLT_DST_ADDR_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_XCOUNT_ALL = { Regs::BLT_XCOUNT, Regs::BLT_XCOUNT_ALL_MASK, 2, Regs::BLT_XCOUNT_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_YCOUNT_ALL = { Regs::BLT_YCOUNT, Regs::BLT_YCOUNT_ALL_MASK, 2, Regs::BLT_YCOUNT_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_BLT_HALFTONE_OP_OP = { Regs::BLT_HALFTONE_OP, Regs::BLT_HALFTONE_OP_OP_MASK, 1, Regs::BLT_HALFTONE_OP_OP_SHIFT, "OP", g_enumStringsBLT_HOP };
+const FieldDef g_fieldDef_BLT_LOGICAL_OP_OP = { Regs::BLT_LOGICAL_OP, Regs::BLT_LOGICAL_OP_OP_MASK, 1, Regs::BLT_LOGICAL_OP_OP_SHIFT, "OP", g_enumStringsBLT_OP };
+const FieldDef g_fieldDef_BLT_CTRL_1_HALFTONE_LINE = { Regs::BLT_CTRL_1, Regs::BLT_CTRL_1_HALFTONE_LINE_MASK, 1, Regs::BLT_CTRL_1_HALFTONE_LINE_SHIFT, "HALFTONE_LINE", nullptr };
+const FieldDef g_fieldDef_BLT_CTRL_1_SMUDGE = { Regs::BLT_CTRL_1, Regs::BLT_CTRL_1_SMUDGE_MASK, 1, Regs::BLT_CTRL_1_SMUDGE_SHIFT, "SMUDGE", nullptr };
+const FieldDef g_fieldDef_BLT_CTRL_1_HOG = { Regs::BLT_CTRL_1, Regs::BLT_CTRL_1_HOG_MASK, 1, Regs::BLT_CTRL_1_HOG_SHIFT, "HOG", nullptr };
+const FieldDef g_fieldDef_BLT_CTRL_1_BUSY = { Regs::BLT_CTRL_1, Regs::BLT_CTRL_1_BUSY_MASK, 1, Regs::BLT_CTRL_1_BUSY_SHIFT, "BUSY", nullptr };
+const FieldDef g_fieldDef_BLT_CTRL_2_SKEW = { Regs::BLT_CTRL_2, Regs::BLT_CTRL_2_SKEW_MASK, 1, Regs::BLT_CTRL_2_SKEW_SHIFT, "SKEW", nullptr };
+const FieldDef g_fieldDef_BLT_CTRL_2_NFSR = { Regs::BLT_CTRL_2, Regs::BLT_CTRL_2_NFSR_MASK, 1, Regs::BLT_CTRL_2_NFSR_SHIFT, "NFSR", nullptr };
+const FieldDef g_fieldDef_BLT_CTRL_2_FXSR = { Regs::BLT_CTRL_2, Regs::BLT_CTRL_2_FXSR_MASK, 1, Regs::BLT_CTRL_2_FXSR_SHIFT, "FXSR", nullptr };
 /* Register Field Sets */
 
 const FieldDef* g_regFieldsDef_MMU_CONFIG[] = {
@@ -660,6 +734,71 @@ const FieldDef* g_regFieldsDef_YM_VOLUME_C[] = {
 };
 const FieldDef* g_regFieldsDef_YM_PERIOD_ENV_SHAPE[] = {
 	 &g_fieldDef_YM_PERIOD_ENV_SHAPE_SHAPE,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_SRC_XINC[] = {
+	 &g_fieldDef_BLT_SRC_XINC_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_SRC_YINC[] = {
+	 &g_fieldDef_BLT_SRC_YINC_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_SRC_ADDR[] = {
+	 &g_fieldDef_BLT_SRC_ADDR_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_ENDMASK_1[] = {
+	 &g_fieldDef_BLT_ENDMASK_1_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_ENDMASK_2[] = {
+	 &g_fieldDef_BLT_ENDMASK_2_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_ENDMASK_3[] = {
+	 &g_fieldDef_BLT_ENDMASK_3_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_DST_XINC[] = {
+	 &g_fieldDef_BLT_DST_XINC_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_DST_YINC[] = {
+	 &g_fieldDef_BLT_DST_YINC_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_DST_ADDR[] = {
+	 &g_fieldDef_BLT_DST_ADDR_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_XCOUNT[] = {
+	 &g_fieldDef_BLT_XCOUNT_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_YCOUNT[] = {
+	 &g_fieldDef_BLT_YCOUNT_ALL,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_HALFTONE_OP[] = {
+	 &g_fieldDef_BLT_HALFTONE_OP_OP,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_LOGICAL_OP[] = {
+	 &g_fieldDef_BLT_LOGICAL_OP_OP,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_CTRL_1[] = {
+	 &g_fieldDef_BLT_CTRL_1_HALFTONE_LINE,
+	 &g_fieldDef_BLT_CTRL_1_SMUDGE,
+	 &g_fieldDef_BLT_CTRL_1_HOG,
+	 &g_fieldDef_BLT_CTRL_1_BUSY,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_BLT_CTRL_2[] = {
+	 &g_fieldDef_BLT_CTRL_2_SKEW,
+	 &g_fieldDef_BLT_CTRL_2_NFSR,
+	 &g_fieldDef_BLT_CTRL_2_FXSR,
 	nullptr
 };
 } // namespace
