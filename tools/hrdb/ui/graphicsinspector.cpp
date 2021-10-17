@@ -864,12 +864,22 @@ int GraphicsInspectorWidget::GetEffectiveWidth() const
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
     if (!pMem)
         return Mode::k4Bitplane;
+
+    // Handle ST scroll
+    int width = 0;
+    if (!IsMachineST(m_pTargetModel->GetMachineType()))
+    {
+        uint8_t modeReg = Regs::GetField_VID_HORIZ_SCROLL_STE_PIXELS(pMem->ReadAddressByte(Regs::VID_HORIZ_SCROLL_STE));
+        if (modeReg != 0)
+            width = 1;  // extra read for scroll
+    }
+
     Regs::RESOLUTION modeReg = Regs::GetField_VID_SHIFTER_RES_RES(pMem->ReadAddressByte(Regs::VID_SHIFTER_RES));
     if (modeReg == Regs::RESOLUTION::LOW)
-        return 20;
+        return width + 20;
     else if (modeReg == Regs::RESOLUTION::MEDIUM)
-        return 40;
-    return 40;
+        return width + 40;
+    return width + 40;
 }
 
 int GraphicsInspectorWidget::GetEffectiveHeight() const
