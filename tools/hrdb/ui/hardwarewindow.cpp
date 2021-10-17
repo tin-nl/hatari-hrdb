@@ -16,6 +16,7 @@
 #include "../hardware/hardware_st.h"
 #include "../hardware/regs_st.h"
 #include "quicklayout.h"
+#include "showaddressactions.h"
 
 //-----------------------------------------------------------------------------
 bool GetField(const Memory& mem, const Regs::FieldDef& def, QString& result)
@@ -26,7 +27,7 @@ bool GetField(const Memory& mem, const Regs::FieldDef& def, QString& result)
     uint32_t regVal = mem.ReadAddressMulti(def.regAddr, def.size);
     uint32_t extracted = (regVal >> def.shift) & def.mask;
     if (def.strings)
-        result = GetString(def.strings, extracted);
+        result = QString::asprintf("%s ($%x)", GetString(def.strings, extracted), extracted);
     else
         result = QString::asprintf("%u ($%x)", extracted, extracted);
     return true;
@@ -41,14 +42,15 @@ public:
         m_pDefaultLabel = new QLabel();
         m_pDefaultLabel->setTextInteractionFlags(Qt::TextInteractionFlag::TextSelectableByMouse);
     }
-
     virtual ~HardwareField();
+
     virtual bool Update(const TargetModel* pTarget) = 0;
     virtual QWidget* GetWidget() = 0;
     virtual void UpdateSettings(const Session::Settings& settings);
 
 protected:
-    QLabel*  m_pDefaultLabel;
+    Session*    m_pSession;
+    QLabel*     m_pDefaultLabel;
 };
 
 //-----------------------------------------------------------------------------
@@ -95,15 +97,24 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-class HardwareFieldRegScreenbase : public HardwareField
+class HardwareFieldAddr : public HardwareField
 {
 public:
-    HardwareFieldRegScreenbase()
+    enum Type
     {
-    }
+        ScreenBase,
+        ScreenCurr,
+        BltSrc,
+        BltDst
+    };
+    HardwareFieldAddr(Session* pSession, Type type);
+    ~HardwareFieldAddr();
 
     bool Update(const TargetModel* pTarget);
-    virtual QWidget* GetWidget() { return m_pDefaultLabel; }
+    virtual QWidget* GetWidget() { return m_pCustomLabel; }
+private:
+    ShowAddressLabel* m_pCustomLabel;
+    Type m_type;
 };
 
 //-----------------------------------------------------------------------------
@@ -202,14 +213,15 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
 
     addField(pExpVideo->m_pBottomLayout,  "Resolution",             Regs::g_fieldDef_VID_SHIFTER_RES_RES);
     addField(pExpVideo->m_pBottomLayout,  "Sync Rate",              Regs::g_fieldDef_VID_SYNC_MODE_RATE);
-    addShared(pExpVideo->m_pBottomLayout, "Video Base",             new HardwareFieldRegScreenbase());
+    addShared(pExpVideo->m_pBottomLayout, "Screen Base Address",    new HardwareFieldAddr(m_pSession, HardwareFieldAddr::ScreenBase));
+    addShared(pExpVideo->m_pBottomLayout, "Current Read Address",   new HardwareFieldAddr(m_pSession, HardwareFieldAddr::ScreenCurr));
 
     addField(pExpVideo->m_pBottomLayout, "Horizontal Scroll (STE)", Regs::g_fieldDef_VID_HORIZ_SCROLL_STE_PIXELS);
     addField(pExpVideo->m_pBottomLayout, "Scanline offset (STE)",   Regs::g_fieldDef_VID_SCANLINE_OFFSET_STE_ALL);
 
     Expander* pExpMfp = new Expander(this, "MFP 68901 - Multi-Function Peripheral");
 
-    addField(pExpMfp->m_pBottomLayout, "Parallel Port Data",        Regs::g_fieldDef_MFP_GPIP_ALL);
+    addField(pExpMfp->m_pBottomLayout, "Parallel Port Data",           Regs::g_fieldDef_MFP_GPIP_ALL);
     addMultiField(pExpMfp->m_pBottomLayout, "Active Edge low->high",   Regs::g_regFieldsDef_MFP_AER);
     addMultiField(pExpMfp->m_pBottomLayout, "Data Direction output",   Regs::g_regFieldsDef_MFP_DDR);
 
@@ -223,23 +235,23 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addMultiField(pExpMfp->m_pBottomLayout, "IPRB (Pending)",          Regs::g_regFieldsDef_MFP_IPRB);
     addMultiField(pExpMfp->m_pBottomLayout, "ISRB (Service)",          Regs::g_regFieldsDef_MFP_ISRB);
 
-    addField(pExpMfp->m_pBottomLayout, "Vector Base offset",        Regs::g_fieldDef_MFP_VR_VEC_BASE_OFFSET);
-    addField(pExpMfp->m_pBottomLayout, "End-of-Interrupt",          Regs::g_fieldDef_MFP_VR_ENDINT);
+    addField(pExpMfp->m_pBottomLayout, "Vector Base offset",           Regs::g_fieldDef_MFP_VR_VEC_BASE_OFFSET);
+    addField(pExpMfp->m_pBottomLayout, "End-of-Interrupt",             Regs::g_fieldDef_MFP_VR_ENDINT);
 
-    addField(pExpMfp->m_pBottomLayout, "Timer A Control Mode",      Regs::g_fieldDef_MFP_TACR_MODE_TIMER_A);
-    addField(pExpMfp->m_pBottomLayout, "Timer A Data",              Regs::g_fieldDef_MFP_TADR_ALL);
-    addField(pExpMfp->m_pBottomLayout, "Timer B Control Mode",      Regs::g_fieldDef_MFP_TBCR_MODE_TIMER_B);
-    addField(pExpMfp->m_pBottomLayout, "Timer B Data",              Regs::g_fieldDef_MFP_TBDR_ALL);
-    addField(pExpMfp->m_pBottomLayout, "Timer C Control Mode",      Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_C);
-    addField(pExpMfp->m_pBottomLayout, "Timer C Data",              Regs::g_fieldDef_MFP_TCDR_ALL);
-    addField(pExpMfp->m_pBottomLayout, "Timer D Control Mode",      Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_D);
-    addField(pExpMfp->m_pBottomLayout, "Timer D Data",              Regs::g_fieldDef_MFP_TDDR_ALL);
+    addField(pExpMfp->m_pBottomLayout, "Timer A Control Mode",         Regs::g_fieldDef_MFP_TACR_MODE_TIMER_A);
+    addField(pExpMfp->m_pBottomLayout, "Timer A Data",                 Regs::g_fieldDef_MFP_TADR_ALL);
+    addField(pExpMfp->m_pBottomLayout, "Timer B Control Mode",         Regs::g_fieldDef_MFP_TBCR_MODE_TIMER_B);
+    addField(pExpMfp->m_pBottomLayout, "Timer B Data",                 Regs::g_fieldDef_MFP_TBDR_ALL);
+    addField(pExpMfp->m_pBottomLayout, "Timer C Control Mode",         Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_C);
+    addField(pExpMfp->m_pBottomLayout, "Timer C Data",                 Regs::g_fieldDef_MFP_TCDR_ALL);
+    addField(pExpMfp->m_pBottomLayout, "Timer D Control Mode",         Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_D);
+    addField(pExpMfp->m_pBottomLayout, "Timer D Data",                 Regs::g_fieldDef_MFP_TDDR_ALL);
 
-    addField(pExpMfp->m_pBottomLayout, "Sync Char",                 Regs::g_fieldDef_MFP_SCR_ALL);
+    addField(pExpMfp->m_pBottomLayout, "Sync Char",                    Regs::g_fieldDef_MFP_SCR_ALL);
     addMultiField(pExpMfp->m_pBottomLayout, "USART Control",           Regs::g_regFieldsDef_MFP_UCR);
     addMultiField(pExpMfp->m_pBottomLayout, "USART RX Status",         Regs::g_regFieldsDef_MFP_RSR);
     addMultiField(pExpMfp->m_pBottomLayout, "USART TX Status",         Regs::g_regFieldsDef_MFP_TSR);
-    addField(pExpMfp->m_pBottomLayout, "USART Data",                Regs::g_fieldDef_MFP_UDR_ALL);
+    addField(pExpMfp->m_pBottomLayout, "USART Data",                   Regs::g_fieldDef_MFP_UDR_ALL);
 
     Expander* pExpYm = new Expander(this, "YM/PSG");
     addShared(pExpYm->m_pBottomLayout, "Period A",     new HardwareFieldYmPeriod(Regs::YM_PERIOD_A_LO));
@@ -258,12 +270,12 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     Expander* pExpBlt = new Expander(this, "Blitter");
 
     // TODO these need sign expansion etc
-    addField(pExpBlt->m_pBottomLayout, "Src X Inc",         Regs::g_fieldDef_BLT_SRC_XINC_ALL);
-    addField(pExpBlt->m_pBottomLayout, "Src Y Inc",         Regs::g_fieldDef_BLT_SRC_YINC_ALL);
-    addField(pExpBlt->m_pBottomLayout, "Src Addr",          Regs::g_fieldDef_BLT_SRC_ADDR_ALL);
-    addField(pExpBlt->m_pBottomLayout, "Dst X Inc",         Regs::g_fieldDef_BLT_DST_XINC_ALL);
-    addField(pExpBlt->m_pBottomLayout, "Dst Y Inc",         Regs::g_fieldDef_BLT_DST_YINC_ALL);
-    addField(pExpBlt->m_pBottomLayout, "Dsr Addr",          Regs::g_fieldDef_BLT_DST_ADDR_ALL);
+    addField( pExpBlt->m_pBottomLayout, "Src X Inc",         Regs::g_fieldDef_BLT_SRC_INC_X_ALL);
+    addField( pExpBlt->m_pBottomLayout, "Src Y Inc",         Regs::g_fieldDef_BLT_SRC_INC_Y_ALL);
+    addShared(pExpBlt->m_pBottomLayout, "Src Addr",          new HardwareFieldAddr(m_pSession, HardwareFieldAddr::BltSrc));
+    addField( pExpBlt->m_pBottomLayout, "Dst X Inc",         Regs::g_fieldDef_BLT_DST_INC_X_ALL);
+    addField( pExpBlt->m_pBottomLayout, "Dst Y Inc",         Regs::g_fieldDef_BLT_DST_INC_Y_ALL);
+    addShared(pExpBlt->m_pBottomLayout, "Dst Addr",          new HardwareFieldAddr(m_pSession, HardwareFieldAddr::BltDst));
 
     addField(pExpBlt->m_pBottomLayout, "X Count",           Regs::g_fieldDef_BLT_XCOUNT_ALL);
     addField(pExpBlt->m_pBottomLayout, "Y Count",           Regs::g_fieldDef_BLT_YCOUNT_ALL);
@@ -355,7 +367,7 @@ void HardwareWindow::startStopChangedSlot()
         m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::MMU_CONFIG,    0x1);
         m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::VID_REG_BASE,  0x70);
         m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::MFP_GPIP,      0x30);
-        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::BLT_SRC_XINC,  0x20);
+        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::BLT_HALFTONE_0,0x40);
 
         m_pDispatcher->InfoYm();
     }
@@ -452,6 +464,7 @@ void Expander::buttonPressedSlot()
     UpdateState();
 }
 
+//-----------------------------------------------------------------------------
 void Expander::UpdateState()
 {
     m_pBottom->setVisible(m_expanded);
@@ -463,11 +476,13 @@ void Expander::UpdateState()
     }
 }
 
+//-----------------------------------------------------------------------------
 ExpandLabel::ExpandLabel(QWidget *parent) :
     QLabel(parent)
 {
 }
 
+//-----------------------------------------------------------------------------
 void ExpandLabel::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::MouseButton::LeftButton)
@@ -476,6 +491,7 @@ void ExpandLabel::mousePressEvent(QMouseEvent *event)
     return QLabel::mousePressEvent(event);
 }
 
+//-----------------------------------------------------------------------------
 bool HardwareFieldRegEnum::Update(const TargetModel* pTarget)
 {
     const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
@@ -492,6 +508,7 @@ bool HardwareFieldRegEnum::Update(const TargetModel* pTarget)
     return true;
 }
 
+//-----------------------------------------------------------------------------
 bool HardwareFieldMultiField::Update(const TargetModel* pTarget)
 {
     const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
@@ -530,19 +547,45 @@ bool HardwareFieldMultiField::Update(const TargetModel* pTarget)
     return true;
 }
 
-bool HardwareFieldRegScreenbase::Update(const TargetModel* pTarget)
+//-----------------------------------------------------------------------------
+HardwareFieldAddr::HardwareFieldAddr(Session* pSession, HardwareFieldAddr::Type type) :
+    m_type(type)
+{
+    m_pCustomLabel = new ShowAddressLabel(pSession);
+}
+
+//-----------------------------------------------------------------------------
+HardwareFieldAddr::~HardwareFieldAddr()
+{
+    delete m_pCustomLabel;
+}
+
+//-----------------------------------------------------------------------------
+bool HardwareFieldAddr::Update(const TargetModel* pTarget)
 {
     const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
     uint32_t address;
-    if (HardwareST::GetVideoBase(mem, MACHINETYPE::MACHINE_ST, address))
+    bool valid = false;
+    switch (m_type)
     {
-        m_pDefaultLabel->setText(QString::asprintf("$%x", address));
+    case Type::ScreenBase:
+        valid = (HardwareST::GetVideoBase(mem, pTarget->GetMachineType(), address)); break;
+    case Type::ScreenCurr:
+        valid = (HardwareST::GetVideoCurrent(mem, address)); break;
+    case Type::BltSrc:
+        valid = (HardwareST::GetBlitterSrc(mem, pTarget->GetMachineType(), address)); break;
+    case Type::BltDst:
+        valid = (HardwareST::GetBlitterDst(mem, pTarget->GetMachineType(), address)); break;
+    }
+    if (valid)
+    {
+        m_pCustomLabel->SetAddress(address);
         return true;
     }
     return false;
-
 }
 
+//-----------------------------------------------------------------------------
 bool HardwareFieldYm::Update(const TargetModel* pTarget)
 {
     uint8_t val = pTarget->GetYm().m_regs[m_index];
@@ -550,6 +593,7 @@ bool HardwareFieldYm::Update(const TargetModel* pTarget)
     return true;
 }
 
+//-----------------------------------------------------------------------------
 bool HardwareFieldYmPeriod::Update(const TargetModel *pTarget)
 {
     uint16_t valLo = (pTarget->GetYm().m_regs[m_index]);
@@ -579,6 +623,7 @@ bool HardwareFieldYmPeriod::Update(const TargetModel *pTarget)
     return true;
 }
 
+//-----------------------------------------------------------------------------
 bool HardwareFieldYmEnvShape::Update(const TargetModel *pTarget)
 {
     uint16_t val = (pTarget->GetYm().m_regs[Regs::YM_PERIOD_ENV_SHAPE]);
@@ -587,6 +632,7 @@ bool HardwareFieldYmEnvShape::Update(const TargetModel *pTarget)
     return true;
 }
 
+//-----------------------------------------------------------------------------
 bool HardwareFieldYmMixer::Update(const TargetModel *pTarget)
 {
     uint32_t val = (pTarget->GetYm().m_regs[Regs::YM_MIXER]);
@@ -608,9 +654,9 @@ bool HardwareFieldYmMixer::Update(const TargetModel *pTarget)
 
     m_pDefaultLabel->setText(str);
     return true;
-
 }
 
+//-----------------------------------------------------------------------------
 bool HardwareFieldYmVolume::Update(const TargetModel *pTarget)
 {
     uint16_t val = pTarget->GetYm().m_regs[m_index];

@@ -287,9 +287,9 @@ const StringDef g_enumStringsBLT_OP[] = {
 };
 const FieldDef g_fieldDef_MMU_CONFIG_BANK1 = { Regs::MMU_CONFIG, Regs::MMU_CONFIG_BANK1_MASK, 1, Regs::MMU_CONFIG_BANK1_SHIFT, "BANK1", g_enumStringsMMU_BANK };
 const FieldDef g_fieldDef_MMU_CONFIG_BANK0 = { Regs::MMU_CONFIG, Regs::MMU_CONFIG_BANK0_MASK, 1, Regs::MMU_CONFIG_BANK0_SHIFT, "BANK0", g_enumStringsMMU_BANK };
-const FieldDef g_fieldDef_VID_SCREEN_HIGH_ALL = { Regs::VID_SCREEN_HIGH, Regs::VID_SCREEN_HIGH_ALL_MASK, 1, Regs::VID_SCREEN_HIGH_ALL_SHIFT, "ALL", nullptr };
-const FieldDef g_fieldDef_VID_SCREEN_MID_ALL = { Regs::VID_SCREEN_MID, Regs::VID_SCREEN_MID_ALL_MASK, 1, Regs::VID_SCREEN_MID_ALL_SHIFT, "ALL", nullptr };
-const FieldDef g_fieldDef_VID_SCREEN_LOW_STE_ALL = { Regs::VID_SCREEN_LOW_STE, Regs::VID_SCREEN_LOW_STE_ALL_MASK, 1, Regs::VID_SCREEN_LOW_STE_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_VID_BASE_HIGH_ALL = { Regs::VID_BASE_HIGH, Regs::VID_BASE_HIGH_ALL_MASK, 1, Regs::VID_BASE_HIGH_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_VID_BASE_MID_ALL = { Regs::VID_BASE_MID, Regs::VID_BASE_MID_ALL_MASK, 1, Regs::VID_BASE_MID_ALL_SHIFT, "ALL", nullptr };
+const FieldDef g_fieldDef_VID_BASE_LOW_STE_ALL = { Regs::VID_BASE_LOW_STE, Regs::VID_BASE_LOW_STE_ALL_MASK, 1, Regs::VID_BASE_LOW_STE_ALL_SHIFT, "ALL", nullptr };
 const FieldDef g_fieldDef_VID_SCANLINE_OFFSET_STE_ALL = { Regs::VID_SCANLINE_OFFSET_STE, Regs::VID_SCANLINE_OFFSET_STE_ALL_MASK, 1, Regs::VID_SCANLINE_OFFSET_STE_ALL_SHIFT, "ALL", nullptr };
 const FieldDef g_fieldDef_VID_HORIZ_SCROLL_STE_PIXELS = { Regs::VID_HORIZ_SCROLL_STE, Regs::VID_HORIZ_SCROLL_STE_PIXELS_MASK, 1, Regs::VID_HORIZ_SCROLL_STE_PIXELS_SHIFT, "PIXELS", nullptr };
 const FieldDef g_fieldDef_VID_SYNC_MODE_TYPE = { Regs::VID_SYNC_MODE, Regs::VID_SYNC_MODE_TYPE_MASK, 1, Regs::VID_SYNC_MODE_TYPE_SHIFT, "TYPE", g_enumStringsSYNC_TYPE };
@@ -462,16 +462,16 @@ const FieldDef* g_regFieldsDef_MMU_CONFIG[] = {
 	 &g_fieldDef_MMU_CONFIG_BANK0,
 	nullptr
 };
-const FieldDef* g_regFieldsDef_VID_SCREEN_HIGH[] = {
-	 &g_fieldDef_VID_SCREEN_HIGH_ALL,
+const FieldDef* g_regFieldsDef_VID_BASE_HIGH[] = {
+	 &g_fieldDef_VID_BASE_HIGH_ALL,
 	nullptr
 };
-const FieldDef* g_regFieldsDef_VID_SCREEN_MID[] = {
-	 &g_fieldDef_VID_SCREEN_MID_ALL,
+const FieldDef* g_regFieldsDef_VID_BASE_MID[] = {
+	 &g_fieldDef_VID_BASE_MID_ALL,
 	nullptr
 };
-const FieldDef* g_regFieldsDef_VID_SCREEN_LOW_STE[] = {
-	 &g_fieldDef_VID_SCREEN_LOW_STE_ALL,
+const FieldDef* g_regFieldsDef_VID_BASE_LOW_STE[] = {
+	 &g_fieldDef_VID_BASE_LOW_STE_ALL,
 	nullptr
 };
 const FieldDef* g_regFieldsDef_VID_SCANLINE_OFFSET_STE[] = {

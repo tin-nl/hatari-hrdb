@@ -184,9 +184,12 @@ extern const char* GetString(BLT_OP val);
 /* Register Addresses */
 static const uint32_t MMU_CONFIG                     = 0xff8001;
 static const uint32_t VID_REG_BASE                   = 0xff8200;
-static const uint32_t VID_SCREEN_HIGH                = 0xff8201;
-static const uint32_t VID_SCREEN_MID                 = 0xff8203;
-static const uint32_t VID_SCREEN_LOW_STE             = 0xff820d;
+static const uint32_t VID_BASE_HIGH                  = 0xff8201;
+static const uint32_t VID_BASE_MID                   = 0xff8203;
+static const uint32_t VID_CURR_HIGH                  = 0xff8205;
+static const uint32_t VID_CURR_MID                   = 0xff8207;
+static const uint32_t VID_CURR_LOW                   = 0xff8209;
+static const uint32_t VID_BASE_LOW_STE               = 0xff820d;
 static const uint32_t VID_SCANLINE_OFFSET_STE        = 0xff820e;
 static const uint32_t VID_HORIZ_SCROLL_STE           = 0xff8265;
 static const uint32_t VID_SYNC_MODE                  = 0xff820a;
@@ -252,6 +255,22 @@ static const uint32_t YM_PERIOD_ENV_HI               = 0xc;
 static const uint32_t YM_PERIOD_ENV_SHAPE            = 0xd;
 static const uint32_t YM_PORT_A                      = 0xe;
 static const uint32_t YM_PORT_B                      = 0xf;
+static const uint32_t BLT_HALFTONE_0                 = 0xff8a00;
+static const uint32_t BLT_HALFTONE_1                 = 0xff8a02;
+static const uint32_t BLT_HALFTONE_2                 = 0xff8a04;
+static const uint32_t BLT_HALFTONE_3                 = 0xff8a06;
+static const uint32_t BLT_HALFTONE_4                 = 0xff8a08;
+static const uint32_t BLT_HALFTONE_5                 = 0xff8a0a;
+static const uint32_t BLT_HALFTONE_6                 = 0xff8a0c;
+static const uint32_t BLT_HALFTONE_7                 = 0xff8a0e;
+static const uint32_t BLT_HALFTONE_8                 = 0xff8a10;
+static const uint32_t BLT_HALFTONE_9                 = 0xff8a12;
+static const uint32_t BLT_HALFTONE_10                = 0xff8a14;
+static const uint32_t BLT_HALFTONE_11                = 0xff8a16;
+static const uint32_t BLT_HALFTONE_12                = 0xff8a18;
+static const uint32_t BLT_HALFTONE_13                = 0xff8a1a;
+static const uint32_t BLT_HALFTONE_14                = 0xff8a1c;
+static const uint32_t BLT_HALFTONE_15                = 0xff8a1e;
 static const uint32_t BLT_SRC_INC_X                  = 0xff8a20;
 static const uint32_t BLT_SRC_INC_Y                  = 0xff8a22;
 static const uint32_t BLT_SRC_ADDR                   = 0xff8a24;
@@ -284,28 +303,28 @@ inline MMU_BANK GetField_MMU_CONFIG_BANK0(uint32_t value) { return static_cast<M
 extern const FieldDef g_fieldDef_MMU_CONFIG_BANK0;
 
 
-/* Register VID_SCREEN_HIGH ($ff8201)*/
+/* Register VID_BASE_HIGH ($ff8201)*/
 /* Field ALL */
-static const uint32_t VID_SCREEN_HIGH_ALL_SHIFT = 0;
-static const uint32_t VID_SCREEN_HIGH_ALL_MASK = 255;
-inline uint8_t GetField_VID_SCREEN_HIGH_ALL(uint32_t value) { return static_cast<uint8_t>(((value)>>0) & 255); }
-extern const FieldDef g_fieldDef_VID_SCREEN_HIGH_ALL;
+static const uint32_t VID_BASE_HIGH_ALL_SHIFT = 0;
+static const uint32_t VID_BASE_HIGH_ALL_MASK = 255;
+inline uint8_t GetField_VID_BASE_HIGH_ALL(uint32_t value) { return static_cast<uint8_t>(((value)>>0) & 255); }
+extern const FieldDef g_fieldDef_VID_BASE_HIGH_ALL;
 
 
-/* Register VID_SCREEN_MID ($ff8203)*/
+/* Register VID_BASE_MID ($ff8203)*/
 /* Field ALL */
-static const uint32_t VID_SCREEN_MID_ALL_SHIFT = 0;
-static const uint32_t VID_SCREEN_MID_ALL_MASK = 255;
-inline uint8_t GetField_VID_SCREEN_MID_ALL(uint32_t value) { return static_cast<uint8_t>(((value)>>0) & 255); }
-extern const FieldDef g_fieldDef_VID_SCREEN_MID_ALL;
+static const uint32_t VID_BASE_MID_ALL_SHIFT = 0;
+static const uint32_t VID_BASE_MID_ALL_MASK = 255;
+inline uint8_t GetField_VID_BASE_MID_ALL(uint32_t value) { return static_cast<uint8_t>(((value)>>0) & 255); }
+extern const FieldDef g_fieldDef_VID_BASE_MID_ALL;
 
 
-/* Register VID_SCREEN_LOW_STE ($ff820d)*/
+/* Register VID_BASE_LOW_STE ($ff820d)*/
 /* Field ALL */
-static const uint32_t VID_SCREEN_LOW_STE_ALL_SHIFT = 0;
-static const uint32_t VID_SCREEN_LOW_STE_ALL_MASK = 255;
-inline uint8_t GetField_VID_SCREEN_LOW_STE_ALL(uint32_t value) { return static_cast<uint8_t>(((value)>>0) & 255); }
-extern const FieldDef g_fieldDef_VID_SCREEN_LOW_STE_ALL;
+static const uint32_t VID_BASE_LOW_STE_ALL_SHIFT = 0;
+static const uint32_t VID_BASE_LOW_STE_ALL_MASK = 255;
+inline uint8_t GetField_VID_BASE_LOW_STE_ALL(uint32_t value) { return static_cast<uint8_t>(((value)>>0) & 255); }
+extern const FieldDef g_fieldDef_VID_BASE_LOW_STE_ALL;
 
 
 /* Register VID_SCANLINE_OFFSET_STE ($ff820e)*/
@@ -1409,9 +1428,9 @@ extern const FieldDef g_fieldDef_BLT_CTRL_2_FXSR;
 /* Register Field Sets */
 
 extern const FieldDef* g_regFieldsDef_MMU_CONFIG[];
-extern const FieldDef* g_regFieldsDef_VID_SCREEN_HIGH[];
-extern const FieldDef* g_regFieldsDef_VID_SCREEN_MID[];
-extern const FieldDef* g_regFieldsDef_VID_SCREEN_LOW_STE[];
+extern const FieldDef* g_regFieldsDef_VID_BASE_HIGH[];
+extern const FieldDef* g_regFieldsDef_VID_BASE_MID[];
+extern const FieldDef* g_regFieldsDef_VID_BASE_LOW_STE[];
 extern const FieldDef* g_regFieldsDef_VID_SCANLINE_OFFSET_STE[];
 extern const FieldDef* g_regFieldsDef_VID_HORIZ_SCROLL_STE[];
 extern const FieldDef* g_regFieldsDef_VID_SYNC_MODE[];

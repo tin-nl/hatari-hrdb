@@ -2,6 +2,7 @@
 #define SHOWADDRESSACTIONS_H
 
 #include <QMenu>
+#include <QLabel>
 #include "../models/memory.h"
 
 class QAction;
@@ -36,6 +37,18 @@ private:
 
     // Pointer for signal sending
     Session*     m_pSession;
+};
+
+class ShowAddressLabel : public QLabel
+{
+public:
+    ShowAddressLabel(Session* pSession);
+    ~ShowAddressLabel();
+
+    void SetAddress(uint32_t address);
+    void contextMenuEvent(QContextMenuEvent *event);
+
+    ShowAddressActions*      m_pActions;
 };
 
 #endif // SHOWADDRESSACTIONS_H

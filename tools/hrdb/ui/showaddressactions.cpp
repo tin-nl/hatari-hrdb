@@ -1,5 +1,6 @@
 #include "showaddressactions.h"
 
+#include <QContextMenuEvent>
 #include "../models/session.h"
 
 ShowAddressActions::ShowAddressActions(Session* pSession) :
@@ -59,3 +60,29 @@ void ShowAddressActions::graphicsInspectorTrigger()
     emit m_pSession->addressRequested(Session::kGraphicsInspector, 0, m_activeAddress);
 }
 
+ShowAddressLabel::ShowAddressLabel(Session *pSession) :
+    m_pActions(nullptr)
+{
+    m_pActions = new ShowAddressActions(pSession);
+}
+
+ShowAddressLabel::~ShowAddressLabel()
+{
+    delete m_pActions;
+}
+
+void ShowAddressLabel::SetAddress(uint32_t address)
+{
+    this->setText(QString::asprintf("<a href=\"null\">$%x</a>", address));
+    this->setTextFormat(Qt::TextFormat::RichText);
+    m_pActions->setAddress(address);
+}
+
+void ShowAddressLabel::contextMenuEvent(QContextMenuEvent *event)
+{
+    // Right click menus are instantiated on demand, so we can
+    // dynamically add to them
+    QMenu menu(this);
+    m_pActions->addActionsToMenu(&menu);
+    menu.exec(event->globalPos());
+}
