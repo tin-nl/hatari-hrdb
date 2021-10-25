@@ -44,7 +44,8 @@ SOURCES += \
     ui/showaddressactions.cpp \
     ui/hardwarewindow.cpp \
     hardware/regs_st.cpp \
-    hardware/hardware_st.cpp
+    hardware/hardware_st.cpp \
+    ui/nonantialiasimage.cpp
 
 HEADERS += \
     hopper/buffer.h \
@@ -77,7 +78,8 @@ HEADERS += \
     ui/prefsdialog.h \
     ui/showaddressactions.h \
     ui/hardwarewindow.h \
-    hardware/regs_st.h
+    hardware/regs_st.h \
+    ui/nonantialiasimage.h
 
 RESOURCES     = hrdb.qrc    
 

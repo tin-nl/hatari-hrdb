@@ -15,6 +15,7 @@
 #include "../models/session.h"
 #include "../hardware/hardware_st.h"
 #include "../hardware/regs_st.h"
+#include "nonantialiasimage.h"
 #include "quicklayout.h"
 #include "showaddressactions.h"
 
@@ -45,7 +46,10 @@ public:
     virtual ~HardwareField();
 
     virtual bool Update(const TargetModel* pTarget) = 0;
-    virtual QWidget* GetWidget() = 0;
+    virtual QWidget* GetWidget()
+    {
+        return m_pDefaultLabel;
+    }
     virtual void UpdateSettings(const Session::Settings& settings);
 
 protected:
@@ -75,7 +79,6 @@ public:
     }
 
     bool Update(const TargetModel* pTarget);
-    virtual QWidget* GetWidget() { return m_pDefaultLabel; }
 
     const Regs::FieldDef&   m_def;
     QString                 m_lastVal;
@@ -91,7 +94,6 @@ public:
     }
 
     bool Update(const TargetModel* pTarget);
-    virtual QWidget* GetWidget() { return m_pDefaultLabel; }
 
     const Regs::FieldDef**  m_pDefs;
 };
@@ -127,7 +129,6 @@ public:
     }
 
     bool Update(const TargetModel* pTarget);
-    virtual QWidget* GetWidget() { return m_pDefaultLabel; }
     int m_index;
 };
 
@@ -141,7 +142,6 @@ public:
     }
 
     bool Update(const TargetModel* pTarget);
-    virtual QWidget* GetWidget() { return m_pDefaultLabel; }
     int m_index;
 };
 
@@ -177,6 +177,34 @@ public:
     bool Update(const TargetModel* pTarget);
     virtual QWidget* GetWidget() { return m_pDefaultLabel; }
     int m_index;
+};
+
+//-----------------------------------------------------------------------------
+class HardwareBitmap : public HardwareField
+{
+public:
+    HardwareBitmap(Session* pSession);
+
+    ~HardwareBitmap()
+    {
+        delete m_pImage;
+    }
+
+    virtual QWidget* GetWidget() { return m_pImage; }
+    NonAntiAliasImage*      m_pImage;
+};
+
+//-----------------------------------------------------------------------------
+class HardwareBitmapBlitterHalftone : public HardwareBitmap
+{
+public:
+    HardwareBitmapBlitterHalftone(Session* pSession) :
+        HardwareBitmap(pSession)
+    {
+        m_pImage->setFixedSize(64, 64);
+    }
+
+    bool Update(const TargetModel* pTarget);
 };
 
 //-----------------------------------------------------------------------------
@@ -270,6 +298,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     Expander* pExpBlt = new Expander(this, "Blitter");
 
     // TODO these need sign expansion etc
+    addShared(pExpBlt->m_pBottomLayout, "Halftone RAM",     new HardwareBitmapBlitterHalftone(m_pSession));
     addField( pExpBlt->m_pBottomLayout, "Src X Inc",         Regs::g_fieldDef_BLT_SRC_INC_X_ALL);
     addField( pExpBlt->m_pBottomLayout, "Src Y Inc",         Regs::g_fieldDef_BLT_SRC_INC_Y_ALL);
     addShared(pExpBlt->m_pBottomLayout, "Src Addr",          new HardwareFieldAddr(m_pSession, HardwareFieldAddr::BltSrc));
@@ -666,5 +695,37 @@ bool HardwareFieldYmVolume::Update(const TargetModel *pTarget)
     m_pDefaultLabel->setText(QString::asprintf("Square Vol = %u%s",
                                                squareVol,
                                                useEnv ? " + ENVELOPE" : ""));
+    return true;
+}
+
+HardwareBitmap::HardwareBitmap(Session *pSession)
+{
+    m_pImage = new NonAntiAliasImage(nullptr, pSession);
+}
+
+//-----------------------------------------------------------------------------
+bool HardwareBitmapBlitterHalftone::Update(const TargetModel *pTarget)
+{
+    const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
+    uint32_t address = Regs::BLT_HALFTONE_0;
+
+    if (!mem.HasAddressMulti(address, 16 * 2U))
+        return false;
+
+    uint8_t* pData = m_pImage->AllocBitmap(16 * 16);
+    for (uint y = 0; y < 16; ++y)
+    {
+        uint32_t data = mem.ReadAddressMulti(address + 2U * y, 2);
+        for (int pix = 15; pix >= 0; --pix)
+        {
+            uint8_t val  = (data & 0x8000) ? 1 : 0;
+            *pData++ = val;
+            data <<= 1U;
+        }
+    }
+    m_pImage->m_colours.resize(2U);
+    m_pImage->m_colours[0] = 0xffffffff;
+    m_pImage->m_colours[1] = 0xff000000;
+    m_pImage->setPixmap(1U, 16);
     return true;
 }
