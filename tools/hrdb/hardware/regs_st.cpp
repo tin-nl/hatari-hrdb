@@ -130,10 +130,10 @@ const char* GetString(ENV_SHAPE val)
 }
 const char* GetString(BLT_HOP val)
 {
-	if (val==BLT_HOP::ONES) return "All Ones";
-	if (val==BLT_HOP::HALFTONE) return "Halftone only";
-	if (val==BLT_HOP::SOURCE) return "Source only";
-	if (val==BLT_HOP::SOURCE_AND_HALFTONE) return "Source AND halftone";
+	if (val==BLT_HOP::HOP_ONES) return "All Ones";
+	if (val==BLT_HOP::HOP_HALFTONE) return "Halftone only";
+	if (val==BLT_HOP::HOP_SOURCE) return "Source only";
+	if (val==BLT_HOP::HOP_SOURCE_AND_HALFTONE) return "Source AND halftone";
 	return "?";
 }
 const char* GetString(BLT_OP val)

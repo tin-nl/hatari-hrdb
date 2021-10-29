@@ -141,10 +141,10 @@ enum class ENV_SHAPE : uint32_t {
 
 /* Enum BLT_HOP */
 enum class BLT_HOP : uint32_t {
-	ONES                 =      0, /* All Ones */
-	HALFTONE             =      1, /* Halftone only */
-	SOURCE               =      2, /* Source only */
-	SOURCE_AND_HALFTONE  =      3  /* Source AND halftone */
+	HOP_ONES             =      0, /* All Ones */
+	HOP_HALFTONE         =      1, /* Halftone only */
+	HOP_SOURCE           =      2, /* Source only */
+	HOP_SOURCE_AND_HALFTONE =      3  /* Source AND halftone */
 };
 
 /* Enum BLT_OP */
