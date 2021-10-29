@@ -455,15 +455,19 @@ Expander::Expander(QWidget *parent, QString text) :
     m_expanded(false)
 {
     m_pTop = new QWidget(parent);
-
     // Stop this restretching
     //this->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     m_pBottom = new QWidget(parent);
     m_pButton = new ExpandLabel(parent);
     m_pButton->setText("Press");
     m_pButton->setMinimumWidth(1000);
+    m_pButton->setFrameStyle(QFrame::NoFrame);
+
+    QFontMetrics info(m_pButton->font());
+    m_pButton->setFixedHeight(info.height() * 2);
 
     m_pTopLayout = new QHBoxLayout(parent);
+    m_pTopLayout->setMargin(0);
     m_pTopLayout->addWidget(m_pButton);
     m_pTopLayout->addStretch();
 
