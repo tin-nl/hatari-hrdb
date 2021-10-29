@@ -867,7 +867,7 @@ static void Main_StatusbarSetup(void)
 	};
 	const char *name;
 	bool named;
-	SDLKey key;
+	SDL_Keycode key;
 	int i;
 
 	named = false;
