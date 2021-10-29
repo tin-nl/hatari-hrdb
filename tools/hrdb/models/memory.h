@@ -30,7 +30,7 @@ enum MemorySlot
 bool Overlaps(uint32_t addr1, uint32_t size1, uint32_t addr2, uint32_t size);
 
 // A block of memory pulled from the target.
-struct Memory
+class Memory
 {
 public:
     Memory(uint32_t addr, uint32_t size);
