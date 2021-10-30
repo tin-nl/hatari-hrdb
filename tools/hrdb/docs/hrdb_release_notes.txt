@@ -2,9 +2,11 @@ hrdb Release Notes
 ==================
 
 v0.004 (November 2021)
+
 - Hardware Window
   - Shows states of MMU, MFP, YM and Blitter in a readable form.
   - Still contains some bugs and missing register data.
+
 - Disassembly view
   - Fix potential crash caused by branching arrows display
 
