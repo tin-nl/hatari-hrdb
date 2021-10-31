@@ -381,20 +381,32 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
     // Anything to show?
     if (m_disasm.lines.size())
     {
-        // Highlight the mouse
+        // Highlight the mouse row with a lighter fill
         if (m_mouseRow != -1)
         {
-            painter.setPen(Qt::PenStyle::DashLine);
-            painter.setBrush(Qt::BrushStyle::NoBrush);
+            painter.setPen(Qt::PenStyle::NoPen);
+            painter.setBrush(palette().midlight());
             painter.drawRect(0, GetPixelFromRow(m_mouseRow), rect().width(), m_lineHeight);
         }
 
         // Highlight the cursor row
         if (m_cursorRow != -1)
         {
+            painter.setPen(Qt::PenStyle::DashLine);
+            painter.setBrush(Qt::BrushStyle::NoBrush);
+            painter.drawRect(0, GetPixelFromRow(m_cursorRow), rect().width(), m_lineHeight);
+        }
+
+        // Highlight the PC row with standard highlighting
+        for (int row = 0; row < m_rowTexts.size(); ++row)
+        {
+            const RowText& t = m_rowTexts[row];
+            if (!t.isPc)
+                continue;
             painter.setPen(Qt::PenStyle::NoPen);
             painter.setBrush(pal.highlight());
-            painter.drawRect(0, GetPixelFromRow(m_cursorRow), rect().width(), m_lineHeight);
+            painter.drawRect(0, GetPixelFromRow(row), rect().width(), m_lineHeight);
+            break;
         }
 
         for (int col = 0; col < kNumColumns; ++col)
@@ -406,11 +418,11 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
             painter.setClipRect(x, 0, x2 - x, height());
             for (int row = 0; row < m_rowTexts.size(); ++row)
             {
+                painter.setPen(Qt::PenStyle::NoPen);
+
                 const RowText& t = m_rowTexts[row];
-                if (row == m_cursorRow)
+                if (t.isPc)
                     painter.setPen(pal.highlightedText().color());
-                else if (t.isPc)
-                    painter.setPen(Qt::darkGreen);
                 else
                     painter.setPen(pal.text().color());
 
