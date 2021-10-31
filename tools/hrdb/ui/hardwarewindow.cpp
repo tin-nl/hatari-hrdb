@@ -223,7 +223,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     //m_pTableView->setModel(new HardwareTableModel(this, m_pTargetModel, m_pDispatcher));
 
     // Layouts
-    QVBoxLayout* pMainLayout = new QVBoxLayout(this);
+    QVBoxLayout* pMainLayout = new QVBoxLayout();
     pMainLayout->setSizeConstraint(QLayout::SetFixedSize);  // constraints children to minimums sizes so they "stack"
     SetMargins(pMainLayout);
 
@@ -466,12 +466,12 @@ Expander::Expander(QWidget *parent, QString text) :
     QFontMetrics info(m_pButton->font());
     m_pButton->setFixedHeight(info.height() * 2);
 
-    m_pTopLayout = new QHBoxLayout(parent);
+    m_pTopLayout = new QHBoxLayout();
     m_pTopLayout->setMargin(0);
     m_pTopLayout->addWidget(m_pButton);
     m_pTopLayout->addStretch();
 
-    m_pBottomLayout = new QFormLayout(parent);
+    m_pBottomLayout = new QFormLayout();
     SetMarginsRows(m_pBottomLayout);
     m_pTop->setLayout(m_pTopLayout);
 
