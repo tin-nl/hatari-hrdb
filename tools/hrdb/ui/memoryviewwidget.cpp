@@ -145,7 +145,7 @@ void MemoryWidget::SetRowCount(int32_t rowCount)
 
 void MemoryWidget::SetLock(bool locked)
 {
-    if (!locked != m_isLocked)
+    if (locked != m_isLocked)
     {
         if (locked)
         {
