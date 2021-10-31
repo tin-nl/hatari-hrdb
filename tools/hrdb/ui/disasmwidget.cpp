@@ -13,6 +13,7 @@
 #include <QCompleter>
 #include <QPainter>
 #include <QSettings>
+#include <QGuiApplication>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -76,7 +77,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &DisasmWidget::symbolTableChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &DisasmWidget::connectChangedSlot);
     connect(m_pTargetModel, &TargetModel::registersChangedSignal,   this, &DisasmWidget::CalcOpAddresses);
-    connect(m_pTargetModel, &TargetModel::otherMemoryChangedSignal,       this, &DisasmWidget::otherMemoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::otherMemoryChangedSignal, this, &DisasmWidget::otherMemoryChangedSlot);
 
     // UI connects
     connect(m_pRunUntilAction,       &QAction::triggered, this, &DisasmWidget::runToCursorRightClick);
@@ -914,9 +915,9 @@ void DisasmWidget::contextMenuEvent(QContextMenuEvent *event)
         m_showMenuAddresses[0] = instAddr;
     }
 
-    for (uint32_t op = 0; op < 2; ++op)
+    for (int32_t op = 0; op < 2; ++op)
     {
-        uint32_t menuIndex = op + 1;
+        int32_t menuIndex = op + 1;
         uint32_t opAddr;
         if (GetEA(m_rightClickRow, op, opAddr))
         {
@@ -1045,7 +1046,7 @@ DisasmWindow::DisasmWindow(QWidget *parent, Session* pSession, int windowIndex) 
     // Construction. Do in order of tabbing
     m_pDisasmWidget = new DisasmWidget(this, pSession, windowIndex);
     m_pDisasmWidget->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
-    m_pLineEdit = new QLineEdit(this);
+    m_pAddressEdit = new QLineEdit(this);
     m_pFollowPC = new QCheckBox("Follow PC", this);
     m_pFollowPC->setTristate(false);
     m_pFollowPC->setChecked(m_pDisasmWidget->GetFollowPC());
@@ -1065,7 +1066,7 @@ DisasmWindow::DisasmWindow(QWidget *parent, Session* pSession, int windowIndex) 
     //pMainGroupBox->setFlat(true);
 
     SetMargins(pTopLayout);
-    pTopLayout->addWidget(m_pLineEdit);
+    pTopLayout->addWidget(m_pAddressEdit);
     pTopLayout->addWidget(m_pFollowPC);
     pTopLayout->addWidget(m_pShowHex);
 
@@ -1081,15 +1082,15 @@ DisasmWindow::DisasmWindow(QWidget *parent, Session* pSession, int windowIndex) 
     m_pSymbolTableModel = new SymbolTableModel(this, m_pTargetModel->GetSymbolTable());
     QCompleter* pCompl = new QCompleter(m_pSymbolTableModel, this);
     pCompl->setCaseSensitivity(Qt::CaseSensitivity::CaseInsensitive);
-    m_pLineEdit->setCompleter(pCompl);
+    m_pAddressEdit->setCompleter(pCompl);
 
     // Now that everything is set up we can load the setings
     loadSettings();
 
     // Listen for start/stop, so we can update our memory request
     connect(m_pDisasmWidget,&DisasmWidget::addressChanged,        this, &DisasmWindow::UpdateTextBox);
-    connect(m_pLineEdit,    &QLineEdit::returnPressed,            this, &DisasmWindow::returnPressedSlot);
-    connect(m_pLineEdit,    &QLineEdit::textEdited,               this, &DisasmWindow::textChangedSlot);
+    connect(m_pAddressEdit, &QLineEdit::returnPressed,            this, &DisasmWindow::returnPressedSlot);
+    connect(m_pAddressEdit, &QLineEdit::textEdited,               this, &DisasmWindow::textChangedSlot);
     connect(m_pFollowPC,    &QCheckBox::clicked,                  this, &DisasmWindow::followPCClickedSlot);
     connect(m_pShowHex,     &QCheckBox::clicked,                  this, &DisasmWindow::showHexClickedSlot);
     connect(m_pSession,     &Session::addressRequested,           this, &DisasmWindow::requestAddress);
@@ -1148,6 +1149,7 @@ void DisasmWindow::keyDownPressed()
 {
     m_pDisasmWidget->MoveDown();
 }
+
 void DisasmWindow::keyUpPressed()
 {
     m_pDisasmWidget->MoveUp();
@@ -1165,28 +1167,28 @@ void DisasmWindow::keyPageUpPressed()
 
 void DisasmWindow::returnPressedSlot()
 {
-    QColor col = m_pDisasmWidget->SetAddress(m_pLineEdit->text().toStdString()) ?
-                      Qt::white : Qt::red;
-    QPalette pal = m_pLineEdit->palette();
+    QColor col = m_pDisasmWidget->SetAddress(m_pAddressEdit->text().toStdString()) ?
+                      QGuiApplication::palette().base().color() : Qt::red;
+    QPalette pal = m_pAddressEdit->palette();
     pal.setColor(QPalette::Base, col);
-    m_pLineEdit-> setAutoFillBackground(true);
-    m_pLineEdit->setPalette(pal);
+    m_pAddressEdit->setAutoFillBackground(true);
+    m_pAddressEdit->setPalette(pal);
 }
 
 void DisasmWindow::textChangedSlot()
 {
     uint32_t addr;
     QColor col = Qt::green;
-    if (!StringParsers::ParseExpression(m_pLineEdit->text().toStdString().c_str(), addr,
+    if (!StringParsers::ParseExpression(m_pAddressEdit->text().toStdString().c_str(), addr,
                                        m_pTargetModel->GetSymbolTable(), m_pTargetModel->GetRegs()))
     {
         col = Qt::red;
     }
 
-    QPalette pal = m_pLineEdit->palette();
+    QPalette pal = m_pAddressEdit->palette();
     pal.setColor(QPalette::Base, col);
-    m_pLineEdit-> setAutoFillBackground(true);
-    m_pLineEdit->setPalette(pal);
+    m_pAddressEdit->setAutoFillBackground(true);
+    m_pAddressEdit->setPalette(pal);
 }
 
 void DisasmWindow::showHexClickedSlot()
@@ -1202,5 +1204,5 @@ void DisasmWindow::followPCClickedSlot()
 void DisasmWindow::UpdateTextBox()
 {
     uint32_t addr = m_pDisasmWidget->GetAddress();
-    m_pLineEdit->setText(QString::asprintf("$%x", addr));
+    m_pAddressEdit->setText(QString::asprintf("$%x", addr));
 }

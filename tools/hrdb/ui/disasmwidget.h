@@ -237,7 +237,7 @@ private:
 
     void UpdateTextBox();
 
-    QLineEdit*      m_pLineEdit;
+    QLineEdit*      m_pAddressEdit;
     QCheckBox*      m_pShowHex;
     QCheckBox*      m_pFollowPC;
     Session*        m_pSession;
