@@ -42,6 +42,7 @@ public:
 class YmState
 {
 public:
+    YmState();
     static const int kNumRegs = 16;
     void Clear();
     uint8_t m_regs[kNumRegs];

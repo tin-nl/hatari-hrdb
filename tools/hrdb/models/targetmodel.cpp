@@ -3,6 +3,11 @@
 #include <iostream>
 #include <QTimer>
 
+YmState::YmState()
+{
+    Clear();
+}
+
 void YmState::Clear()
 {
     for (int i = 0; i < kNumRegs; ++i)
