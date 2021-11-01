@@ -100,14 +100,16 @@ MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
 
     connect(m_pTargetModel, &TargetModel::memoryChangedSignal,      this, &MemoryWidget::memoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal,   this, &MemoryWidget::startStopChangedSlot);
+    connect(m_pTargetModel, &TargetModel::registersChangedSignal,   this, &MemoryWidget::registersChangedSlot);
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &MemoryWidget::connectChangedSlot);
-    connect(m_pTargetModel, &TargetModel::otherMemoryChangedSignal,       this, &MemoryWidget::otherMemoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::otherMemoryChangedSignal, this, &MemoryWidget::otherMemoryChangedSlot);
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &MemoryWidget::symbolTableChangedSlot);
     connect(m_pSession,     &Session::settingsChanged,              this, &MemoryWidget::settingsChangedSlot);
 }
 
-bool MemoryWidget::SetAddress(std::string expression)
+bool MemoryWidget::SetExpression(std::string expression)
 {
+    // This does a "once only"
     uint32_t addr;
     if (!StringParsers::ParseExpression(expression.c_str(), addr,
                                         m_pTargetModel->GetSymbolTable(),
@@ -145,15 +147,17 @@ void MemoryWidget::SetRowCount(int32_t rowCount)
 
 void MemoryWidget::SetLock(bool locked)
 {
-    if (locked != m_isLocked)
-    {
-        if (locked)
-        {
-            // Recalculate this expression for locking
-            SetAddress(m_addressExpression);
-        }
-    }
+    bool changed = (locked != m_isLocked);
+
+    // Do this here so that RecalcLockedExpression works
     m_isLocked = locked;
+    if (changed && locked)
+    {
+        // Lock has been turned on
+        // Recalculate this expression for locking
+        RecalcLockedExpression();
+        RequestMemory();
+    }
 }
 
 void MemoryWidget::SetMode(MemoryWidget::Mode mode)
@@ -450,18 +454,8 @@ void MemoryWidget::startStopChangedSlot()
     // Request new memory for the view
     if (!m_pTargetModel->IsRunning())
     {
-        // Recalc a locked expression
-        uint32_t addr;
-        if (m_isLocked)
-        {
-            if (StringParsers::ParseExpression(m_addressExpression.c_str(), addr,
-                                                m_pTargetModel->GetSymbolTable(),
-                                                m_pTargetModel->GetRegs()))
-            {
-                SetAddress(addr);
-            }
-        }
-        RequestMemory();
+        // Normally we would request memory here, but it can be an expression.
+        // So leave it to registers changing
     }
     else {
         // Starting to run
@@ -483,6 +477,15 @@ void MemoryWidget::connectChangedSlot()
     update();
 }
 
+void MemoryWidget::registersChangedSlot()
+{
+    // New registers can affect expression parsing
+    RecalcLockedExpression();
+
+    // Always re-request here, since this is expected after every start/stop
+    RequestMemory();
+}
+
 void MemoryWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
 {
     (void)address;
@@ -494,7 +497,9 @@ void MemoryWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
 
 void MemoryWidget::symbolTableChangedSlot()
 {
-    RecalcText();
+    // New symbol table can affect expression parsing
+    RecalcLockedExpression();
+    RequestMemory();
 }
 
 void MemoryWidget::settingsChangedSlot()
@@ -743,6 +748,21 @@ void MemoryWidget::RequestMemory()
         m_requestId = m_pDispatcher->RequestMemory(m_memSlot, m_address, size);
 }
 
+void MemoryWidget::RecalcLockedExpression()
+{
+    if (m_isLocked)
+    {
+        uint32_t addr;
+        if (StringParsers::ParseExpression(m_addressExpression.c_str(), addr,
+                                            m_pTargetModel->GetSymbolTable(),
+                                            m_pTargetModel->GetRegs()))
+        {
+            SetAddress(addr);
+        }
+    }
+
+}
+
 void MemoryWidget::RecalcRowCount()
 {
     // It seems that viewport is updated without this even being called,
@@ -945,7 +965,7 @@ void MemoryWindow::requestAddress(Session::WindowType type, int windowIndex, uin
         return;
 
     m_pMemoryWidget->SetLock(false);
-    m_pMemoryWidget->SetAddress(std::to_string(address));
+    m_pMemoryWidget->SetExpression(std::to_string(address));
     m_pLockCheckBox->setChecked(false);
     setVisible(true);
     this->keyFocus();
@@ -954,7 +974,7 @@ void MemoryWindow::requestAddress(Session::WindowType type, int windowIndex, uin
 
 void MemoryWindow::textEditChangedSlot()
 {
-    m_pMemoryWidget->SetAddress(m_pLineEdit->text().toStdString());
+    m_pMemoryWidget->SetExpression(m_pLineEdit->text().toStdString());
 }
 
 void MemoryWindow::lockChangedSlot()

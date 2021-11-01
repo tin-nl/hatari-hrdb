@@ -36,8 +36,9 @@ public:
     uint32_t GetRowCount() const { return m_rowCount; }
     Mode GetMode() const { return m_mode; }
 
+    // Set the text expression used as the address.
     // returns false if expression is invalid
-    bool SetAddress(std::string expression);
+    bool SetExpression(std::string expression);
     void SetLock(bool locked);
     void SetMode(Mode mode);
 
@@ -45,6 +46,7 @@ public slots:
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
     void startStopChangedSlot();
     void connectChangedSlot();
+    void registersChangedSlot();
     void otherMemoryChangedSlot(uint32_t address, uint32_t size);
     void symbolTableChangedSlot();
     void settingsChangedSlot();
@@ -69,6 +71,9 @@ private:
 
     void SetAddress(uint32_t address);
     void RequestMemory();
+
+    // Is we are locked to an expression recalc m_address
+    void RecalcLockedExpression();
     void RecalcText();
     void RecalcRowCount();
 
