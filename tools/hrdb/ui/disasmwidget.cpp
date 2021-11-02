@@ -286,14 +286,25 @@ void DisasmWidget::startStopChangedSlot()
         // Decide what to request.
         if (m_bFollowPC)
         {
-            // Update to PC position
-            SetAddress(m_pTargetModel->GetPC());
+            // Decide if the new PC is covered by the existing view range. If so, don't move
+            uint32_t pc = m_pTargetModel->GetPC();
+
+            if (m_disasm.lines.size() == 0)
+            {
+                SetAddress(pc);
+                return;
+            }
+
+            if (m_disasm.lines[0].address > pc ||
+                m_disasm.lines.back().address < pc + 10)
+            {
+                // Update to PC position
+                SetAddress(pc);
+                return;
+            }
         }
-        else
-        {
-            // Just request what we had already.
-            RequestMemory();
-        }
+        // Just request what we had already.
+        RequestMemory();
     }
 }
 
