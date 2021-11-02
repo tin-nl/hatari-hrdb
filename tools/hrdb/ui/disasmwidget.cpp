@@ -385,14 +385,14 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
         if (m_mouseRow != -1)
         {
             painter.setPen(Qt::PenStyle::NoPen);
-            painter.setBrush(palette().midlight());
+            painter.setBrush(palette().alternateBase());
             painter.drawRect(0, GetPixelFromRow(m_mouseRow), rect().width(), m_lineHeight);
         }
 
         // Highlight the cursor row
         if (m_cursorRow != -1)
         {
-            painter.setPen(Qt::PenStyle::DashLine);
+            painter.setPen(QPen(palette().highlight(), 1, Qt::PenStyle::DashLine));
             painter.setBrush(Qt::BrushStyle::NoBrush);
             painter.drawRect(0, GetPixelFromRow(m_cursorRow), rect().width(), m_lineHeight);
         }
