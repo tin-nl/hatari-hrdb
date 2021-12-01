@@ -1282,7 +1282,6 @@ void RemoteDebug_UnInit()
 	printf("Stopping remote debug\n");
 	DebugUI_RegisterRemoteDebug(NULL);
 
-	RemoteDebug_CloseDebugOutput(&g_rdbState);
 	if (g_rdbState.AcceptedFD != -1)
 	{
 		RDB_CLOSE(g_rdbState.AcceptedFD);
