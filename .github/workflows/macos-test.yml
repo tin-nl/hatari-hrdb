@@ -29,6 +29,7 @@ jobs:
            mkdir output
            curl -O https://www.libsdl.org/release/SDL2-2.0.18.dmg
            hdiutil attach SDL2-2.0.18.dmg
+           ls -Rl /Volumes/SDL2/
       - name: Build hatari
         run: |
           ./configure
@@ -36,6 +37,7 @@ jobs:
           cd src
           ls -Rl
           chmod +x hatari.app/Contents/MacOS/hatari
+          cp /Volumes/SDL2/SDL2.framework hatari.app/Contents/Frameworks 
           mv hatari.app ../output/
       - name: build hrdb
         run: |
