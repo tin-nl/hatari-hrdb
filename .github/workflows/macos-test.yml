@@ -37,7 +37,7 @@ jobs:
           cd src
           ls -Rl
           chmod +x hatari.app/Contents/MacOS/hatari
-          cp /Volumes/SDL2/SDL2.framework hatari.app/Contents/Frameworks 
+          cp -R /Volumes/SDL2/SDL2.framework hatari.app/Contents/Frameworks
           mv hatari.app ../output/
       - name: build hrdb
         run: |
