@@ -27,6 +27,7 @@ jobs:
            echo "/usr/local/opt/qt@5/bin" >> $GITHUB_PATH
            echo "Qt5_DIR=/usr/local/opt/qt@5/lib/cmake/Qt5" >> $GITHUB_ENV
            mkdir output
+           ls -Rl /Library/Frameworks
       - name: Build hatari
         run: |
           ./configure
