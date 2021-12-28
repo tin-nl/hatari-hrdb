@@ -4,6 +4,7 @@
 #include <QWidget>
 
 class Session;
+class QContextMenuEvent;
 
 // Taken from https://forum.qt.io/topic/94996/qlabel-and-image-antialiasing/5
 class NonAntiAliasImage : public QWidget
@@ -27,9 +28,11 @@ signals:
 protected:
     virtual void paintEvent(QPaintEvent*) override;
     virtual void mouseMoveEvent(QMouseEvent *event) override;
+    virtual void contextMenuEvent(QContextMenuEvent *event) override;
 
 private slots:
     void settingsChangedSlot();
+    void saveImageSlot();
 
 private:
     void UpdateString();
@@ -39,11 +42,16 @@ private:
     QPointF         m_mousePos;
 
     // Underlying bitmap data
+    QImage          m_img;
+
     uint8_t*        m_pBitmap;
     int             m_bitmapSize;
 
     QString         m_infoString;
     bool            m_bRunningMask;
+
+    // Context menu
+    QAction*        m_pSaveImageAction;
 };
 
 

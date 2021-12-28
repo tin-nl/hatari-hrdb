@@ -3,6 +3,8 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QStyle>
+#include <QMenu>
+#include <QFileDialog>
 #include "../models/session.h"
 #include "../models/targetmodel.h"
 
@@ -15,15 +17,18 @@ NonAntiAliasImage::NonAntiAliasImage(QWidget *parent, Session* pSession)
 {
     setMouseTracking(true);
     setFocusPolicy(Qt::FocusPolicy::StrongFocus);
+    m_pSaveImageAction = new QAction(tr("Save Image..."), this);
 
-    connect(m_pSession, &Session::settingsChanged, this, &NonAntiAliasImage::settingsChangedSlot);
+    connect(m_pSession,         &Session::settingsChanged, this, &NonAntiAliasImage::settingsChangedSlot);
+    connect(m_pSaveImageAction, &QAction::triggered,       this, &NonAntiAliasImage::saveImageSlot);
 }
 
 void NonAntiAliasImage::setPixmap(int width, int height)
 {
-    QImage img(m_pBitmap, width * 16, height, QImage::Format_Indexed8);
-    img.setColorTable(m_colours);
-    QPixmap pm = QPixmap::fromImage(img);
+    // Regenerate a new shape
+    m_img = QImage(m_pBitmap, width * 16, height, QImage::Format_Indexed8);
+    m_img.setColorTable(m_colours);
+    QPixmap pm = QPixmap::fromImage(m_img);
     m_pixmap = pm;
     UpdateString();
     emit StringChanged();
@@ -109,10 +114,35 @@ void NonAntiAliasImage::mouseMoveEvent(QMouseEvent *event)
     QWidget::mouseMoveEvent(event);
 }
 
+void NonAntiAliasImage::contextMenuEvent(QContextMenuEvent *event)
+{
+    // Right click menus are instantiated on demand, so we can
+    // dynamically add to them
+    QMenu menu(this);
+
+    // Add the default actions
+    menu.addAction(m_pSaveImageAction);
+    menu.exec(event->globalPos());
+}
+
 void NonAntiAliasImage::settingsChangedSlot()
 {
     // Force redraw in case square pixels changed
     update();
+}
+
+void NonAntiAliasImage::saveImageSlot()
+{
+    // Choose output file
+    QString filter = "Bitmap files (*.bmp *.png);;All files (*.*);";
+    QString filename = QFileDialog::getSaveFileName(
+          this,
+          tr("Choose image filename"),
+          QString(),
+          filter);
+
+    if (filename.size() != 0)
+        m_img.save(filename);
 }
 
 void NonAntiAliasImage::UpdateString()
