@@ -1,6 +1,37 @@
 hrdb Release Notes
 ==================
 
+v0.005 (December 2021)
+
+- Disassembly view
+  - Fix color settings with Mac Dark Theme. (reported by RATI/OVR)
+  - New design for row highlighting. Suggested by RATI/OVR.
+    - PC row is main highlight colours (usually white-on-blue for light themes)
+    - Active Cursor row uses dashed lines
+    - Mouseover row is a different background colour (palette "midlight" value)
+  - Window limits movement of the address when Follow PC is active.
+    - Code tries to keep the window static until PC moves out of visible range,
+      this allows you to see the code around the PC in a more stable fashion.
+
+- Memory Window
+  - Fixed bug when Lock button is changed. If Lock was applied, window wouldn't re-fetch memory data because of a typo.
+    (reported by RATI/OVR)
+  - Fixed another bug with locked expressions.
+      View was requesting memory for the window before register values arrived,
+      so was always behind by a step.
+
+- Graphics Inspector
+  - Add "Save Image" right-click context menu item for easier sprite/gfx ripping.
+    Image is saved as a palettised BMP or PNG using Qt's image libraries.
+    (requested by Shazz/TRSI)
+
+- General
+  - New feature: support e.g. "D0.W" for sign-extended data registers when evaluating expressions.
+
+- Hatari (Target runtime)
+  - Fix crash bug in RemoteDebug.c's DebugOutput redirection handling.
+
+
 v0.004 (November 2021)
 
 - Hardware Window
