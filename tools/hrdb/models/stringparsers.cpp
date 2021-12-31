@@ -141,7 +141,7 @@ static bool IsRegisterNameDotW(const char* name, int& regId)
     for (int i = 0; i < 8; ++i)
     {
 #ifdef WIN32
-        if (_stricmp(name, names[i] != 0)
+        if (_stricmp(name, names[i]) != 0)
             continue;
 #else
         if (strcasecmp(name, names[i]) != 0)
