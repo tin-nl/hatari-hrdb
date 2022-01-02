@@ -579,6 +579,8 @@ bool GraphicsInspectorWidget::SetAddressFromVideo()
 {
     // Update to current video regs
     const Memory* pVideoRegs = m_pTargetModel->GetMemory(MemorySlot::kVideo);
+    if (!pVideoRegs)
+        return false;
 
     uint32_t address;
     if (HardwareST::GetVideoBase(*pVideoRegs, m_pTargetModel->GetMachineType(), address))
