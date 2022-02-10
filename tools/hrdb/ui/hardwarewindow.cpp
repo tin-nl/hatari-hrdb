@@ -2,7 +2,7 @@
 
 #include <QLineEdit>
 #include <QVBoxLayout>
-#include <QFormLayout>
+#include <QGridLayout>
 #include <QHeaderView>
 #include <QKeyEvent>
 #include <QSettings>
@@ -427,26 +427,28 @@ void HardwareWindow::settingsChangedSlot()
         pField->UpdateSettings(m_pSession->GetSettings());
 }
 
-void HardwareWindow::addField(QFormLayout* pLayout, const QString& title, const Regs::FieldDef &def)
+void HardwareWindow::addField(QGridLayout* pLayout, const QString& title, const Regs::FieldDef &def)
 {
     HardwareFieldRegEnum* pField = new HardwareFieldRegEnum(def);
     addShared(pLayout, title, pField);
 }
 
-void HardwareWindow::addMultiField(QFormLayout* pLayout, const QString& title, const Regs::FieldDef** defs)
+void HardwareWindow::addMultiField(QGridLayout* pLayout, const QString& title, const Regs::FieldDef** defs)
 {
     HardwareFieldMultiField* pField = new HardwareFieldMultiField(defs);
     addShared(pLayout, title, pField);
 }
 
-void HardwareWindow::addShared(QFormLayout *pLayout, const QString &title, HardwareField *pField)
+void HardwareWindow::addShared(QGridLayout *pLayout, const QString &title, HardwareField *pField)
 {
     m_fields.append(pField);
     QLabel* pLabel = new QLabel(this);
     pLabel->setMargin(0);
     pLabel->setText(title);
     pLabel->setTextInteractionFlags(Qt::TextInteractionFlag::TextSelectableByMouse);
-    pLayout->addRow(pLabel, pField->GetWidget());
+    int row = pLayout->rowCount();
+    pLayout->addWidget(pLabel, row, 0, Qt::AlignLeft);
+    pLayout->addWidget(pField->GetWidget(), row, Qt::AlignLeft);
 }
 
 Expander::Expander(QWidget *parent, QString text) :
@@ -471,7 +473,8 @@ Expander::Expander(QWidget *parent, QString text) :
     m_pTopLayout->addWidget(m_pButton);
     m_pTopLayout->addStretch();
 
-    m_pBottomLayout = new QFormLayout();
+    m_pBottomLayout = new QGridLayout();
+    m_pBottomLayout->setColumnStretch(1, 20);
     SetMarginsRows(m_pBottomLayout);
     m_pTop->setLayout(m_pTopLayout);
 

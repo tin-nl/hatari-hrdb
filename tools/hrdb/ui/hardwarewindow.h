@@ -7,7 +7,7 @@
 #include "../models/memory.h"
 
 class QTreeView;
-class QFormLayout;
+class QGridLayout;
 class QHBoxLayout;
 class QLabel;
 
@@ -43,7 +43,7 @@ public:
     QWidget*                m_pTop;
     QWidget*                m_pBottom;
     QHBoxLayout*            m_pTopLayout;
-    QFormLayout*            m_pBottomLayout;
+    QGridLayout*            m_pBottomLayout;
 
     ExpandLabel*            m_pButton;
 
@@ -82,9 +82,9 @@ public slots:
     void settingsChangedSlot();
 
 private:
-    void addField(QFormLayout* pLayout, const QString& title, const Regs::FieldDef& def);
-    void addMultiField(QFormLayout *pLayout, const QString &title, const Regs::FieldDef** defs);
-    void addShared(QFormLayout *pLayout, const QString &title, HardwareField* pField);
+    void addField(QGridLayout* pLayout, const QString& title, const Regs::FieldDef& def);
+    void addMultiField(QGridLayout *pLayout, const QString &title, const Regs::FieldDef** defs);
+    void addShared(QGridLayout *pLayout, const QString &title, HardwareField* pField);
 
     Session*                    m_pSession;
     TargetModel*                m_pTargetModel;
