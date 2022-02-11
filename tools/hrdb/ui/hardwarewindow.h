@@ -3,7 +3,7 @@
 
 #include <QDockWidget>
 #include <QAbstractItemModel>
-#include <QLabel>
+#include <QTreeView>
 #include "../models/memory.h"
 #include "../models/session.h"
 
@@ -50,6 +50,12 @@ public:
     QFont m_fontBold;
 };
 
+class HardwareTreeView : public QTreeView
+{
+public:
+    HardwareTreeView(QWidget* parent);
+};
+
 class HardwareWindow : public QDockWidget
 {
     Q_OBJECT
@@ -82,7 +88,7 @@ private:
     Memory                      m_videoMem;
     Memory                      m_mfpMem;
 
-    QTreeView*                  m_pView;
+    HardwareTreeView*           m_pView;
     HardwareTreeModel*          m_pModel;
     QVector<HardwareField*>     m_fields;
 };

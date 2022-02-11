@@ -82,10 +82,8 @@ public:
     virtual ~HardwareField();
     virtual bool isHeader() const { return false; }
     virtual bool Update(const TargetModel* pTarget) = 0;
-    virtual void UpdateSettings(const Session::Settings& settings);
 
 protected:
-    Session*    m_pSession;
 };
 
 //-----------------------------------------------------------------------------
@@ -105,12 +103,6 @@ public:
 //-----------------------------------------------------------------------------
 HardwareField::~HardwareField()
 {
-}
-
-//-----------------------------------------------------------------------------
-void HardwareField::UpdateSettings(const Session::Settings &settings)
-{
-//    m_pDefaultLabel->setFont(settings.m_font);
 }
 
 //-----------------------------------------------------------------------------
@@ -154,8 +146,8 @@ public:
         BasePage,
         Mfp
     };
-    HardwareFieldAddr(Session* pSession, Type type, uint32_t address = 0);
-    HardwareFieldAddr(Session* pSession, uint32_t address);
+    HardwareFieldAddr(Type type, uint32_t address = 0);
+    HardwareFieldAddr(uint32_t address);
     ~HardwareFieldAddr();
 
     bool Update(const TargetModel* pTarget);
@@ -225,12 +217,8 @@ public:
 class HardwareBitmap : public HardwareField
 {
 public:
-    HardwareBitmap(Session* pSession);
-
-    ~HardwareBitmap()
-    {
-        delete m_pImage;
-    }
+    HardwareBitmap(Session *pSession);
+    virtual ~HardwareBitmap();
 
     NonAntiAliasImage*      m_pImage;
 };
@@ -314,14 +302,14 @@ bool HardwareFieldMultiField::Update(const TargetModel* pTarget)
 }
 
 //-----------------------------------------------------------------------------
-HardwareFieldAddr::HardwareFieldAddr(Session* pSession, HardwareFieldAddr::Type type, uint32_t address) :
+HardwareFieldAddr::HardwareFieldAddr(HardwareFieldAddr::Type type, uint32_t address) :
     m_type(type),
     m_address(address)
 {
 }
 
 //-----------------------------------------------------------------------------
-HardwareFieldAddr::HardwareFieldAddr(Session* pSession, uint32_t address) :
+HardwareFieldAddr::HardwareFieldAddr(uint32_t address) :
     m_type(BasePage),
     m_address(address)
 {
@@ -478,9 +466,15 @@ bool HardwareFieldYmVolume::Update(const TargetModel *pTarget)
     return true;
 }
 
+//-----------------------------------------------------------------------------
 HardwareBitmap::HardwareBitmap(Session *pSession)
 {
     m_pImage = new NonAntiAliasImage(nullptr, pSession);
+}
+
+HardwareBitmap::~HardwareBitmap()
+{
+    delete m_pImage;
 }
 
 //-----------------------------------------------------------------------------
@@ -647,6 +641,14 @@ QModelIndex HardwareTreeModel::createIndex2(HardwareBase *pItem) const
     return ind;
 }
 
+
+//-----------------------------------------------------------------------------
+// HardwareTreeView
+//-----------------------------------------------------------------------------
+HardwareTreeView::HardwareTreeView(QWidget *parent) :
+    QTreeView(parent)
+{}
+
 //-----------------------------------------------------------------------------
 // HardwareWindow
 //-----------------------------------------------------------------------------
@@ -685,57 +687,57 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     m_pRoot->AddChild(pExpBlt);
 
     // ===== Vectors ====
-    addShared(pExpVecExceptions, "Bus Error",           new HardwareFieldAddr(m_pSession, 0x8));
-    addShared(pExpVecExceptions, "Address Eror",        new HardwareFieldAddr(m_pSession, 0xc));
-    addShared(pExpVecExceptions, "Illegal Instruction", new HardwareFieldAddr(m_pSession, 0x10));
-    addShared(pExpVecExceptions, "Zero Divide",         new HardwareFieldAddr(m_pSession, 0x14));
-    addShared(pExpVecExceptions, "CHK/CHK2",            new HardwareFieldAddr(m_pSession, 0x18));
-    addShared(pExpVecExceptions, "TRAPcc, TRAPV",       new HardwareFieldAddr(m_pSession, 0x1c));
-    addShared(pExpVecExceptions, "Privilege Violation", new HardwareFieldAddr(m_pSession, 0x20));
-    addShared(pExpVecExceptions, "Trace",               new HardwareFieldAddr(m_pSession, 0x24));
-    addShared(pExpVecExceptions, "Line-A",              new HardwareFieldAddr(m_pSession, 0x28));
-    addShared(pExpVecExceptions, "Line-F",              new HardwareFieldAddr(m_pSession, 0x2c));
-    addShared(pExpVecExceptions, "Spurious Interrupt",  new HardwareFieldAddr(m_pSession, 0x60));
+    addShared(pExpVecExceptions, "Bus Error",           new HardwareFieldAddr(0x8));
+    addShared(pExpVecExceptions, "Address Eror",        new HardwareFieldAddr(0xc));
+    addShared(pExpVecExceptions, "Illegal Instruction", new HardwareFieldAddr(0x10));
+    addShared(pExpVecExceptions, "Zero Divide",         new HardwareFieldAddr(0x14));
+    addShared(pExpVecExceptions, "CHK/CHK2",            new HardwareFieldAddr(0x18));
+    addShared(pExpVecExceptions, "TRAPcc, TRAPV",       new HardwareFieldAddr(0x1c));
+    addShared(pExpVecExceptions, "Privilege Violation", new HardwareFieldAddr(0x20));
+    addShared(pExpVecExceptions, "Trace",               new HardwareFieldAddr(0x24));
+    addShared(pExpVecExceptions, "Line-A",              new HardwareFieldAddr(0x28));
+    addShared(pExpVecExceptions, "Line-F",              new HardwareFieldAddr(0x2c));
+    addShared(pExpVecExceptions, "Spurious Interrupt",  new HardwareFieldAddr(0x60));
     pExpVec->AddChild(pExpVecExceptions);
 
-    addShared(pExpVecAutos, "HBL",      new HardwareFieldAddr(m_pSession, 0x68));
-    addShared(pExpVecAutos, "VBL",      new HardwareFieldAddr(m_pSession, 0x70));
+    addShared(pExpVecAutos, "HBL",      new HardwareFieldAddr(0x68));
+    addShared(pExpVecAutos, "VBL",      new HardwareFieldAddr(0x70));
     pExpVec->AddChild(pExpVecAutos);
 
-    addShared(pExpVecTraps, "Trap #0",             new HardwareFieldAddr(m_pSession, 0x80));
-    addShared(pExpVecTraps, "Trap #1 (GemDOS)",    new HardwareFieldAddr(m_pSession, 0x84));
-    addShared(pExpVecTraps, "Trap #2 (AES/VDI)",   new HardwareFieldAddr(m_pSession, 0x88));
-    addShared(pExpVecTraps, "Trap #3",             new HardwareFieldAddr(m_pSession, 0x8c));
-    addShared(pExpVecTraps, "Trap #4",             new HardwareFieldAddr(m_pSession, 0x90));
-    addShared(pExpVecTraps, "Trap #5",             new HardwareFieldAddr(m_pSession, 0x94));
-    addShared(pExpVecTraps, "Trap #6",             new HardwareFieldAddr(m_pSession, 0x98));
-    addShared(pExpVecTraps, "Trap #7",             new HardwareFieldAddr(m_pSession, 0x9c));
-    addShared(pExpVecTraps, "Trap #8",             new HardwareFieldAddr(m_pSession, 0xa0));
-    addShared(pExpVecTraps, "Trap #9",             new HardwareFieldAddr(m_pSession, 0xa4));
-    addShared(pExpVecTraps, "Trap #10",            new HardwareFieldAddr(m_pSession, 0xa8));
-    addShared(pExpVecTraps, "Trap #11",            new HardwareFieldAddr(m_pSession, 0xac));
-    addShared(pExpVecTraps, "Trap #12",            new HardwareFieldAddr(m_pSession, 0xb0));
-    addShared(pExpVecTraps, "Trap #13 (BIOS)",     new HardwareFieldAddr(m_pSession, 0xb4));
-    addShared(pExpVecTraps, "Trap #14 (XBIOS)",    new HardwareFieldAddr(m_pSession, 0xb8));
-    addShared(pExpVecTraps, "Trap #15",            new HardwareFieldAddr(m_pSession, 0xbc));
+    addShared(pExpVecTraps, "Trap #0",             new HardwareFieldAddr(0x80));
+    addShared(pExpVecTraps, "Trap #1 (GemDOS)",    new HardwareFieldAddr(0x84));
+    addShared(pExpVecTraps, "Trap #2 (AES/VDI)",   new HardwareFieldAddr(0x88));
+    addShared(pExpVecTraps, "Trap #3",             new HardwareFieldAddr(0x8c));
+    addShared(pExpVecTraps, "Trap #4",             new HardwareFieldAddr(0x90));
+    addShared(pExpVecTraps, "Trap #5",             new HardwareFieldAddr(0x94));
+    addShared(pExpVecTraps, "Trap #6",             new HardwareFieldAddr(0x98));
+    addShared(pExpVecTraps, "Trap #7",             new HardwareFieldAddr(0x9c));
+    addShared(pExpVecTraps, "Trap #8",             new HardwareFieldAddr(0xa0));
+    addShared(pExpVecTraps, "Trap #9",             new HardwareFieldAddr(0xa4));
+    addShared(pExpVecTraps, "Trap #10",            new HardwareFieldAddr(0xa8));
+    addShared(pExpVecTraps, "Trap #11",            new HardwareFieldAddr(0xac));
+    addShared(pExpVecTraps, "Trap #12",            new HardwareFieldAddr(0xb0));
+    addShared(pExpVecTraps, "Trap #13 (BIOS)",     new HardwareFieldAddr(0xb4));
+    addShared(pExpVecTraps, "Trap #14 (XBIOS)",    new HardwareFieldAddr(0xb8));
+    addShared(pExpVecTraps, "Trap #15",            new HardwareFieldAddr(0xbc));
     pExpVec->AddChild(pExpVecTraps);
 
-    addShared(pExpVecMfp, "Centronics busy",          new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 0));
-    addShared(pExpVecMfp, "RS-232 DCD",               new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 1));
-    addShared(pExpVecMfp, "RS-232 CTS",               new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 2));
-    addShared(pExpVecMfp, "Blitter done",             new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 3));
-    addShared(pExpVecMfp, "Timer D",                  new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 4));
-    addShared(pExpVecMfp, "Timer C",                  new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 5));
-    addShared(pExpVecMfp, "Keyboard/MIDI (ACIA)",     new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 6));
-    addShared(pExpVecMfp, "FDC/HDC",                  new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 7));
-    addShared(pExpVecMfp, "Timer B",                  new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 8));
-    addShared(pExpVecMfp, "Send Error",               new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 9));
-    addShared(pExpVecMfp, "Send buffer empty",        new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 10));
-    addShared(pExpVecMfp, "Receive error",            new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 11));
-    addShared(pExpVecMfp, "Receive buffer full",      new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 12));
-    addShared(pExpVecMfp, "Timer A",                  new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 13));
-    addShared(pExpVecMfp, "RS-232 Ring detect",       new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 14));
-    addShared(pExpVecMfp, "GPI7 - Monochrome Detect", new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 15));
+    addShared(pExpVecMfp, "Centronics busy",          new HardwareFieldAddr(HardwareFieldAddr::Mfp, 0));
+    addShared(pExpVecMfp, "RS-232 DCD",               new HardwareFieldAddr(HardwareFieldAddr::Mfp, 1));
+    addShared(pExpVecMfp, "RS-232 CTS",               new HardwareFieldAddr(HardwareFieldAddr::Mfp, 2));
+    addShared(pExpVecMfp, "Blitter done",             new HardwareFieldAddr(HardwareFieldAddr::Mfp, 3));
+    addShared(pExpVecMfp, "Timer D",                  new HardwareFieldAddr(HardwareFieldAddr::Mfp, 4));
+    addShared(pExpVecMfp, "Timer C",                  new HardwareFieldAddr(HardwareFieldAddr::Mfp, 5));
+    addShared(pExpVecMfp, "Keyboard/MIDI (ACIA)",     new HardwareFieldAddr(HardwareFieldAddr::Mfp, 6));
+    addShared(pExpVecMfp, "FDC/HDC",                  new HardwareFieldAddr(HardwareFieldAddr::Mfp, 7));
+    addShared(pExpVecMfp, "Timer B",                  new HardwareFieldAddr(HardwareFieldAddr::Mfp, 8));
+    addShared(pExpVecMfp, "Send Error",               new HardwareFieldAddr(HardwareFieldAddr::Mfp, 9));
+    addShared(pExpVecMfp, "Send buffer empty",        new HardwareFieldAddr(HardwareFieldAddr::Mfp, 10));
+    addShared(pExpVecMfp, "Receive error",            new HardwareFieldAddr(HardwareFieldAddr::Mfp, 11));
+    addShared(pExpVecMfp, "Receive buffer full",      new HardwareFieldAddr(HardwareFieldAddr::Mfp, 12));
+    addShared(pExpVecMfp, "Timer A",                  new HardwareFieldAddr(HardwareFieldAddr::Mfp, 13));
+    addShared(pExpVecMfp, "RS-232 Ring detect",       new HardwareFieldAddr(HardwareFieldAddr::Mfp, 14));
+    addShared(pExpVecMfp, "GPI7 - Monochrome Detect", new HardwareFieldAddr(HardwareFieldAddr::Mfp, 15));
     pExpVec->AddChild(pExpVecMfp);
 
     // ===== MMU ====
@@ -745,8 +747,8 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     // ===== VIDEO ====
     addField(pExpVideo,  "Resolution",             Regs::g_fieldDef_VID_SHIFTER_RES_RES);
     addField(pExpVideo,  "Sync Rate",              Regs::g_fieldDef_VID_SYNC_MODE_RATE);
-    addShared(pExpVideo, "Screen Base Address",    new HardwareFieldAddr(m_pSession, HardwareFieldAddr::ScreenBase));
-    //addShared(pExpVideo, "Current Read Address",   new HardwareFieldAddr(m_pSession, HardwareFieldAddr::ScreenCurr));
+    addShared(pExpVideo, "Screen Base Address",    new HardwareFieldAddr(HardwareFieldAddr::ScreenBase));
+    //addShared(pExpVideo, "Current Read Address",   new HardwareFieldAddr(HardwareFieldAddr::ScreenCurr));
 
     addField(pExpVideo, "Horizontal Scroll (STE)", Regs::g_fieldDef_VID_HORIZ_SCROLL_STE_PIXELS);
     addField(pExpVideo, "Scanline offset (STE)",   Regs::g_fieldDef_VID_SCANLINE_OFFSET_STE_ALL);
@@ -772,16 +774,16 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
 
     addField(pExpMfp,  "Timer A Control Mode",         Regs::g_fieldDef_MFP_TACR_MODE_TIMER_A);
     addField(pExpMfp,  "Timer A Data",                 Regs::g_fieldDef_MFP_TADR_ALL);
-    addShared(pExpMfp, "Timer A Vector",              new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 13));
+    addShared(pExpMfp, "Timer A Vector",              new HardwareFieldAddr(HardwareFieldAddr::Mfp, 13));
     addField(pExpMfp,  "Timer B Control Mode",         Regs::g_fieldDef_MFP_TBCR_MODE_TIMER_B);
     addField(pExpMfp,  "Timer B Data",                 Regs::g_fieldDef_MFP_TBDR_ALL);
-    addShared(pExpMfp, "Timer B Vector",              new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 8));
+    addShared(pExpMfp, "Timer B Vector",              new HardwareFieldAddr(HardwareFieldAddr::Mfp, 8));
     addField(pExpMfp,  "Timer C Control Mode",         Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_C);
     addField(pExpMfp,  "Timer C Data",                 Regs::g_fieldDef_MFP_TCDR_ALL);
-    addShared(pExpMfp, "Timer C Vector",              new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 5));
+    addShared(pExpMfp, "Timer C Vector",              new HardwareFieldAddr(HardwareFieldAddr::Mfp, 5));
     addField(pExpMfp,  "Timer D Control Mode",         Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_D);
     addField(pExpMfp,  "Timer D Data",                 Regs::g_fieldDef_MFP_TDDR_ALL);
-    addShared(pExpMfp, "Timer D Vector",              new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 4));
+    addShared(pExpMfp, "Timer D Vector",              new HardwareFieldAddr(HardwareFieldAddr::Mfp, 4));
 
     addField(pExpMfp, "Sync Char",                    Regs::g_fieldDef_MFP_SCR_ALL);
     addMultiField(pExpMfp, "USART Control",           Regs::g_regFieldsDef_MFP_UCR);
@@ -808,10 +810,10 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
    // addShared(pExpBlt, "Halftone RAM",     new HardwareBitmapBlitterHalftone(m_pSession));
     addField( pExpBlt, "Src X Inc",        Regs::g_fieldDef_BLT_SRC_INC_X_ALL);
     addField( pExpBlt, "Src Y Inc",        Regs::g_fieldDef_BLT_SRC_INC_Y_ALL);
-    addShared(pExpBlt, "Src Addr",         new HardwareFieldAddr(m_pSession, HardwareFieldAddr::BltSrc));
+    addShared(pExpBlt, "Src Addr",         new HardwareFieldAddr(HardwareFieldAddr::BltSrc));
     addField( pExpBlt, "Dst X Inc",        Regs::g_fieldDef_BLT_DST_INC_X_ALL);
     addField( pExpBlt, "Dst Y Inc",        Regs::g_fieldDef_BLT_DST_INC_Y_ALL);
-    addShared(pExpBlt, "Dst Addr",         new HardwareFieldAddr(m_pSession, HardwareFieldAddr::BltDst));
+    addShared(pExpBlt, "Dst Addr",         new HardwareFieldAddr(HardwareFieldAddr::BltDst));
 
     addField(pExpBlt, "X Count",           Regs::g_fieldDef_BLT_XCOUNT_ALL);
     addField(pExpBlt, "Y Count",           Regs::g_fieldDef_BLT_YCOUNT_ALL);
@@ -826,7 +828,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     QVBoxLayout* pMainLayout = new QVBoxLayout();
     SetMargins(pMainLayout);
 
-    m_pView = new QTreeView(this);
+    m_pView = new HardwareTreeView(this);
     m_pView->setModel(m_pModel);
 
     m_pView->setExpanded(m_pModel->createIndex2(pExpVec), true);
@@ -959,9 +961,6 @@ void HardwareWindow::ymChangedSlot()
 
 void HardwareWindow::settingsChangedSlot()
 {
-    for (auto pField : m_fields)
-        pField->UpdateSettings(m_pSession->GetSettings());
-
     m_pModel->UpdateSettings(m_pSession->GetSettings());
 }
 
@@ -983,4 +982,3 @@ void HardwareWindow::addShared(HardwareBase *pLayout, const QString &title, Hard
     pField->m_title = title;
     pLayout->AddChild(pField);
 }
-
