@@ -21,6 +21,7 @@
 #include "rundialog.h"
 #include "quicklayout.h"
 #include "prefsdialog.h"
+#include "symboltext.h"
 
 static QString CreateNumberTooltip(uint32_t value, uint32_t prevValue)
 {
@@ -475,14 +476,7 @@ void RegisterWidget::UpdateFont()
 
 QString RegisterWidget::FindSymbol(uint32_t addr)
 {
-    Symbol sym;
-    if (!m_pTargetModel->GetSymbolTable().FindLowerOrEqual(addr & 0xffffff, sym))
-        return QString();
-
-    uint32_t offset = addr - sym.address;
-    if (offset)
-        return QString::asprintf("%s+%d", sym.name.c_str(), offset);
-    return QString::fromStdString(sym.name);
+    return DescribeSymbol(m_pTargetModel->GetSymbolTable(), addr & 0xffffff);
 }
 
 int RegisterWidget::AddToken(int x, int y, QString text, TokenType type, uint32_t subIndex, TokenColour colour)

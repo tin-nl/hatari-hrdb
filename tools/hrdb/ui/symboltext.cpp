@@ -8,6 +8,6 @@ QString DescribeSymbol(const SymbolTable& table, uint32_t addr)
 
     uint32_t offset = addr - sym.address;
     if (offset)
-        return QString::asprintf("%s+%d", sym.name.c_str(), offset);
+        return QString::asprintf("%s+$%x", sym.name.c_str(), offset);
     return QString::fromStdString(sym.name);
 }

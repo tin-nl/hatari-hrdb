@@ -893,15 +893,9 @@ void DisasmWidget::printEA(const operand& op, const Registers& regs, uint32_t ad
     {
         ea &= 0xffffff; // mask for ST hardware range
         ref << "$" << QString::asprintf("%x", ea);
-        Symbol sym;
-        if (m_pTargetModel->GetSymbolTable().FindLowerOrEqual(ea, sym))
-        {
-            uint32_t offset = ea - sym.address;
-            if (offset)
-                ref << QString::asprintf(" %s+$%x", sym.name.c_str(), offset);
-            else
-                ref << " " << QString::fromStdString(sym.name);
-        }
+        QString sym = DescribeSymbol(m_pTargetModel->GetSymbolTable(), ea);
+        if (!sym.isEmpty())
+           ref << " " << sym;
     };
 }
 
