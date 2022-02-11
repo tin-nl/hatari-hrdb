@@ -154,6 +154,8 @@ private slots:
     void startStopClicked();
     void singleStepClicked();
     void nextClicked();
+    void skipPressed();
+
     void runToClicked();
     void addBreakpointPressed();
     void breakPressed();

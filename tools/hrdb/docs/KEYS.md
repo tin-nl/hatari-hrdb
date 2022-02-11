@@ -5,6 +5,7 @@ Normal focus
 - Ctrl+R       - Start/stop
 - Esc          - Stop
 - S            - Step (execute next instruction)
+- Ctrl+S       - Skip (move to next instruction without executing current)
 - N            - Next (step through bsr/jsr)
 - U            - Run Until (HBL etc)
 - Alt+Shift+B  - Add breakpoint (dialog)

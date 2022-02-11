@@ -701,6 +701,7 @@ MainWindow::MainWindow(QWidget *parent)
     new QShortcut(QKeySequence("Ctrl+R"),         this, SLOT(startStopClicked()));
     new QShortcut(QKeySequence("Esc"),            this, SLOT(breakPressed()));
     new QShortcut(QKeySequence("S"),              this, SLOT(singleStepClicked()));
+    new QShortcut(QKeySequence("Ctrl+S"),         this, SLOT(skipPressed()));
     new QShortcut(QKeySequence("N"),              this, SLOT(nextClicked()));
     new QShortcut(QKeySequence("U"),              this, SLOT(runToClicked()));
 
@@ -826,6 +827,30 @@ void MainWindow::nextClicked()
     {
         m_pDispatcher->SendCommandPacket("step");
     }
+}
+
+void MainWindow::skipPressed()
+{
+    if (!m_pTargetModel->IsConnected())
+        return;
+
+    if (m_pTargetModel->IsRunning())
+        return;
+
+    // Work out where the next PC is
+    if (m_disasm.lines.size() == 0)
+        return;
+
+    // Bug fix: we can't decide on how to step until the available disassembly matches
+    // the PC we are stepping from. This slows down stepping a little (since there is
+    // a round-trip). In theory we could send the next instruction opcode as part of
+    // the "status" notification if we want it to be faster.
+    if(m_disasm.lines[0].address != m_pTargetModel->GetPC())
+        return;
+
+    const Disassembler::line& nextInst = m_disasm.lines[0];
+    QString cmd = QString::asprintf("console r pc=$%x", nextInst.GetEnd());
+    m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
 }
 
 void MainWindow::runToClicked()
