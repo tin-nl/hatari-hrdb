@@ -717,7 +717,6 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     m_pView->setExpanded(m_pModel->createIndex2(pExpMfp), true);
     m_pView->setExpanded(m_pModel->createIndex2(pExpYm), true);
     m_pView->setExpanded(m_pModel->createIndex2(pExpBlt), true);
-    m_pView->resizeColumnToContents(0);
 
     pMainLayout->addWidget(m_pView);
 
@@ -739,6 +738,9 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
 
     // Refresh font
     settingsChangedSlot();
+
+    // Call this after settingsChangedSlot so that the font is known
+    m_pView->resizeColumnToContents(0);
 }
 
 HardwareWindow::~HardwareWindow()
