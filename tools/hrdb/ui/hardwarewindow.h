@@ -5,6 +5,7 @@
 #include <QAbstractItemModel>
 #include <QLabel>
 #include "../models/memory.h"
+#include "../models/session.h"
 
 class QTreeView;
 class QGridLayout;
@@ -20,46 +21,34 @@ namespace Regs
     struct FieldDef;
 }
 
+class HardwareBase;
 class HardwareField;
 
-class ExpandLabel : public QLabel
+class HardwareTreeModel : public QAbstractItemModel
 {
     Q_OBJECT
+
 public:
-    ExpandLabel(QWidget* parent);
-signals:
-    void clicked();
+    explicit HardwareTreeModel(QObject *parent = nullptr);
+    virtual ~HardwareTreeModel() override;
+    void dataChanged2(HardwareBase* pField);
+    void UpdateSettings(const Session::Settings &settings);
+    QModelIndex createIndex2(HardwareBase* pItem) const;
 
-protected:
-    virtual void mousePressEvent(QMouseEvent *event) override;
-private:
+    QVariant data(const QModelIndex &index, int role) const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
+    QModelIndex index(int row, int column,
+                      const QModelIndex &parent = QModelIndex()) const override;
+    QModelIndex parent(const QModelIndex &index) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+
+    HardwareBase *rootItem;
+    QFont m_font;
+    QFont m_fontBold;
 };
-
-class Expander : public QWidget
-{
-    Q_OBJECT
-public:
-    // Two widgets, the clickable item
-    QWidget*                m_pTop;
-    QWidget*                m_pBottom;
-    QHBoxLayout*            m_pTopLayout;
-    QGridLayout*            m_pBottomLayout;
-
-    ExpandLabel*            m_pButton;
-
-    // Then the form-layout with child items
-    Expander(QWidget* parent, QString text);
-
-public slots:
-    void buttonPressedSlot();
-
-private:
-    void UpdateState();
-
-    QString m_text;
-    bool m_expanded;
-};
-
 
 class HardwareWindow : public QDockWidget
 {
@@ -82,9 +71,9 @@ public slots:
     void settingsChangedSlot();
 
 private:
-    void addField(QGridLayout* pLayout, const QString& title, const Regs::FieldDef& def);
-    void addMultiField(QGridLayout *pLayout, const QString &title, const Regs::FieldDef** defs);
-    void addShared(QGridLayout *pLayout, const QString &title, HardwareField* pField);
+    void addField(HardwareBase* pLayout, const QString& title, const Regs::FieldDef& def);
+    void addMultiField(HardwareBase *pLayout, const QString &title, const Regs::FieldDef** defs);
+    void addShared(HardwareBase *pLayout, const QString &title, HardwareField* pField);
 
     Session*                    m_pSession;
     TargetModel*                m_pTargetModel;
@@ -93,6 +82,8 @@ private:
     Memory                      m_videoMem;
     Memory                      m_mfpMem;
 
+    QTreeView*                  m_pView;
+    HardwareTreeModel*          m_pModel;
     QVector<HardwareField*>     m_fields;
 };
 
