@@ -959,9 +959,9 @@ inline ENDINT GetField_MFP_VR_ENDINT(uint32_t value) { return static_cast<ENDINT
 extern const FieldDef g_fieldDef_MFP_VR_ENDINT;
 
 /* Field VEC_BASE_OFFSET */
-static const uint32_t MFP_VR_VEC_BASE_OFFSET_SHIFT = 5;
-static const uint32_t MFP_VR_VEC_BASE_OFFSET_MASK = 7;
-inline uint8_t GetField_MFP_VR_VEC_BASE_OFFSET(uint32_t value) { return static_cast<uint8_t>(((value)>>5) & 7); }
+static const uint32_t MFP_VR_VEC_BASE_OFFSET_SHIFT = 4;
+static const uint32_t MFP_VR_VEC_BASE_OFFSET_MASK = 15;
+inline uint8_t GetField_MFP_VR_VEC_BASE_OFFSET(uint32_t value) { return static_cast<uint8_t>(((value)>>4) & 15); }
 extern const FieldDef g_fieldDef_MFP_VR_VEC_BASE_OFFSET;
 
 

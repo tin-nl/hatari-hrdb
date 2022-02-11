@@ -21,8 +21,10 @@ enum MemorySlot
     kGraphicsInspector = kMemoryView0 + kNumMemoryViews,    // gfx bitmap
     kGraphicsInspectorVideoRegs,                            // same as kVideo but synced with graphics inspector requests
 
-    kHardwareWindow,    // Multiple (overlaid) memory requests -- the view takes a copy
+    kHardwareWindow,        // Multiple (overlaid) memory requests -- the view takes a copy
+    kHardwareWindowMfpVecs,
 
+    kBasePage,          // Bottom 256 bytes for vectors
     kMemorySlotCount
 };
 

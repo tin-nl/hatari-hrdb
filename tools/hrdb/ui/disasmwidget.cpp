@@ -22,6 +22,7 @@
 #include "../models/memory.h"
 #include "../models/session.h"
 #include "quicklayout.h"
+#include "symboltext.h"
 
 DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     QWidget(parent),
@@ -663,14 +664,7 @@ void DisasmWidget::CalcDisasm()
         if (row == 0)
         {
             // show symbol + offset if necessary for the top line
-            if (m_pTargetModel->GetSymbolTable().FindLowerOrEqual(addr, sym))
-            {
-                if (addr == sym.address)
-                    t.symbol = QString::fromStdString(sym.name) + ":";
-                else {
-                    t.symbol = QString::asprintf("%s+$%x:", sym.name.c_str(), addr - sym.address);
-                }
-            }
+            t.symbol = DescribeSymbol(m_pTargetModel->GetSymbolTable(), addr) + ":";
         }
         else {
             if (m_pTargetModel->GetSymbolTable().Find(addr, sym))

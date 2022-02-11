@@ -45,7 +45,8 @@ SOURCES += \
     ui/hardwarewindow.cpp \
     hardware/regs_st.cpp \
     hardware/hardware_st.cpp \
-    ui/nonantialiasimage.cpp
+    ui/nonantialiasimage.cpp \
+    ui/symboltext.cpp
 
 HEADERS += \
     hopper/buffer.h \
@@ -79,7 +80,8 @@ HEADERS += \
     ui/showaddressactions.h \
     ui/hardwarewindow.h \
     hardware/regs_st.h \
-    ui/nonantialiasimage.h
+    ui/nonantialiasimage.h \
+    ui/symboltext.h
 
 RESOURCES     = hrdb.qrc    
 

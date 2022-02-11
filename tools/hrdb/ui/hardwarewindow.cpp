@@ -13,6 +13,7 @@
 #include "nonantialiasimage.h"
 #include "quicklayout.h"
 #include "showaddressactions.h"
+#include "symboltext.h"
 
 //-----------------------------------------------------------------------------
 bool GetField(const Memory& mem, const Regs::FieldDef& def, QString& result)
@@ -26,6 +27,18 @@ bool GetField(const Memory& mem, const Regs::FieldDef& def, QString& result)
         result = QString::asprintf("%s ($%x)", GetString(def.strings, extracted), extracted);
     else
         result = QString::asprintf("%u ($%x)", extracted, extracted);
+    return true;
+}
+
+//-----------------------------------------------------------------------------
+bool GetFieldVal(const Memory& mem, const Regs::FieldDef& def, uint32_t& result)
+{
+    if (!mem.HasAddressMulti(def.regAddr, def.size))
+        return false;
+
+    uint32_t regVal = mem.ReadAddressMulti(def.regAddr, def.size);
+    uint32_t extracted = (regVal >> def.shift) & def.mask;
+    result = extracted;
     return true;
 }
 
@@ -137,16 +150,18 @@ public:
         ScreenBase,
         ScreenCurr,
         BltSrc,
-        BltDst
+        BltDst,
+        BasePage,
+        Mfp
     };
-    HardwareFieldAddr(Session* pSession, Type type);
+    HardwareFieldAddr(Session* pSession, Type type, uint32_t address = 0);
+    HardwareFieldAddr(Session* pSession, uint32_t address);
     ~HardwareFieldAddr();
 
     bool Update(const TargetModel* pTarget);
-    virtual QWidget* GetWidget() { return m_pCustomLabel; }
 private:
-    ShowAddressLabel* m_pCustomLabel;
     Type m_type;
+    uint32_t m_address;
 };
 
 //-----------------------------------------------------------------------------
@@ -299,23 +314,31 @@ bool HardwareFieldMultiField::Update(const TargetModel* pTarget)
 }
 
 //-----------------------------------------------------------------------------
-HardwareFieldAddr::HardwareFieldAddr(Session* pSession, HardwareFieldAddr::Type type) :
-    m_type(type)
+HardwareFieldAddr::HardwareFieldAddr(Session* pSession, HardwareFieldAddr::Type type, uint32_t address) :
+    m_type(type),
+    m_address(address)
 {
-    m_pCustomLabel = new ShowAddressLabel(pSession);
+}
+
+//-----------------------------------------------------------------------------
+HardwareFieldAddr::HardwareFieldAddr(Session* pSession, uint32_t address) :
+    m_type(BasePage),
+    m_address(address)
+{
 }
 
 //-----------------------------------------------------------------------------
 HardwareFieldAddr::~HardwareFieldAddr()
 {
-    delete m_pCustomLabel;
 }
 
 //-----------------------------------------------------------------------------
 bool HardwareFieldAddr::Update(const TargetModel* pTarget)
 {
     const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
-    uint32_t address;
+    const Memory* memB = pTarget->GetMemory(MemorySlot::kBasePage);
+
+    uint32_t address = 0;
     bool valid = false;
     switch (m_type)
     {
@@ -327,10 +350,34 @@ bool HardwareFieldAddr::Update(const TargetModel* pTarget)
         valid = (HardwareST::GetBlitterSrc(mem, pTarget->GetMachineType(), address)); break;
     case Type::BltDst:
         valid = (HardwareST::GetBlitterDst(mem, pTarget->GetMachineType(), address)); break;
+    case Type::BasePage:
+        if (memB)
+        {
+            valid = memB->HasAddressMulti(m_address, 4);
+            if (valid)
+                address = memB->ReadAddressMulti(m_address, 4);
+        }
+        break;
+    case Type::Mfp:
+        {
+            const Memory* memMfp = pTarget->GetMemory(MemorySlot::kHardwareWindowMfpVecs);
+            if (memMfp)
+            {
+                uint32_t base = memMfp->GetAddress();
+                valid = memMfp->HasAddressMulti(base + m_address * 4, 4);
+                if (valid)
+                    address = memMfp->ReadAddressMulti(base + m_address * 4, 4);
+            }
+        }
+        break;
     }
     if (valid)
     {
+        address &= 0xffffff;
         QString str = QString::asprintf("$%08x", address);
+        QString sym = DescribeSymbol(pTarget->GetSymbolTable(), address);
+        if (!sym.isEmpty())
+            str += " (" + sym + ")";
         m_changed = m_text != str;
         m_text = str;
         return true;
@@ -618,11 +665,18 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     m_pModel = new HardwareTreeModel(this);
     m_pModel->rootItem = m_pRoot;
 
+    HardwareHeader* pExpVec = new HardwareHeader("Vectors", "");
+    HardwareHeader* pExpVecExceptions = new HardwareHeader("Exception Vectors", "");
+    HardwareHeader* pExpVecAutos = new HardwareHeader("Auto-Vectors", "");
+    HardwareHeader* pExpVecTraps = new HardwareHeader("Trap Vectors", "");
+    HardwareHeader* pExpVecMfp = new HardwareHeader("MFP Vectors", "");
+
     HardwareHeader* pExpMmu = new HardwareHeader("MMU", "Memory Management Unit");
     HardwareHeader* pExpVideo = new HardwareHeader("Shifter/Glue", "Video");
     HardwareHeader* pExpMfp = new HardwareHeader("MFP 68901", "Multi-Function Peripheral");
     HardwareHeader* pExpYm = new HardwareHeader("YM/PSG", "Soundchip");
     HardwareHeader* pExpBlt = new HardwareHeader("Blitter", "");
+    m_pRoot->AddChild(pExpVec);
 
     m_pRoot->AddChild(pExpMmu);
     m_pRoot->AddChild(pExpVideo);
@@ -630,9 +684,65 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     m_pRoot->AddChild(pExpYm);
     m_pRoot->AddChild(pExpBlt);
 
+    // ===== Vectors ====
+    addShared(pExpVecExceptions, "Bus Error",           new HardwareFieldAddr(m_pSession, 0x8));
+    addShared(pExpVecExceptions, "Address Eror",        new HardwareFieldAddr(m_pSession, 0xc));
+    addShared(pExpVecExceptions, "Illegal Instruction", new HardwareFieldAddr(m_pSession, 0x10));
+    addShared(pExpVecExceptions, "Zero Divide",         new HardwareFieldAddr(m_pSession, 0x14));
+    addShared(pExpVecExceptions, "CHK/CHK2",            new HardwareFieldAddr(m_pSession, 0x18));
+    addShared(pExpVecExceptions, "TRAPcc, TRAPV",       new HardwareFieldAddr(m_pSession, 0x1c));
+    addShared(pExpVecExceptions, "Privilege Violation", new HardwareFieldAddr(m_pSession, 0x20));
+    addShared(pExpVecExceptions, "Trace",               new HardwareFieldAddr(m_pSession, 0x24));
+    addShared(pExpVecExceptions, "Line-A",              new HardwareFieldAddr(m_pSession, 0x28));
+    addShared(pExpVecExceptions, "Line-F",              new HardwareFieldAddr(m_pSession, 0x2c));
+    addShared(pExpVecExceptions, "Spurious Interrupt",  new HardwareFieldAddr(m_pSession, 0x60));
+    pExpVec->AddChild(pExpVecExceptions);
+
+    addShared(pExpVecAutos, "HBL",      new HardwareFieldAddr(m_pSession, 0x68));
+    addShared(pExpVecAutos, "VBL",      new HardwareFieldAddr(m_pSession, 0x70));
+    pExpVec->AddChild(pExpVecAutos);
+
+    addShared(pExpVecTraps, "Trap #0",             new HardwareFieldAddr(m_pSession, 0x80));
+    addShared(pExpVecTraps, "Trap #1 (GemDOS)",    new HardwareFieldAddr(m_pSession, 0x84));
+    addShared(pExpVecTraps, "Trap #2 (AES/VDI)",   new HardwareFieldAddr(m_pSession, 0x88));
+    addShared(pExpVecTraps, "Trap #3",             new HardwareFieldAddr(m_pSession, 0x8c));
+    addShared(pExpVecTraps, "Trap #4",             new HardwareFieldAddr(m_pSession, 0x90));
+    addShared(pExpVecTraps, "Trap #5",             new HardwareFieldAddr(m_pSession, 0x94));
+    addShared(pExpVecTraps, "Trap #6",             new HardwareFieldAddr(m_pSession, 0x98));
+    addShared(pExpVecTraps, "Trap #7",             new HardwareFieldAddr(m_pSession, 0x9c));
+    addShared(pExpVecTraps, "Trap #8",             new HardwareFieldAddr(m_pSession, 0xa0));
+    addShared(pExpVecTraps, "Trap #9",             new HardwareFieldAddr(m_pSession, 0xa4));
+    addShared(pExpVecTraps, "Trap #10",            new HardwareFieldAddr(m_pSession, 0xa8));
+    addShared(pExpVecTraps, "Trap #11",            new HardwareFieldAddr(m_pSession, 0xac));
+    addShared(pExpVecTraps, "Trap #12",            new HardwareFieldAddr(m_pSession, 0xb0));
+    addShared(pExpVecTraps, "Trap #13 (BIOS)",     new HardwareFieldAddr(m_pSession, 0xb4));
+    addShared(pExpVecTraps, "Trap #14 (XBIOS)",    new HardwareFieldAddr(m_pSession, 0xb8));
+    addShared(pExpVecTraps, "Trap #15",            new HardwareFieldAddr(m_pSession, 0xbc));
+    pExpVec->AddChild(pExpVecTraps);
+
+    addShared(pExpVecMfp, "Centronics busy",          new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 0));
+    addShared(pExpVecMfp, "RS-232 DCD",               new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 1));
+    addShared(pExpVecMfp, "RS-232 CTS",               new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 2));
+    addShared(pExpVecMfp, "Blitter done",             new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 3));
+    addShared(pExpVecMfp, "Timer D",                  new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 4));
+    addShared(pExpVecMfp, "Timer C",                  new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 5));
+    addShared(pExpVecMfp, "Keyboard/MIDI (ACIA)",     new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 6));
+    addShared(pExpVecMfp, "FDC/HDC",                  new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 7));
+    addShared(pExpVecMfp, "Timer B",                  new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 8));
+    addShared(pExpVecMfp, "Send Error",               new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 9));
+    addShared(pExpVecMfp, "Send buffer empty",        new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 10));
+    addShared(pExpVecMfp, "Receive error",            new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 11));
+    addShared(pExpVecMfp, "Receive buffer full",      new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 12));
+    addShared(pExpVecMfp, "Timer A",                  new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 13));
+    addShared(pExpVecMfp, "RS-232 Ring detect",       new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 14));
+    addShared(pExpVecMfp, "GPI7 - Monochrome Detect", new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 15));
+    pExpVec->AddChild(pExpVecMfp);
+
+    // ===== MMU ====
     addField(pExpMmu,  "Bank 0",                   Regs::g_fieldDef_MMU_CONFIG_BANK0);
     addField(pExpMmu,  "Bank 1",                   Regs::g_fieldDef_MMU_CONFIG_BANK1);
 
+    // ===== VIDEO ====
     addField(pExpVideo,  "Resolution",             Regs::g_fieldDef_VID_SHIFTER_RES_RES);
     addField(pExpVideo,  "Sync Rate",              Regs::g_fieldDef_VID_SYNC_MODE_RATE);
     addShared(pExpVideo, "Screen Base Address",    new HardwareFieldAddr(m_pSession, HardwareFieldAddr::ScreenBase));
@@ -641,6 +751,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addField(pExpVideo, "Horizontal Scroll (STE)", Regs::g_fieldDef_VID_HORIZ_SCROLL_STE_PIXELS);
     addField(pExpVideo, "Scanline offset (STE)",   Regs::g_fieldDef_VID_SCANLINE_OFFSET_STE_ALL);
 
+    // ===== MFP ====
     addField(pExpMfp, "Parallel Port Data",           Regs::g_fieldDef_MFP_GPIP_ALL);
     addMultiField(pExpMfp, "Active Edge low->high",   Regs::g_regFieldsDef_MFP_AER);
     addMultiField(pExpMfp, "Data Direction output",   Regs::g_regFieldsDef_MFP_DDR);
@@ -658,14 +769,19 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addField(pExpMfp, "Vector Base offset",           Regs::g_fieldDef_MFP_VR_VEC_BASE_OFFSET);
     addField(pExpMfp, "End-of-Interrupt",             Regs::g_fieldDef_MFP_VR_ENDINT);
 
-    addField(pExpMfp, "Timer A Control Mode",         Regs::g_fieldDef_MFP_TACR_MODE_TIMER_A);
-    addField(pExpMfp, "Timer A Data",                 Regs::g_fieldDef_MFP_TADR_ALL);
-    addField(pExpMfp, "Timer B Control Mode",         Regs::g_fieldDef_MFP_TBCR_MODE_TIMER_B);
-    addField(pExpMfp, "Timer B Data",                 Regs::g_fieldDef_MFP_TBDR_ALL);
-    addField(pExpMfp, "Timer C Control Mode",         Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_C);
-    addField(pExpMfp, "Timer C Data",                 Regs::g_fieldDef_MFP_TCDR_ALL);
-    addField(pExpMfp, "Timer D Control Mode",         Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_D);
-    addField(pExpMfp, "Timer D Data",                 Regs::g_fieldDef_MFP_TDDR_ALL);
+
+    addField(pExpMfp,  "Timer A Control Mode",         Regs::g_fieldDef_MFP_TACR_MODE_TIMER_A);
+    addField(pExpMfp,  "Timer A Data",                 Regs::g_fieldDef_MFP_TADR_ALL);
+    addShared(pExpMfp, "Timer A Vector",              new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 13));
+    addField(pExpMfp,  "Timer B Control Mode",         Regs::g_fieldDef_MFP_TBCR_MODE_TIMER_B);
+    addField(pExpMfp,  "Timer B Data",                 Regs::g_fieldDef_MFP_TBDR_ALL);
+    addShared(pExpMfp, "Timer B Vector",              new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 8));
+    addField(pExpMfp,  "Timer C Control Mode",         Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_C);
+    addField(pExpMfp,  "Timer C Data",                 Regs::g_fieldDef_MFP_TCDR_ALL);
+    addShared(pExpMfp, "Timer C Vector",              new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 5));
+    addField(pExpMfp,  "Timer D Control Mode",         Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_D);
+    addField(pExpMfp,  "Timer D Data",                 Regs::g_fieldDef_MFP_TDDR_ALL);
+    addShared(pExpMfp, "Timer D Vector",              new HardwareFieldAddr(m_pSession, HardwareFieldAddr::Mfp, 4));
 
     addField(pExpMfp, "Sync Char",                    Regs::g_fieldDef_MFP_SCR_ALL);
     addMultiField(pExpMfp, "USART Control",           Regs::g_regFieldsDef_MFP_UCR);
@@ -673,6 +789,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addMultiField(pExpMfp, "USART TX Status",         Regs::g_regFieldsDef_MFP_TSR);
     addField(pExpMfp, "USART Data",                   Regs::g_fieldDef_MFP_UDR_ALL);
 
+    // ===== YM ====
     addShared(pExpYm, "Period A",     new HardwareFieldYmPeriod(Regs::YM_PERIOD_A_LO));
     addShared(pExpYm, "Period B",     new HardwareFieldYmPeriod(Regs::YM_PERIOD_B_LO));
     addShared(pExpYm, "Period C",     new HardwareFieldYmPeriod(Regs::YM_PERIOD_C_LO));
@@ -686,7 +803,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addShared(pExpYm, "Port A",       new HardwareFieldYm(Regs::YM_PORT_A));
     addShared(pExpYm, "Port B",       new HardwareFieldYm(Regs::YM_PORT_B));
 
-
+    // ===== BLITTER ====
     // TODO these need sign expansion etc
    // addShared(pExpBlt, "Halftone RAM",     new HardwareBitmapBlitterHalftone(m_pSession));
     addField( pExpBlt, "Src X Inc",        Regs::g_fieldDef_BLT_SRC_INC_X_ALL);
@@ -712,6 +829,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     m_pView = new QTreeView(this);
     m_pView->setModel(m_pModel);
 
+    m_pView->setExpanded(m_pModel->createIndex2(pExpVec), true);
     m_pView->setExpanded(m_pModel->createIndex2(pExpMmu), true);
     m_pView->setExpanded(m_pModel->createIndex2(pExpVideo), true);
     m_pView->setExpanded(m_pModel->createIndex2(pExpMfp), true);
@@ -805,6 +923,23 @@ void HardwareWindow::startStopChangedSlot()
 void HardwareWindow::memoryChangedSlot(int memorySlot, uint64_t /*commandId*/)
 {
     if (memorySlot == MemorySlot::kHardwareWindow)
+    {
+        const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kHardwareWindow);
+
+        // Special case: MFP vector base register
+        uint32_t vecBase;
+        if (pMem && GetFieldVal(*pMem, Regs::g_fieldDef_MFP_VR_VEC_BASE_OFFSET, vecBase))
+        {
+            // We combine the upper 4 bits with the lower 4 bits of the MFP interrupt type
+            uint32_t vecIndex = vecBase * 16;
+            uint32_t vecAddr = vecIndex * 4;
+
+            // Request memory
+            m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowMfpVecs, vecAddr, 4 * 32);
+        }
+    }
+
+    if (memorySlot == MemorySlot::kHardwareWindow || memorySlot == MemorySlot::kHardwareWindowMfpVecs)
     {
         for (auto pField : m_fields)
         {

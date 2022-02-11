@@ -745,6 +745,8 @@ void MainWindow::startStopChangedSlot()
         m_pDispatcher->SendCommandPacket("bplist");
         m_pDispatcher->SendCommandPacket("exmask");
 
+        // Basepage makes things much easier
+        m_pDispatcher->RequestMemory(MemorySlot::kBasePage, 0, 0x200);
         // Video memory is generally handy
         m_pDispatcher->RequestMemory(MemorySlot::kVideo, Regs::VID_REG_BASE, 0x70);
 
