@@ -84,7 +84,14 @@ public:
     }
     virtual ~HardwareField();
     virtual bool isHeader() const { return false; }
-    virtual bool Update(const TargetModel* pTarget) = 0;
+    virtual bool Update(const TargetModel*)
+    {
+        return false;
+    }
+    virtual bool UpdateYm(const TargetModel*)
+    {
+        return false;
+    }
 
 protected:
 };
@@ -100,6 +107,7 @@ public:
     }
 
     virtual ~HardwareHeader();
+    virtual bool UpdateYm(const TargetModel* ) { return false; }
     virtual bool isHeader() const { return true; }
 };
 
@@ -185,7 +193,7 @@ public:
     {
     }
 
-    bool Update(const TargetModel* pTarget);
+    bool UpdateYm(const TargetModel* pTarget);
     int m_index;
 };
 
@@ -195,7 +203,7 @@ class HardwareFieldYmEnvShape : public HardwareField
 public:
     HardwareFieldYmEnvShape() {}
 
-    bool Update(const TargetModel* pTarget);
+    bool UpdateYm(const TargetModel* pTarget);
 };
 
 //-----------------------------------------------------------------------------
@@ -204,7 +212,7 @@ class HardwareFieldYmMixer : public HardwareField
 public:
     HardwareFieldYmMixer() {}
 
-    bool Update(const TargetModel* pTarget);
+    bool UpdateYm(const TargetModel* pTarget);
 };
 
 //-----------------------------------------------------------------------------
@@ -216,7 +224,7 @@ public:
     {
     }
 
-    bool Update(const TargetModel* pTarget);
+    bool UpdateYm(const TargetModel* pTarget);
     int m_index;
 };
 
@@ -393,7 +401,7 @@ bool HardwareFieldYm::Update(const TargetModel* pTarget)
 }
 
 //-----------------------------------------------------------------------------
-bool HardwareFieldYmPeriod::Update(const TargetModel *pTarget)
+bool HardwareFieldYmPeriod::UpdateYm(const TargetModel *pTarget)
 {
     uint16_t valLo = (pTarget->GetYm().m_regs[m_index]);
     uint16_t valHi = (pTarget->GetYm().m_regs[m_index + 1]);
@@ -425,7 +433,7 @@ bool HardwareFieldYmPeriod::Update(const TargetModel *pTarget)
 }
 
 //-----------------------------------------------------------------------------
-bool HardwareFieldYmEnvShape::Update(const TargetModel *pTarget)
+bool HardwareFieldYmEnvShape::UpdateYm(const TargetModel *pTarget)
 {
     uint16_t val = (pTarget->GetYm().m_regs[Regs::YM_PERIOD_ENV_SHAPE]);
     const char* pString = Regs::GetString(static_cast<Regs::ENV_SHAPE>(val));
@@ -436,7 +444,7 @@ bool HardwareFieldYmEnvShape::Update(const TargetModel *pTarget)
 }
 
 //-----------------------------------------------------------------------------
-bool HardwareFieldYmMixer::Update(const TargetModel *pTarget)
+bool HardwareFieldYmMixer::UpdateYm(const TargetModel *pTarget)
 {
     uint32_t val = (pTarget->GetYm().m_regs[Regs::YM_MIXER]);
 
@@ -461,7 +469,7 @@ bool HardwareFieldYmMixer::Update(const TargetModel *pTarget)
 }
 
 //-----------------------------------------------------------------------------
-bool HardwareFieldYmVolume::Update(const TargetModel *pTarget)
+bool HardwareFieldYmVolume::UpdateYm(const TargetModel *pTarget)
 {
     uint16_t val = pTarget->GetYm().m_regs[m_index];
     uint8_t squareVol = Regs::GetField_YM_VOLUME_A_VOL(val);
@@ -989,7 +997,8 @@ void HardwareWindow::ymChangedSlot()
 {
     for (auto pField : m_fields)
     {
-        pField->Update(m_pTargetModel);
+        if (pField->UpdateYm(m_pTargetModel))
+            m_pModel->dataChanged2(pField);
     }
 }
 
