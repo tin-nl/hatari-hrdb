@@ -664,7 +664,9 @@ void DisasmWidget::CalcDisasm()
         if (row == 0)
         {
             // show symbol + offset if necessary for the top line
-            t.symbol = DescribeSymbol(m_pTargetModel->GetSymbolTable(), addr) + ":";
+            t.symbol = DescribeSymbol(m_pTargetModel->GetSymbolTable(), addr);
+            if (!t.symbol.isEmpty())
+                t.symbol += ":";
         }
         else {
             if (m_pTargetModel->GetSymbolTable().Find(addr, sym))
