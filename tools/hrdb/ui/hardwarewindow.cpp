@@ -4,6 +4,7 @@
 #include <QTreeView>
 #include <QSettings>
 #include <QDebug>
+#include <QContextMenuEvent>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -47,6 +48,7 @@ class HardwareBase
 {
 public:
     HardwareBase() :
+        m_memAddress(~0U),
         m_changed(false),
         m_pParent(nullptr),
         m_rowIndex(0)
@@ -65,6 +67,7 @@ public:
 
     QString                    m_title;
     QString                    m_text;
+    uint32_t                   m_memAddress;            // For right-click menu, or ~0U
     bool                       m_changed;
 
     HardwareBase*              m_pParent;
@@ -112,6 +115,7 @@ public:
     HardwareFieldRegEnum(const Regs::FieldDef& def) :
         m_def(def)
     {
+        m_memAddress = m_def.regAddr;
     }
 
     bool Update(const TargetModel* pTarget);
@@ -126,6 +130,9 @@ public:
     HardwareFieldMultiField(const Regs::FieldDef** defs) :
         m_pDefs(defs)
     {
+        // Simply use the first register address
+        if (defs && defs[0])
+            m_memAddress = defs[0]->regAddr;
     }
 
     bool Update(const TargetModel* pTarget);
@@ -323,6 +330,7 @@ HardwareFieldAddr::~HardwareFieldAddr()
 //-----------------------------------------------------------------------------
 bool HardwareFieldAddr::Update(const TargetModel* pTarget)
 {
+    m_memAddress = ~0U;
     const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
     const Memory* memB = pTarget->GetMemory(MemorySlot::kBasePage);
 
@@ -362,6 +370,7 @@ bool HardwareFieldAddr::Update(const TargetModel* pTarget)
     if (valid)
     {
         address &= 0xffffff;
+        m_memAddress = address;
         QString str = QString::asprintf("$%08x", address);
         QString sym = DescribeSymbol(pTarget->GetSymbolTable(), address);
         if (!sym.isEmpty())
@@ -645,9 +654,34 @@ QModelIndex HardwareTreeModel::createIndex2(HardwareBase *pItem) const
 //-----------------------------------------------------------------------------
 // HardwareTreeView
 //-----------------------------------------------------------------------------
-HardwareTreeView::HardwareTreeView(QWidget *parent) :
-    QTreeView(parent)
-{}
+HardwareTreeView::HardwareTreeView(QWidget *parent, Session* pSession) :
+    QTreeView(parent),
+    m_showAddressActions(pSession)
+{
+    // Right-click menu
+    m_pShowAddressMenu = new QMenu("", this);
+}
+
+void HardwareTreeView::contextMenuEvent(QContextMenuEvent *event)
+{
+    QModelIndex ind = indexAt(event->pos());
+    if (!ind.isValid())
+        return;
+
+    HardwareBase* item = static_cast<HardwareBase*>(ind.internalPointer());
+    QMenu menu(this);
+    menu.addMenu(m_pShowAddressMenu);
+    uint32_t addr = item->m_memAddress;
+    if (addr != ~0U)
+    {
+        m_pShowAddressMenu->setTitle(QString::asprintf("Address: $%x", addr));
+        m_showAddressActions.setAddress(addr);
+        m_showAddressActions.addActionsToMenu(m_pShowAddressMenu);
+
+        // Run it
+        menu.exec(event->globalPos());
+    }
+}
 
 //-----------------------------------------------------------------------------
 // HardwareWindow
@@ -828,7 +862,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     QVBoxLayout* pMainLayout = new QVBoxLayout();
     SetMargins(pMainLayout);
 
-    m_pView = new HardwareTreeView(this);
+    m_pView = new HardwareTreeView(this, m_pSession);
     m_pView->setModel(m_pModel);
 
     m_pView->setExpanded(m_pModel->createIndex2(pExpVec), true);

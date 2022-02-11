@@ -6,6 +6,7 @@
 #include <QTreeView>
 #include "../models/memory.h"
 #include "../models/session.h"
+#include "showaddressactions.h"
 
 class QTreeView;
 class QGridLayout;
@@ -53,7 +54,13 @@ public:
 class HardwareTreeView : public QTreeView
 {
 public:
-    HardwareTreeView(QWidget* parent);
+    HardwareTreeView(QWidget* parent, Session* pSession);
+protected:
+    virtual void contextMenuEvent(QContextMenuEvent *event);
+
+    // Menu actions
+    QMenu*              m_pShowAddressMenu;
+    ShowAddressActions  m_showAddressActions;
 };
 
 class HardwareWindow : public QDockWidget
