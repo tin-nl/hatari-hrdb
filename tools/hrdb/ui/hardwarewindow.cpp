@@ -338,7 +338,6 @@ HardwareFieldAddr::~HardwareFieldAddr()
 //-----------------------------------------------------------------------------
 bool HardwareFieldAddr::Update(const TargetModel* pTarget)
 {
-    m_memAddress = ~0U;
     const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
     const Memory* memB = pTarget->GetMemory(MemorySlot::kBasePage);
 
@@ -944,6 +943,13 @@ void HardwareWindow::connectChangedSlot()
     }
     else
     {
+        // Empty all fields
+        for (auto pField : m_fields)
+        {
+            pField->m_text.clear();
+            pField->m_changed = false;
+            m_pModel->dataChanged2(pField);
+        }
     }
 }
 
