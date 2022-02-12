@@ -1026,7 +1026,7 @@ void DisasmWidget::RecalcColums()
     m_columnLeft[kPC] = pos; pos += 1;
     m_columnLeft[kBreakpoint] = pos; pos += 1;
     m_columnLeft[kHex] = pos; pos += (m_bShowHex) ? 10 * 2 + 1 : 0;
-    m_columnLeft[kDisasm] = pos; pos += 8+18+9+1; // movea.l $12345678(pc,d0.w),$12345678
+    m_columnLeft[kDisasm] = pos; pos += 42;
     m_columnLeft[kComments] = pos; pos += 80;
     m_columnLeft[kNumColumns] = pos;
 }
