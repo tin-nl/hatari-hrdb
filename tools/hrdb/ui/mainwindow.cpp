@@ -648,7 +648,7 @@ MainWindow::MainWindow(QWidget *parent)
     hlayout->addWidget(m_pStepOverButton);
     hlayout->addWidget(m_pRunToButton);
     hlayout->addWidget(m_pRunToCombo);
-
+    hlayout->addStretch();
     //hlayout->setAlignment(m_pRunToCombo, Qt::Align);
     pTopGroupBox->setLayout(hlayout);
 
