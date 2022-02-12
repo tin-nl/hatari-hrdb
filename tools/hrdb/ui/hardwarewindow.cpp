@@ -1,10 +1,13 @@
 #include "hardwarewindow.h"
 
-#include <QVBoxLayout>
-#include <QTreeView>
-#include <QSettings>
-#include <QDebug>
+#include <QClipboard>
 #include <QContextMenuEvent>
+#include <QDebug>
+#include <QGuiApplication>
+#include <QPushButton>
+#include <QSettings>
+#include <QTreeView>
+#include <QVBoxLayout>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -865,9 +868,16 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addMultiField(pExpBlt, "Control 1",    Regs::g_regFieldsDef_BLT_CTRL_1);
     addMultiField(pExpBlt, "Control 2",    Regs::g_regFieldsDef_BLT_CTRL_2);
 
+    QPushButton* pCopyButton = new QPushButton(tr("Copy"), this);
+
     // Layouts
     QVBoxLayout* pMainLayout = new QVBoxLayout();
     SetMargins(pMainLayout);
+    QHBoxLayout* pTopLayout = new QHBoxLayout;
+    auto pTopRegion = new QWidget(this);      // top buttons/edits
+    SetMargins(pTopLayout);
+    pTopLayout->addWidget(pCopyButton);
+    pTopLayout->addStretch();
 
     m_pView = new HardwareTreeView(this, m_pSession);
     m_pView->setModel(m_pModel);
@@ -879,13 +889,17 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     m_pView->setExpanded(m_pModel->createIndex2(pExpYm), true);
     m_pView->setExpanded(m_pModel->createIndex2(pExpBlt), true);
 
+    pMainLayout->addWidget(pTopRegion);
     pMainLayout->addWidget(m_pView);
 
     auto pMainRegion = new QWidget(this);   // whole panel
+    pTopRegion->setLayout(pTopLayout);
     pMainRegion->setLayout(pMainLayout);
     setWidget(pMainRegion);
 
     loadSettings();
+
+    connect(pCopyButton,     &QAbstractButton::clicked,            this, &HardwareWindow::copyToClipboardSlot);
 
     connect(m_pTargetModel,  &TargetModel::connectChangedSignal,   this, &HardwareWindow::connectChangedSlot);
     connect(m_pTargetModel,  &TargetModel::startStopChangedSignal, this, &HardwareWindow::startStopChangedSlot);
@@ -933,6 +947,35 @@ void HardwareWindow::saveSettings()
     settings.endGroup();
 }
 
+//-----------------------------------------------------------------------------
+static void AddNode(QTextStream& ref, HardwareBase* pNode, int indent)
+{
+    for (int i = 0; i < indent; ++i)
+        ref << "\t";
+
+    ref.setFieldAlignment(QTextStream::FieldAlignment::AlignLeft);
+    ref.setFieldWidth(28);
+    ref << pNode->m_title;
+    ref.setFieldWidth(0);
+    ref << "\t\t" << pNode->m_text << endl;
+
+    for (HardwareBase* pChild : pNode->m_children)
+        AddNode(ref, pChild, indent + 1);
+}
+
+//-----------------------------------------------------------------------------
+void HardwareWindow::copyToClipboardSlot()
+{
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QString newText;
+
+    QTextStream ref(&newText);
+    AddNode(ref, m_pModel->rootItem, 0);
+
+    clipboard->setText(newText);
+}
+
+//-----------------------------------------------------------------------------
 void HardwareWindow::connectChangedSlot()
 {
     if (m_pTargetModel->IsConnected())

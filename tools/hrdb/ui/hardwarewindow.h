@@ -77,6 +77,7 @@ public:
     void saveSettings();
 
 public slots:
+    void copyToClipboardSlot();
     void connectChangedSlot();
     void startStopChangedSlot();
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
