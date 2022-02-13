@@ -262,4 +262,7 @@ extern void Video_TTColorRegs_STRegWrite(void);
 
 extern void Video_Info(FILE *fp, Uint32 dummy);
 
+/* Sync memory/state that might need to be inspected by the Remote Debug system */
+extern void Video_RemoteDebugSync(void);
+
 #endif  /* HATARI_VIDEO_H */

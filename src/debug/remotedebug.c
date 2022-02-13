@@ -42,10 +42,13 @@
 #include "memory.h"
 #include "configuration.h"
 #include "psg.h"
+#include "dmaSnd.h"
+#include "blitter.h"
 
 // For status bar updates
 #include "screen.h"
 #include "statusbar.h"
+#include "video.h"	/* FIXME: video.h is dependent on HBL_PALETTE_LINES from screen.h */
 
 // TCP port for remote debugger access
 #define RDB_PORT                   (56001)
@@ -274,7 +277,33 @@ static void RemoteDebug_CloseDebugOutput(RemoteDebugState* state)
 #endif
 	debugOutput = state->original_debugOutput;
 	state->original_debugOutput = NULL;
+}
 
+/* Call per-system methods to make sure that any state inspected
+   is in sync with what the user sees e.g. hardware registers look
+   correct when read, CPU registers are up-to-date.
+*/
+static void RemoteDebug_HardwareSync(void)
+{
+	/*
+	Workaround to match the behaviour in DebugCpu_Register().
+	The call to m68k_dumpstate_file actually *updates* these registers,
+	so they are stale until you view the registers in the command line
+	debugger (and possibly stale when evaluating breakpoints.)
+
+	Ideally I think this fix should happen when break occurs, but that
+	might be a bit drastic.
+	*/
+	if (regs.s == 0)
+		regs.usp = regs.regs[REG_A7];
+	if (regs.s && regs.m)
+		regs.msp = regs.regs[REG_A7];
+	if (regs.s && regs.m == 0)
+		regs.isp = regs.regs[REG_A7];
+
+	DmaSnd_RemoteDebugSync();
+	Video_RemoteDebugSync();
+	Blitter_RemoteDebugSync();
 }
 
 // -----------------------------------------------------------------------------
@@ -359,22 +388,6 @@ static int RemoteDebug_Regs(int nArgc, char *psArgs[], RemoteDebugState* state)
 	for (regIdx = 0; regIdx < ARRAY_SIZE(regIds); ++regIdx)
 		send_key_value(state, regNames[regIdx], Regs[regIds[regIdx]]);
 		
-	/*
-	Workaround to match the behaviour in DebugCpu_Register().
-	The call to m68k_dumpstate_file actually *updates* these registers,
-	so they are stale until you view the registers in the command line
-	debugger (and possibly stale when evaluating breakpoints.)
-
-	Ideally I think this fix should happen when break occurs, but that
-	might be a bit drastic.
-	*/
-	if (regs.s == 0)
-		regs.usp = regs.regs[REG_A7];
-	if (regs.s && regs.m)
-		regs.msp = regs.regs[REG_A7];
-	if (regs.s && regs.m == 0)
-		regs.isp = regs.regs[REG_A7];
-
 	// Special regs
 	send_key_value(state, "PC", M68000_GetPC());
 	send_key_value(state, "USP", regs.usp);
@@ -1083,6 +1096,8 @@ static bool RemoteDebug_BreakLoop(void)
 		RemoteDebug_NotifyState(state);
 		flush_data(state);
 	}
+
+	RemoteDebug_HardwareSync();
 
 	SetStatusbarMessage(state);
 
