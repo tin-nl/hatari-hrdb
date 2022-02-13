@@ -1188,7 +1188,7 @@ static int RemoteDebugState_InitServer(RemoteDebugState* state)
 	}
 
 	// Socket is now in a listening state and could accept 
-	printf("Remote Debug Listening on port %d\n", RDB_PORT);
+	printf("Remote Debug Listening on port %d, protocol %x\n", RDB_PORT, REMOTEDEBUG_PROTOCOL_ID);
 	return 0;
 }
 
