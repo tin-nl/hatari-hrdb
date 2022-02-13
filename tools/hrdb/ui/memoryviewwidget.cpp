@@ -53,21 +53,6 @@ static QString CreateTooltip(uint32_t address, const SymbolTable& symTable, uint
     return final;
 }
 
-// Decide whether a given key event will be used for our input (e.g. for hex or ASCII)
-// This is needed so we can successfully override shortcuts.
-static char IsEditKey(const QKeyEvent* event)
-{
-    // Try edit keys
-    if (event->text().size() != 0)
-    {
-        QChar ch = event->text().at(0);
-        signed char ascii = ch.toLatin1();
-        if (ascii >= 32)
-            return ascii;
-    }
-    return 0;
-}
-
 MemoryWidget::MemoryWidget(QWidget *parent, Session* pSession,
                                            int windowIndex) :
     QWidget(parent),
@@ -293,17 +278,17 @@ void MemoryWidget::PageDown(bool isKeyboard)
     SetAddress(m_address + m_bytesPerRow * m_rowCount);
 }
 
-void MemoryWidget::EditKey(char key)
+bool MemoryWidget::EditKey(char key)
 {
     // Can't edit while we still wait for memory
     if (m_requestId != 0)
-        return;
+        return false;
 
     const ColInfo& info = m_columnMap[m_cursorCol];
     if (info.type == ColInfo::kSpace)
     {
         MoveRight();
-        return;
+        return false;
     }
 
     uint8_t cursorByte = m_rows[m_cursorRow].m_rawBytes[info.byteOffset];
@@ -312,7 +297,7 @@ void MemoryWidget::EditKey(char key)
     if (info.type == ColInfo::kBottomNybble)
     {
         if (!StringParsers::ParseHexChar(key, val))
-            return;
+            return false;
 
         cursorByte &= 0xf0;
         cursorByte |= val;
@@ -320,7 +305,7 @@ void MemoryWidget::EditKey(char key)
     else if (info.type == ColInfo::kTopNybble)
     {
         if (!StringParsers::ParseHexChar(key, val))
-            return;
+            return false;
         cursorByte &= 0x0f;
         cursorByte |= val << 4;
     }
@@ -336,6 +321,47 @@ void MemoryWidget::EditKey(char key)
     RecalcText();
 
     MoveRight();
+    return true;
+}
+
+// Decide whether a given key event will be used for our input (e.g. for hex or ASCII)
+// This is needed so we can successfully override shortcuts.
+// This is a bit messy since it replicates a lot of logic in EditKey()
+char MemoryWidget::IsEditKey(const QKeyEvent* event)
+{
+    // Try edit keys
+    if (event->text().size() == 0)
+        return 0;
+
+    QChar ch = event->text().at(0);
+    signed char ascii = ch.toLatin1();
+
+    if (m_requestId != 0)
+        return 0;
+
+    const ColInfo& info = m_columnMap[m_cursorCol];
+    if (info.type == ColInfo::kSpace)
+        return 0;
+
+    uint8_t val;
+    if (info.type == ColInfo::kBottomNybble)
+    {
+        if (!StringParsers::ParseHexChar(ascii, val))
+            return 0;
+        return ascii;
+    }
+    else if (info.type == ColInfo::kTopNybble)
+    {
+        if (!StringParsers::ParseHexChar(ascii, val))
+            return 0;
+        return ascii;
+    }
+    else if (info.type == ColInfo::kASCII)
+    {
+        if (ascii >= 32)
+            return ascii;
+    }
+    return 0;
 }
 
 void MemoryWidget::memoryChangedSlot(int memorySlot, uint64_t commandId)
@@ -614,7 +640,10 @@ void MemoryWidget::keyPressEvent(QKeyEvent* event)
 
         char key = IsEditKey(event);
         if (key)
-            EditKey(key);
+        {
+            if (EditKey(key))
+                return;
+        }
     }
     QWidget::keyPressEvent(event);
 }

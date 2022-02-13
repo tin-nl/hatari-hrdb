@@ -67,7 +67,9 @@ private:
     void MoveRight();
     void PageUp(bool isKeyboard);
     void PageDown(bool isKeyboard);
-    void EditKey(char key);
+    // Returns true if key was used (so we know not to block it)
+    bool EditKey(char key);
+    char IsEditKey(const QKeyEvent *event);
 
     void SetAddress(uint32_t address);
     void RequestMemory();
