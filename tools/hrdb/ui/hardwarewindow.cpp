@@ -971,7 +971,7 @@ HardwareWindow::~HardwareWindow()
 void HardwareWindow::keyFocus()
 {
     activateWindow();
-    this->setFocus();
+    m_pView->setFocus();
 }
 
 //-----------------------------------------------------------------------------

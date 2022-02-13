@@ -628,7 +628,9 @@ MainWindow::MainWindow(QWidget *parent)
     m_pBreakpointsWidget = new BreakpointsWindow(this, m_pTargetModel, m_pDispatcher);
     m_pBreakpointsWidget->setWindowTitle("Breakpoints (Alt+B)");
     m_pConsoleWindow = new ConsoleWindow(this, &m_session);
+
     m_pHardwareWindow = new HardwareWindow(this, &m_session);
+    m_pHardwareWindow->setWindowTitle("Hardware (Alt+H)");
 
     m_pExceptionDialog = new ExceptionDialog(this, m_pTargetModel, m_pDispatcher);
     m_pRunDialog = new RunDialog(this, &m_session);
@@ -1146,6 +1148,7 @@ void MainWindow::createActions()
     m_pConsoleWindowAct->setCheckable(true);
 
     m_pHardwareWindowAct = new QAction(tr("&Hardware"), this);
+    m_pHardwareWindowAct->setShortcut(QKeySequence("Alt+H"));
     m_pHardwareWindowAct->setStatusTip(tr("Show the Hardware window"));
     m_pHardwareWindowAct->setCheckable(true);
 
@@ -1201,7 +1204,7 @@ void MainWindow::createMenus()
     m_pWindowMenu->addAction(m_pConsoleWindowAct);
     m_pWindowMenu->addAction(m_pHardwareWindowAct);
 
-    m_pHelpMenu = menuBar()->addMenu(tr("&Help"));
+    m_pHelpMenu = menuBar()->addMenu(tr("Help"));
     m_pHelpMenu->addAction(m_pAboutAct);
     m_pHelpMenu->addAction(m_pAboutQtAct);
 }

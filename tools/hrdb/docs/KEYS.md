@@ -13,6 +13,7 @@ Normal focus
 - Alt+M - Focus Memory View
 - Alt+G - Focus Graphics Inspector
 - Alt+B - Focus Breakpoints View
+- Alt+H - Focus Hardware View
 
 Disassembly focus
 =================
