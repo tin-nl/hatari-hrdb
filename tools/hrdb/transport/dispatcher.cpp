@@ -56,7 +56,7 @@ uint64_t Dispatcher::InsertFlush()
     pNewCmd->m_uid = m_responseUid++;
     m_sentCommands.push_front(pNewCmd);
     // Don't send it down the wire!
-    return 0;
+    return pNewCmd->m_uid;
 }
 
 uint64_t Dispatcher::RequestMemory(MemorySlot slot, uint32_t address, uint32_t size)
@@ -111,9 +111,10 @@ void Dispatcher::ReceivePacket(const char* response)
         if (m_sentCommands.back()->m_cmd != "flush")
             break;
 
+        uint64_t commandId = m_sentCommands.back()->m_uid;
         delete m_sentCommands.back();
         m_sentCommands.pop_back();
-        m_pTargetModel->Flush();
+        m_pTargetModel->Flush(commandId);
     }
 
     // Check for a notification
@@ -163,9 +164,10 @@ void Dispatcher::ReceivePacket(const char* response)
             if (m_sentCommands.back()->m_cmd != "flush")
                 break;
 
+            uint64_t commandId = m_sentCommands.back()->m_uid;
             delete m_sentCommands.back();
             m_sentCommands.pop_back();
-            m_pTargetModel->Flush();
+            m_pTargetModel->Flush(commandId);
         }
     }
     else

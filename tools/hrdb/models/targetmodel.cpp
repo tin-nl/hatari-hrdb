@@ -144,9 +144,9 @@ void TargetModel::ConsoleCommand()
     emit exceptionMaskChanged();
 }
 
-void TargetModel::Flush()
+void TargetModel::Flush(uint64_t commmandId)
 {
-    emit changedFlush(m_changedFlags);
+    emit flushSignal(m_changedFlags, commmandId);
     m_changedFlags.Clear();
 }
 

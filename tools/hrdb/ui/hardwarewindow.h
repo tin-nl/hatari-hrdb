@@ -6,6 +6,7 @@
 #include <QTreeView>
 #include "../models/memory.h"
 #include "../models/session.h"
+#include "../models/targetmodel.h"
 #include "showaddressactions.h"
 
 class QTreeView;
@@ -80,8 +81,8 @@ public slots:
     void copyToClipboardSlot();
     void connectChangedSlot();
     void startStopChangedSlot();
+    void flushSlot(const TargetChangedFlags& flags, uint64_t commandId);
     void memoryChangedSlot(int memorySlot, uint64_t commandId);
-    void ymChangedSlot();
     void settingsChangedSlot();
 
 private:
@@ -99,6 +100,7 @@ private:
     HardwareTreeView*           m_pView;
     HardwareTreeModel*          m_pModel;
     QVector<HardwareField*>     m_fields;
+    uint64_t                    m_flushUid;
 };
 
 #endif // HARDWAREWINDOW_H

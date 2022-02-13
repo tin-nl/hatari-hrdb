@@ -77,7 +77,8 @@ public:
     // User-added console command. Anything can happen!
     void ConsoleCommand();
 
-    void Flush();
+    // User-inserted dummy command to signal e.g. end of a series of updates
+    void Flush(uint64_t commmandId);
 
 	// NOTE: all these return copies to avoid data contention
     MACHINETYPE	GetMachineType() const { return m_machineType; }
@@ -106,7 +107,8 @@ signals:
 
     void startStopChangedSignalDelayed(int running);
 
-    void changedFlush(const TargetChangedFlags& flags);
+    // When a user-inserted flush is the next command
+    void flushSignal(const TargetChangedFlags& flags, uint64_t uid);
 
 	// When new CPU registers are changed
     void registersChangedSignal(uint64_t commandId);

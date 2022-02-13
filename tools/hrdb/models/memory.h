@@ -7,7 +7,7 @@
 static const int kNumDisasmViews = 2;
 static const int kNumMemoryViews = 4;
 
-enum MemorySlot
+enum MemorySlot : int
 {
     kNone,          // e.g. regs
     kMainPC,        // Memory around the stopped PC for the main view (to allow stepping etc)
@@ -21,8 +21,14 @@ enum MemorySlot
     kGraphicsInspector = kMemoryView0 + kNumMemoryViews,    // gfx bitmap
     kGraphicsInspectorVideoRegs,                            // same as kVideo but synced with graphics inspector requests
 
-    kHardwareWindow,        // Multiple (overlaid) memory requests -- the view takes a copy
+    kHardwareWindowMmu,
+    kHardwareWindowVideo,
+    kHardwareWindowMfp,
+    kHardwareWindowBlitter,
     kHardwareWindowMfpVecs,
+
+    kHardwareWindowStart = kHardwareWindowMmu,
+    kHardwareWindowEnd = kHardwareWindowMfpVecs,
 
     kBasePage,          // Bottom 256 bytes for vectors
     kMemorySlotCount

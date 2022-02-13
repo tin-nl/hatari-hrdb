@@ -20,13 +20,44 @@
 #include "showaddressactions.h"
 #include "symboltext.h"
 
+
 //-----------------------------------------------------------------------------
-bool GetField(const Memory& mem, const Regs::FieldDef& def, QString& result)
+// Wrappers to get memory from multiple memory slots
+static bool HasAddressMulti(const TargetModel* pModel, uint32_t address, uint32_t numBytes)
 {
-    if (!mem.HasAddressMulti(def.regAddr, def.size))
+    for (int i = MemorySlot::kHardwareWindowStart; i <= MemorySlot::kHardwareWindowEnd; ++i)
+    {
+        const Memory* pMem = pModel->GetMemory(static_cast<MemorySlot>(i));
+        if (!pMem)
+            continue;
+        if (pMem->HasAddressMulti(address, numBytes))
+            return true;
+    }
+    return false;
+}
+
+//-----------------------------------------------------------------------------
+uint32_t ReadAddressMulti(const TargetModel* pModel, uint32_t address, uint32_t numBytes)
+{
+    for (int i = MemorySlot::kHardwareWindowStart; i <= MemorySlot::kHardwareWindowEnd; ++i)
+    {
+        const Memory* pMem = pModel->GetMemory(static_cast<MemorySlot>(i));
+        if (!pMem)
+            continue;
+        if (!pMem->HasAddressMulti(address, numBytes))
+            continue;
+        return pMem->ReadAddressMulti(address, numBytes);
+    }
+    return 0;
+}
+
+//-----------------------------------------------------------------------------
+bool GetField(const TargetModel* pModel, const Regs::FieldDef& def, QString& result)
+{
+    if (!HasAddressMulti(pModel, def.regAddr, def.size))
         return false;
 
-    uint32_t regVal = mem.ReadAddressMulti(def.regAddr, def.size);
+    uint32_t regVal = ReadAddressMulti(pModel, def.regAddr, def.size);
     uint32_t extracted = (regVal >> def.shift) & def.mask;
     if (def.strings)
         result = QString::asprintf("%s ($%x)", GetString(def.strings, extracted), extracted);
@@ -93,10 +124,6 @@ public:
     {
         return false;
     }
-    virtual bool UpdateYm(const TargetModel*)
-    {
-        return false;
-    }
 
 protected:
 };
@@ -112,7 +139,6 @@ public:
     }
 
     virtual ~HardwareHeader();
-    virtual bool UpdateYm(const TargetModel* ) { return false; }
     virtual bool isHeader() const { return true; }
 };
 
@@ -199,7 +225,7 @@ public:
     {
     }
 
-    bool UpdateYm(const TargetModel* pTarget);
+    bool Update(const TargetModel* pTarget);
     int m_index;
 };
 
@@ -209,7 +235,7 @@ class HardwareFieldYmEnvShape : public HardwareField
 public:
     HardwareFieldYmEnvShape() {}
 
-    bool UpdateYm(const TargetModel* pTarget);
+    bool Update(const TargetModel* pTarget);
 };
 
 //-----------------------------------------------------------------------------
@@ -218,7 +244,7 @@ class HardwareFieldYmMixer : public HardwareField
 public:
     HardwareFieldYmMixer() {}
 
-    bool UpdateYm(const TargetModel* pTarget);
+    bool Update(const TargetModel* pTarget);
 };
 
 //-----------------------------------------------------------------------------
@@ -230,7 +256,7 @@ public:
     {
     }
 
-    bool UpdateYm(const TargetModel* pTarget);
+    bool Update(const TargetModel* pTarget);
     int m_index;
 };
 
@@ -272,9 +298,8 @@ HardwareHeader::~HardwareHeader()
 //-----------------------------------------------------------------------------
 bool HardwareFieldRegEnum::Update(const TargetModel* pTarget)
 {
-    const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
     QString str;
-    if (!GetField(mem, m_def, str))
+    if (!GetField(pTarget, m_def, str))
         return false;       // Wrong memory
 
     m_changed = m_text != str;
@@ -285,17 +310,16 @@ bool HardwareFieldRegEnum::Update(const TargetModel* pTarget)
 //-----------------------------------------------------------------------------
 bool HardwareFieldMultiField::Update(const TargetModel* pTarget)
 {
-    const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
     QString res;
     QTextStream ref(&res);
     const Regs::FieldDef** pDef = m_pDefs;
     for (; *pDef; ++pDef)
     {
         const Regs::FieldDef* pCurrDef = *pDef;
-        if (!mem.HasAddress(pCurrDef->regAddr))
+        if (!HasAddressMulti(pTarget, pCurrDef->regAddr, 1))
             return false;
-        uint8_t regVal = mem.ReadAddressByte(pCurrDef->regAddr);
-        uint16_t extracted = (regVal >> pCurrDef->shift) & pCurrDef->mask;
+        uint32_t regVal = ReadAddressMulti(pTarget, pCurrDef->regAddr, 1);
+        uint32_t extracted = (regVal >> pCurrDef->shift) & pCurrDef->mask;
 
         if (pCurrDef->mask == 1 && !pCurrDef->strings)
         {
@@ -344,33 +368,42 @@ HardwareFieldAddr::~HardwareFieldAddr()
 //-----------------------------------------------------------------------------
 bool HardwareFieldAddr::Update(const TargetModel* pTarget)
 {
-    const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
-    const Memory* memB = pTarget->GetMemory(MemorySlot::kBasePage);
+    const Memory* memVid  = pTarget->GetMemory(MemorySlot::kHardwareWindowVideo);
+    const Memory* memBase = pTarget->GetMemory(MemorySlot::kBasePage);
+    const Memory* memBlit = pTarget->GetMemory(MemorySlot::kHardwareWindowBlitter);
+    const Memory* memMfp = pTarget->GetMemory(MemorySlot::kHardwareWindowMfpVecs);
 
     uint32_t address = 0;
     bool valid = false;
     switch (m_type)
     {
     case Type::ScreenBase:
-        valid = (HardwareST::GetVideoBase(mem, pTarget->GetMachineType(), address)); break;
+        if (!memVid)
+            break;
+        valid = (HardwareST::GetVideoBase(*memVid, pTarget->GetMachineType(), address)); break;
     case Type::ScreenCurr:
-        valid = (HardwareST::GetVideoCurrent(mem, address)); break;
+        if (!memVid)
+            break;
+        valid = (HardwareST::GetVideoCurrent(*memVid, address)); break;
     case Type::BltSrc:
-        valid = (HardwareST::GetBlitterSrc(mem, pTarget->GetMachineType(), address)); break;
+        if (!memBlit)
+            break;
+        valid = (HardwareST::GetBlitterSrc(*memBlit, pTarget->GetMachineType(), address)); break;
     case Type::BltDst:
-        valid = (HardwareST::GetBlitterDst(mem, pTarget->GetMachineType(), address)); break;
+        if (!memBlit)
+            break;
+        valid = (HardwareST::GetBlitterDst(*memBlit, pTarget->GetMachineType(), address)); break;
     case Type::BasePage:
-        if (memB)
-        {
-            valid = memB->HasAddressMulti(m_address, 4);
-            if (valid)
-                address = memB->ReadAddressMulti(m_address, 4);
-        }
+        if (!memBase)
+            break;
+        valid = memBase->HasAddressMulti(m_address, 4);
+        if (valid)
+            address = memBase->ReadAddressMulti(m_address, 4);
         break;
     case Type::Mfp:
         {
-            const Memory* memMfp = pTarget->GetMemory(MemorySlot::kHardwareWindowMfpVecs);
-            if (memMfp)
+            if (!memMfp)
+                break;
             {
                 uint32_t base = memMfp->GetAddress();
                 valid = memMfp->HasAddressMulti(base + m_address * 4, 4);
@@ -406,7 +439,7 @@ bool HardwareFieldYm::Update(const TargetModel* pTarget)
 }
 
 //-----------------------------------------------------------------------------
-bool HardwareFieldYmPeriod::UpdateYm(const TargetModel *pTarget)
+bool HardwareFieldYmPeriod::Update(const TargetModel *pTarget)
 {
     uint16_t valLo = (pTarget->GetYm().m_regs[m_index]);
     uint16_t valHi = (pTarget->GetYm().m_regs[m_index + 1]);
@@ -438,7 +471,7 @@ bool HardwareFieldYmPeriod::UpdateYm(const TargetModel *pTarget)
 }
 
 //-----------------------------------------------------------------------------
-bool HardwareFieldYmEnvShape::UpdateYm(const TargetModel *pTarget)
+bool HardwareFieldYmEnvShape::Update(const TargetModel *pTarget)
 {
     uint16_t val = (pTarget->GetYm().m_regs[Regs::YM_PERIOD_ENV_SHAPE]);
     const char* pString = Regs::GetString(static_cast<Regs::ENV_SHAPE>(val));
@@ -449,7 +482,7 @@ bool HardwareFieldYmEnvShape::UpdateYm(const TargetModel *pTarget)
 }
 
 //-----------------------------------------------------------------------------
-bool HardwareFieldYmMixer::UpdateYm(const TargetModel *pTarget)
+bool HardwareFieldYmMixer::Update(const TargetModel *pTarget)
 {
     uint32_t val = (pTarget->GetYm().m_regs[Regs::YM_MIXER]);
 
@@ -474,7 +507,7 @@ bool HardwareFieldYmMixer::UpdateYm(const TargetModel *pTarget)
 }
 
 //-----------------------------------------------------------------------------
-bool HardwareFieldYmVolume::UpdateYm(const TargetModel *pTarget)
+bool HardwareFieldYmVolume::Update(const TargetModel *pTarget)
 {
     uint16_t val = pTarget->GetYm().m_regs[m_index];
     uint8_t squareVol = Regs::GetField_YM_VOLUME_A_VOL(val);
@@ -502,7 +535,7 @@ HardwareBitmap::~HardwareBitmap()
 //-----------------------------------------------------------------------------
 bool HardwareBitmapBlitterHalftone::Update(const TargetModel *pTarget)
 {
-    const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindow);
+    const Memory& mem = *pTarget->GetMemory(MemorySlot::kHardwareWindowBlitter);
     uint32_t address = Regs::BLT_HALFTONE_0;
 
     if (!mem.HasAddressMulti(address, 16 * 2U))
@@ -914,7 +947,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     connect(m_pTargetModel,  &TargetModel::connectChangedSignal,   this, &HardwareWindow::connectChangedSlot);
     connect(m_pTargetModel,  &TargetModel::startStopChangedSignal, this, &HardwareWindow::startStopChangedSlot);
     connect(m_pTargetModel,  &TargetModel::memoryChangedSignal,    this, &HardwareWindow::memoryChangedSlot);
-    connect(m_pTargetModel,  &TargetModel::ymChangedSignal,        this, &HardwareWindow::ymChangedSlot);
+    connect(m_pTargetModel,  &TargetModel::flushSignal,            this, &HardwareWindow::flushSlot);
 
     connect(m_pSession,      &Session::settingsChanged,            this, &HardwareWindow::settingsChangedSlot);
 
@@ -928,17 +961,20 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     m_pView->resizeColumnToContents(0);
 }
 
+//-----------------------------------------------------------------------------
 HardwareWindow::~HardwareWindow()
 {
 
 }
 
+//-----------------------------------------------------------------------------
 void HardwareWindow::keyFocus()
 {
     activateWindow();
     this->setFocus();
 }
 
+//-----------------------------------------------------------------------------
 void HardwareWindow::loadSettings()
 {
     QSettings settings;
@@ -948,6 +984,7 @@ void HardwareWindow::loadSettings()
     settings.endGroup();
 }
 
+//-----------------------------------------------------------------------------
 void HardwareWindow::saveSettings()
 {
     QSettings settings;
@@ -988,14 +1025,9 @@ void HardwareWindow::copyToClipboardSlot()
 //-----------------------------------------------------------------------------
 void HardwareWindow::connectChangedSlot()
 {
-    if (m_pTargetModel->IsConnected())
+    if (!m_pTargetModel->IsConnected())
     {
-        if (m_pTargetModel->IsConnected())
-        {
-        }
-    }
-    else
-    {
+        // Disconnect
         // Empty all fields
         for (auto pField : m_fields)
         {
@@ -1009,25 +1041,40 @@ void HardwareWindow::connectChangedSlot()
 //-----------------------------------------------------------------------------
 void HardwareWindow::startStopChangedSlot()
 {
-    if (m_pTargetModel->IsRunning())
+    if (!m_pTargetModel->IsRunning())
     {
+        // Stopped -- request data
+        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowMmu,     Regs::MMU_CONFIG,    0x1);
+        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowVideo,   Regs::VID_REG_BASE,  0x70);
 
-    }
-    else {
-        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::MMU_CONFIG,    0x1);
-        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::VID_REG_BASE,  0x70);
-        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::MFP_GPIP,      0x30);
-        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindow, Regs::BLT_HALFTONE_0,0x40);
-
+        // This one triggers an extra memory request in memoryChangedSlot() for the MFP vectors
+        // which are dependent on a register
+        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowMfp,     Regs::MFP_GPIP,      0x30);
+        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowBlitter, Regs::BLT_HALFTONE_0,0x40);
         m_pDispatcher->InfoYm();
     }
 }
 
+//-----------------------------------------------------------------------------
+void HardwareWindow::flushSlot(const TargetChangedFlags& flags, uint64_t commandId)
+{
+    if (commandId == m_flushUid)
+    {
+        // All commands necessary for the view are available, so update display
+        for (auto pField : m_fields)
+        {
+            if (pField->Update(m_pTargetModel))
+                m_pModel->dataChanged2(pField);
+        }
+    }
+}
+
+//-----------------------------------------------------------------------------
 void HardwareWindow::memoryChangedSlot(int memorySlot, uint64_t /*commandId*/)
 {
-    if (memorySlot == MemorySlot::kHardwareWindow)
+    if (memorySlot == MemorySlot::kHardwareWindowMfp)
     {
-        const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kHardwareWindow);
+        const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kHardwareWindowMfp);
 
         // Special case: MFP vector base register
         uint32_t vecBase;
@@ -1039,45 +1086,35 @@ void HardwareWindow::memoryChangedSlot(int memorySlot, uint64_t /*commandId*/)
 
             // Request memory
             m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowMfpVecs, vecAddr, 4 * 32);
-        }
-    }
 
-    if (memorySlot == MemorySlot::kHardwareWindow || memorySlot == MemorySlot::kHardwareWindowMfpVecs)
-    {
-        for (auto pField : m_fields)
-        {
-            if (pField->Update(m_pTargetModel))
-                m_pModel->dataChanged2(pField);
+            // Insert the flush.
+            // The flush's callback will trigger recalculation of the table model.
+            m_flushUid = m_pDispatcher->InsertFlush();
         }
     }
 }
 
-void HardwareWindow::ymChangedSlot()
-{
-    for (auto pField : m_fields)
-    {
-        if (pField->UpdateYm(m_pTargetModel))
-            m_pModel->dataChanged2(pField);
-    }
-}
-
+//-----------------------------------------------------------------------------
 void HardwareWindow::settingsChangedSlot()
 {
     m_pModel->UpdateSettings(m_pSession->GetSettings());
 }
 
+//-----------------------------------------------------------------------------
 void HardwareWindow::addField(HardwareBase* pLayout, const QString& title, const Regs::FieldDef &def)
 {
     HardwareFieldRegEnum* pField = new HardwareFieldRegEnum(def);
     addShared(pLayout, title, pField);
 }
 
+//-----------------------------------------------------------------------------
 void HardwareWindow::addMultiField(HardwareBase* pLayout, const QString& title, const Regs::FieldDef** defs)
 {
     HardwareFieldMultiField* pField = new HardwareFieldMultiField(defs);
     addShared(pLayout, title, pField);
 }
 
+//-----------------------------------------------------------------------------
 void HardwareWindow::addShared(HardwareBase *pLayout, const QString &title, HardwareField *pField)
 {
     m_fields.append(pField);
