@@ -853,7 +853,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addField(pExpVideo,  "Resolution",             Regs::g_fieldDef_VID_SHIFTER_RES_RES);
     addField(pExpVideo,  "Sync Rate",              Regs::g_fieldDef_VID_SYNC_MODE_RATE);
     addShared(pExpVideo, "Screen Base Address",    new HardwareFieldAddr(HardwareFieldAddr::ScreenBase));
-    //addShared(pExpVideo, "Current Read Address",   new HardwareFieldAddr(HardwareFieldAddr::ScreenCurr));
+    addShared(pExpVideo, "Current Read Address",   new HardwareFieldAddr(HardwareFieldAddr::ScreenCurr));
 
     addField(pExpVideo, "Horizontal Scroll (STE)", Regs::g_fieldDef_VID_HORIZ_SCROLL_STE_PIXELS);
     addField(pExpVideo, "Scanline offset (STE)",   Regs::g_fieldDef_VID_SCANLINE_OFFSET_STE_ALL);
