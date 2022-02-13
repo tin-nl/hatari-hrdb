@@ -190,7 +190,7 @@ static const uint32_t VID_CURR_HIGH                  = 0xff8205;
 static const uint32_t VID_CURR_MID                   = 0xff8207;
 static const uint32_t VID_CURR_LOW                   = 0xff8209;
 static const uint32_t VID_BASE_LOW_STE               = 0xff820d;
-static const uint32_t VID_SCANLINE_OFFSET_STE        = 0xff820e;
+static const uint32_t VID_SCANLINE_OFFSET_STE        = 0xff820f;
 static const uint32_t VID_HORIZ_SCROLL_STE           = 0xff8265;
 static const uint32_t VID_SYNC_MODE                  = 0xff820a;
 static const uint32_t VID_PAL_0                      = 0xff8240;
@@ -327,7 +327,7 @@ inline uint8_t GetField_VID_BASE_LOW_STE_ALL(uint32_t value) { return static_cas
 extern const FieldDef g_fieldDef_VID_BASE_LOW_STE_ALL;
 
 
-/* Register VID_SCANLINE_OFFSET_STE ($ff820e)*/
+/* Register VID_SCANLINE_OFFSET_STE ($ff820f)*/
 /* Field ALL */
 static const uint32_t VID_SCANLINE_OFFSET_STE_ALL_SHIFT = 0;
 static const uint32_t VID_SCANLINE_OFFSET_STE_ALL_MASK = 255;
