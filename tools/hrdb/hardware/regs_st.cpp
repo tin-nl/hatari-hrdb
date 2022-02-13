@@ -156,6 +156,20 @@ const char* GetString(BLT_OP val)
 	if (val==BLT_OP::ONES) return "All ones";
 	return "?";
 }
+const char* GetString(IS_STEREO val)
+{
+	if (val==IS_STEREO::MONO) return "Mono";
+	if (val==IS_STEREO::STEREO) return "Stereo";
+	return "?";
+}
+const char* GetString(DMA_FREQ val)
+{
+	if (val==DMA_FREQ::FREQ_6258) return "6258Hz (STE only)";
+	if (val==DMA_FREQ::FREQ_12517) return "12517Hz";
+	if (val==DMA_FREQ::FREQ_25033) return "25033Hz";
+	if (val==DMA_FREQ::FREQ_50066) return "50066Hz";
+	return "?";
+}
 const StringDef g_enumStringsMMU_BANK[] = {
 	{ 0, "128K" },
 	{ 1, "512K" },
@@ -283,6 +297,18 @@ const StringDef g_enumStringsBLT_OP[] = {
 	{ 13, "NOT source OR destination" },
 	{ 14, "NOT source OR NOT destination" },
 	{ 15, "All ones" },
+	{ 0, nullptr }
+};
+const StringDef g_enumStringsIS_STEREO[] = {
+	{ 0, "Mono" },
+	{ 1, "Stereo" },
+	{ 0, nullptr }
+};
+const StringDef g_enumStringsDMA_FREQ[] = {
+	{ 0, "6258Hz (STE only)" },
+	{ 1, "12517Hz" },
+	{ 2, "25033Hz" },
+	{ 3, "50066Hz" },
 	{ 0, nullptr }
 };
 const FieldDef g_fieldDef_MMU_CONFIG_BANK1 = { Regs::MMU_CONFIG, Regs::MMU_CONFIG_BANK1_MASK, 1, Regs::MMU_CONFIG_BANK1_SHIFT, "BANK1", g_enumStringsMMU_BANK, "Size of memory bank 1" };
@@ -455,6 +481,17 @@ const FieldDef g_fieldDef_BLT_CTRL_1_BUSY = { Regs::BLT_CTRL_1, Regs::BLT_CTRL_1
 const FieldDef g_fieldDef_BLT_CTRL_2_SKEW = { Regs::BLT_CTRL_2, Regs::BLT_CTRL_2_SKEW_MASK, 1, Regs::BLT_CTRL_2_SKEW_SHIFT, "SKEW", nullptr, "Source Skew" };
 const FieldDef g_fieldDef_BLT_CTRL_2_NFSR = { Regs::BLT_CTRL_2, Regs::BLT_CTRL_2_NFSR_MASK, 1, Regs::BLT_CTRL_2_NFSR_SHIFT, "NFSR", nullptr, "No Final Source Read" };
 const FieldDef g_fieldDef_BLT_CTRL_2_FXSR = { Regs::BLT_CTRL_2, Regs::BLT_CTRL_2_FXSR_MASK, 1, Regs::BLT_CTRL_2_FXSR_SHIFT, "FXSR", nullptr, "Force Extra Source Read" };
+const FieldDef g_fieldDef_DMA_BUFFER_INTERRUPTS_i7_REPLAY = { Regs::DMA_BUFFER_INTERRUPTS, Regs::DMA_BUFFER_INTERRUPTS_i7_REPLAY_MASK, 1, Regs::DMA_BUFFER_INTERRUPTS_i7_REPLAY_SHIFT, "i7_REPLAY", nullptr, "MFP-15-Int (I7) at end of replay buffer" };
+const FieldDef g_fieldDef_DMA_BUFFER_INTERRUPTS_I7_RECORD = { Regs::DMA_BUFFER_INTERRUPTS, Regs::DMA_BUFFER_INTERRUPTS_I7_RECORD_MASK, 1, Regs::DMA_BUFFER_INTERRUPTS_I7_RECORD_SHIFT, "I7_RECORD", nullptr, "MFP-15-Int (I7) at end of record buffer" };
+const FieldDef g_fieldDef_DMA_BUFFER_INTERRUPTS_TIMERA_REPLAY = { Regs::DMA_BUFFER_INTERRUPTS, Regs::DMA_BUFFER_INTERRUPTS_TIMERA_REPLAY_MASK, 1, Regs::DMA_BUFFER_INTERRUPTS_TIMERA_REPLAY_SHIFT, "TIMERA_REPLAY", nullptr, "TimerA-Int at end of replay buffer" };
+const FieldDef g_fieldDef_DMA_BUFFER_INTERRUPTS_TIMERA_RECORD = { Regs::DMA_BUFFER_INTERRUPTS, Regs::DMA_BUFFER_INTERRUPTS_TIMERA_RECORD_MASK, 1, Regs::DMA_BUFFER_INTERRUPTS_TIMERA_RECORD_SHIFT, "TIMERA_RECORD", nullptr, "TimerA-Int at end of record buffer" };
+const FieldDef g_fieldDef_DMA_CONTROL_REPLAY = { Regs::DMA_CONTROL, Regs::DMA_CONTROL_REPLAY_MASK, 1, Regs::DMA_CONTROL_REPLAY_SHIFT, "REPLAY", nullptr, "Replay enabled" };
+const FieldDef g_fieldDef_DMA_CONTROL_LOOP_REPLAY = { Regs::DMA_CONTROL, Regs::DMA_CONTROL_LOOP_REPLAY_MASK, 1, Regs::DMA_CONTROL_LOOP_REPLAY_SHIFT, "LOOP_REPLAY", nullptr, "" };
+const FieldDef g_fieldDef_DMA_CONTROL_RECORD = { Regs::DMA_CONTROL, Regs::DMA_CONTROL_RECORD_MASK, 1, Regs::DMA_CONTROL_RECORD_SHIFT, "RECORD", nullptr, "Recording enabled" };
+const FieldDef g_fieldDef_DMA_CONTROL_LOOP_RECORD = { Regs::DMA_CONTROL, Regs::DMA_CONTROL_LOOP_RECORD_MASK, 1, Regs::DMA_CONTROL_LOOP_RECORD_SHIFT, "LOOP_RECORD", nullptr, "" };
+const FieldDef g_fieldDef_DMA_CONTROL_SELECT = { Regs::DMA_CONTROL, Regs::DMA_CONTROL_SELECT_MASK, 1, Regs::DMA_CONTROL_SELECT_SHIFT, "SELECT", nullptr, "0=record select, 1=replay select" };
+const FieldDef g_fieldDef_DMA_SND_MODE_DMA_FREQ = { Regs::DMA_SND_MODE, Regs::DMA_SND_MODE_DMA_FREQ_MASK, 1, Regs::DMA_SND_MODE_DMA_FREQ_SHIFT, "DMA_FREQ", g_enumStringsDMA_FREQ, "" };
+const FieldDef g_fieldDef_DMA_SND_MODE_FORMAT = { Regs::DMA_SND_MODE, Regs::DMA_SND_MODE_FORMAT_MASK, 1, Regs::DMA_SND_MODE_FORMAT_SHIFT, "FORMAT", g_enumStringsIS_STEREO, "" };
 /* Register Field Sets */
 
 const FieldDef* g_regFieldsDef_MMU_CONFIG[] = {
@@ -799,6 +836,26 @@ const FieldDef* g_regFieldsDef_BLT_CTRL_2[] = {
 	 &g_fieldDef_BLT_CTRL_2_SKEW,
 	 &g_fieldDef_BLT_CTRL_2_NFSR,
 	 &g_fieldDef_BLT_CTRL_2_FXSR,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_DMA_BUFFER_INTERRUPTS[] = {
+	 &g_fieldDef_DMA_BUFFER_INTERRUPTS_i7_REPLAY,
+	 &g_fieldDef_DMA_BUFFER_INTERRUPTS_I7_RECORD,
+	 &g_fieldDef_DMA_BUFFER_INTERRUPTS_TIMERA_REPLAY,
+	 &g_fieldDef_DMA_BUFFER_INTERRUPTS_TIMERA_RECORD,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_DMA_CONTROL[] = {
+	 &g_fieldDef_DMA_CONTROL_REPLAY,
+	 &g_fieldDef_DMA_CONTROL_LOOP_REPLAY,
+	 &g_fieldDef_DMA_CONTROL_RECORD,
+	 &g_fieldDef_DMA_CONTROL_LOOP_RECORD,
+	 &g_fieldDef_DMA_CONTROL_SELECT,
+	nullptr
+};
+const FieldDef* g_regFieldsDef_DMA_SND_MODE[] = {
+	 &g_fieldDef_DMA_SND_MODE_DMA_FREQ,
+	 &g_fieldDef_DMA_SND_MODE_FORMAT,
 	nullptr
 };
 } // namespace

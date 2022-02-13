@@ -191,7 +191,10 @@ public:
         BltSrc,
         BltDst,
         BasePage,
-        Mfp
+        Mfp,
+        DMASndStart,
+        DMASndCurr,
+        DMASndEnd,
     };
     HardwareFieldAddr(Type type, uint32_t address = 0);
     HardwareFieldAddr(uint32_t address);
@@ -372,6 +375,7 @@ bool HardwareFieldAddr::Update(const TargetModel* pTarget)
     const Memory* memBase = pTarget->GetMemory(MemorySlot::kBasePage);
     const Memory* memBlit = pTarget->GetMemory(MemorySlot::kHardwareWindowBlitter);
     const Memory* memMfp = pTarget->GetMemory(MemorySlot::kHardwareWindowMfpVecs);
+    const Memory* memDma = pTarget->GetMemory(MemorySlot::kHardwareWindowDmaSnd);
 
     uint32_t address = 0;
     bool valid = false;
@@ -393,6 +397,18 @@ bool HardwareFieldAddr::Update(const TargetModel* pTarget)
         if (!memBlit)
             break;
         valid = (HardwareST::GetBlitterDst(*memBlit, pTarget->GetMachineType(), address)); break;
+    case Type::DMASndStart:
+        if (!memDma)
+            break;
+        valid = (HardwareST::GetDmaStart(*memDma, pTarget->GetMachineType(), address)); break;
+    case Type::DMASndCurr:
+        if (!memDma)
+            break;
+        valid = (HardwareST::GetDmaCurr(*memDma, pTarget->GetMachineType(), address)); break;
+    case Type::DMASndEnd:
+        if (!memDma)
+            break;
+        valid = (HardwareST::GetDmaEnd(*memDma, pTarget->GetMachineType(), address)); break;
     case Type::BasePage:
         if (!memBase)
             break;
@@ -765,6 +781,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     HardwareHeader* pExpMfp = new HardwareHeader("MFP 68901", "Multi-Function Peripheral");
     HardwareHeader* pExpYm = new HardwareHeader("YM/PSG", "Soundchip");
     HardwareHeader* pExpBlt = new HardwareHeader("Blitter", "");
+    HardwareHeader* pExpDmaSnd = new HardwareHeader("DMA Sound", "");
     m_pRoot->AddChild(pExpVec);
 
     m_pRoot->AddChild(pExpMmu);
@@ -772,6 +789,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     m_pRoot->AddChild(pExpMfp);
     m_pRoot->AddChild(pExpYm);
     m_pRoot->AddChild(pExpBlt);
+    m_pRoot->AddChild(pExpDmaSnd);
 
     // ===== Vectors ====
     addShared(pExpVecExceptions, "Bus Error",           new HardwareFieldAddr(0x8));
@@ -894,7 +912,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
 
     // ===== BLITTER ====
     // TODO these need sign expansion etc
-   // addShared(pExpBlt, "Halftone RAM",     new HardwareBitmapBlitterHalftone(m_pSession));
+   // addShared(pExpBlt, "Halftone RAM",   new HardwareBitmapBlitterHalftone(m_pSession));
     addField( pExpBlt, "Src X Inc",        Regs::g_fieldDef_BLT_SRC_INC_X_ALL);
     addField( pExpBlt, "Src Y Inc",        Regs::g_fieldDef_BLT_SRC_INC_Y_ALL);
     addShared(pExpBlt, "Src Addr",         new HardwareFieldAddr(HardwareFieldAddr::BltSrc));
@@ -910,6 +928,14 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
 
     addMultiField(pExpBlt, "Control 1",    Regs::g_regFieldsDef_BLT_CTRL_1);
     addMultiField(pExpBlt, "Control 2",    Regs::g_regFieldsDef_BLT_CTRL_2);
+
+    // ===== DMA SND ====
+    addMultiField(pExpDmaSnd, "DMA Interrupts", Regs::g_regFieldsDef_DMA_BUFFER_INTERRUPTS);
+    addMultiField(pExpDmaSnd, "DMA Control",    Regs::g_regFieldsDef_DMA_CONTROL);
+    addShared(pExpDmaSnd, "Frame Start",        new HardwareFieldAddr(HardwareFieldAddr::DMASndStart));
+    addShared(pExpDmaSnd, "Frame Current",      new HardwareFieldAddr(HardwareFieldAddr::DMASndCurr));
+    addShared(pExpDmaSnd, "Frame End",          new HardwareFieldAddr(HardwareFieldAddr::DMASndEnd));
+    addMultiField(pExpDmaSnd, "DMA Sound Mode", Regs::g_regFieldsDef_DMA_SND_MODE);
 
     QPushButton* pCopyButton = new QPushButton(tr("Copy"), this);
 
@@ -931,6 +957,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     m_pView->setExpanded(m_pModel->createIndex2(pExpMfp), true);
     m_pView->setExpanded(m_pModel->createIndex2(pExpYm), true);
     m_pView->setExpanded(m_pModel->createIndex2(pExpBlt), true);
+    m_pView->setExpanded(m_pModel->createIndex2(pExpDmaSnd), true);
 
     pMainLayout->addWidget(pTopRegion);
     pMainLayout->addWidget(m_pView);
@@ -1051,6 +1078,7 @@ void HardwareWindow::startStopChangedSlot()
         // which are dependent on a register
         m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowMfp,     Regs::MFP_GPIP,      0x30);
         m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowBlitter, Regs::BLT_HALFTONE_0,0x40);
+        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowDmaSnd,  Regs::DMA_SND_BASE,  0x40);
         m_pDispatcher->InfoYm();
     }
 }

@@ -63,4 +63,42 @@ namespace HardwareST
         address = val & 0xffffff;
         return true;
     }
+
+    bool GetDmaStart(const Memory &mem, MACHINETYPE machineType, uint32_t &address)
+    {
+        if (!IsMachineSTE(machineType))
+            return false;
+        if (!mem.HasAddressMulti(Regs::DMA_START_HIGH, 5))
+            return false;
+        uint32_t hi = mem.ReadAddressByte(Regs::DMA_START_HIGH);
+        uint32_t mi = mem.ReadAddressByte(Regs::DMA_START_MID);
+        uint32_t lo = mem.ReadAddressByte(Regs::DMA_START_LOW);
+        address = (hi << 16) | (mi << 8) | lo;
+        return true;
+    }
+    bool GetDmaCurr(const Memory &mem, MACHINETYPE machineType, uint32_t &address)
+    {
+        if (!IsMachineSTE(machineType))
+            return false;
+        if (!mem.HasAddressMulti(Regs::DMA_CURR_HIGH, 5))
+            return false;
+        uint32_t hi = mem.ReadAddressByte(Regs::DMA_CURR_HIGH);
+        uint32_t mi = mem.ReadAddressByte(Regs::DMA_CURR_MID);
+        uint32_t lo = mem.ReadAddressByte(Regs::DMA_CURR_LOW);
+        address = (hi << 16) | (mi << 8) | lo;
+        return true;
+    }
+    bool GetDmaEnd(const Memory &mem, MACHINETYPE machineType, uint32_t &address)
+    {
+        if (!IsMachineSTE(machineType))
+            return false;
+        if (!mem.HasAddressMulti(Regs::DMA_END_HIGH, 5))
+            return false;
+        uint32_t hi = mem.ReadAddressByte(Regs::DMA_END_HIGH);
+        uint32_t mi = mem.ReadAddressByte(Regs::DMA_END_MID);
+        uint32_t lo = mem.ReadAddressByte(Regs::DMA_END_LOW);
+        address = (hi << 16) | (mi << 8) | lo;
+        return true;
+    }
+
 }

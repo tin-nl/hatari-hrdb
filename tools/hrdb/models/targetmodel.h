@@ -156,5 +156,6 @@ private:
 
 // Helper functions to check broad machine types
 extern bool IsMachineST(MACHINETYPE type);
+extern bool IsMachineSTE(MACHINETYPE type);
 
 #endif // TARGET_MODEL_H

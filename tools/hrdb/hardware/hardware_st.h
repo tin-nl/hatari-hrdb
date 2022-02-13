@@ -21,8 +21,13 @@ namespace HardwareST
 {
     bool GetVideoBase(const Memory& mem, MACHINETYPE machineType, uint32_t& address);
     bool GetVideoCurrent(const Memory& mem, uint32_t& address);
+
     bool GetBlitterSrc(const Memory& mem, MACHINETYPE machineType, uint32_t& address);
     bool GetBlitterDst(const Memory& mem, MACHINETYPE machineType, uint32_t& address);
+
+    bool GetDmaStart(const Memory& mem, MACHINETYPE machineType, uint32_t& address);
+    bool GetDmaCurr(const Memory& mem, MACHINETYPE machineType, uint32_t& address);
+    bool GetDmaEnd(const Memory& mem, MACHINETYPE machineType, uint32_t& address);
 }
 
 #endif // HARDWARE_ST_H

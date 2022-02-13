@@ -160,3 +160,8 @@ bool IsMachineST(MACHINETYPE type)
 {
     return (type == MACHINE_ST || type == MACHINE_MEGA_ST);
 }
+
+bool IsMachineSTE(MACHINETYPE type)
+{
+    return (type == MACHINE_STE || type == MACHINE_MEGA_STE);
+}

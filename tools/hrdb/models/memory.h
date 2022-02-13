@@ -26,9 +26,10 @@ enum MemorySlot : int
     kHardwareWindowMfp,
     kHardwareWindowBlitter,
     kHardwareWindowMfpVecs,
+    kHardwareWindowDmaSnd,
 
     kHardwareWindowStart = kHardwareWindowMmu,
-    kHardwareWindowEnd = kHardwareWindowMfpVecs,
+    kHardwareWindowEnd = kHardwareWindowDmaSnd,
 
     kBasePage,          // Bottom 256 bytes for vectors
     kMemorySlotCount

@@ -168,6 +168,20 @@ enum class BLT_OP : uint32_t {
 	ONES                 =     15  /* All ones */
 };
 
+/* Enum IS_STEREO */
+enum class IS_STEREO : uint32_t {
+	MONO                 =      0, /* Mono */
+	STEREO               =      1  /* Stereo */
+};
+
+/* Enum DMA_FREQ */
+enum class DMA_FREQ : uint32_t {
+	FREQ_6258            =      0, /* 6258Hz (STE only) */
+	FREQ_12517           =      1, /* 12517Hz */
+	FREQ_25033           =      2, /* 25033Hz */
+	FREQ_50066           =      3  /* 50066Hz */
+};
+
 /* Enum -> string lookup declarations */
 extern const char* GetString(MMU_BANK val);
 extern const char* GetString(RESOLUTION val);
@@ -181,6 +195,8 @@ extern const char* GetString(USARTLEN val);
 extern const char* GetString(ENV_SHAPE val);
 extern const char* GetString(BLT_HOP val);
 extern const char* GetString(BLT_OP val);
+extern const char* GetString(IS_STEREO val);
+extern const char* GetString(DMA_FREQ val);
 
 /* Register Addresses */
 static const uint32_t MMU_CONFIG                     = 0xff8001;
@@ -287,6 +303,19 @@ static const uint32_t BLT_HALFTONE_OP                = 0xff8a3a;
 static const uint32_t BLT_LOGICAL_OP                 = 0xff8a3b;
 static const uint32_t BLT_CTRL_1                     = 0xff8a3c;
 static const uint32_t BLT_CTRL_2                     = 0xff8a3d;
+static const uint32_t DMA_SND_BASE                   = 0xff8900;
+static const uint32_t DMA_BUFFER_INTERRUPTS          = 0xff8900;
+static const uint32_t DMA_CONTROL                    = 0xff8901;
+static const uint32_t DMA_START_HIGH                 = 0xff8903;
+static const uint32_t DMA_START_MID                  = 0xff8905;
+static const uint32_t DMA_START_LOW                  = 0xff8907;
+static const uint32_t DMA_CURR_HIGH                  = 0xff8909;
+static const uint32_t DMA_CURR_MID                   = 0xff890b;
+static const uint32_t DMA_CURR_LOW                   = 0xff890d;
+static const uint32_t DMA_END_HIGH                   = 0xff890f;
+static const uint32_t DMA_END_MID                    = 0xff8911;
+static const uint32_t DMA_END_LOW                    = 0xff8913;
+static const uint32_t DMA_SND_MODE                   = 0xff8921;
 
 /* Register Field Accessors */
 
@@ -1426,6 +1455,78 @@ inline bool GetField_BLT_CTRL_2_FXSR(uint32_t value) { return static_cast<bool>(
 extern const FieldDef g_fieldDef_BLT_CTRL_2_FXSR;
 
 
+/* Register DMA_BUFFER_INTERRUPTS ($ff8900)*/
+/* Field i7_REPLAY */
+static const uint32_t DMA_BUFFER_INTERRUPTS_i7_REPLAY_SHIFT = 0;
+static const uint32_t DMA_BUFFER_INTERRUPTS_i7_REPLAY_MASK = 1;
+inline bool GetField_DMA_BUFFER_INTERRUPTS_i7_REPLAY(uint32_t value) { return static_cast<bool>(((value)>>0) & 1); }
+extern const FieldDef g_fieldDef_DMA_BUFFER_INTERRUPTS_i7_REPLAY;
+
+/* Field I7_RECORD */
+static const uint32_t DMA_BUFFER_INTERRUPTS_I7_RECORD_SHIFT = 1;
+static const uint32_t DMA_BUFFER_INTERRUPTS_I7_RECORD_MASK = 1;
+inline bool GetField_DMA_BUFFER_INTERRUPTS_I7_RECORD(uint32_t value) { return static_cast<bool>(((value)>>1) & 1); }
+extern const FieldDef g_fieldDef_DMA_BUFFER_INTERRUPTS_I7_RECORD;
+
+/* Field TIMERA_REPLAY */
+static const uint32_t DMA_BUFFER_INTERRUPTS_TIMERA_REPLAY_SHIFT = 2;
+static const uint32_t DMA_BUFFER_INTERRUPTS_TIMERA_REPLAY_MASK = 1;
+inline bool GetField_DMA_BUFFER_INTERRUPTS_TIMERA_REPLAY(uint32_t value) { return static_cast<bool>(((value)>>2) & 1); }
+extern const FieldDef g_fieldDef_DMA_BUFFER_INTERRUPTS_TIMERA_REPLAY;
+
+/* Field TIMERA_RECORD */
+static const uint32_t DMA_BUFFER_INTERRUPTS_TIMERA_RECORD_SHIFT = 3;
+static const uint32_t DMA_BUFFER_INTERRUPTS_TIMERA_RECORD_MASK = 1;
+inline bool GetField_DMA_BUFFER_INTERRUPTS_TIMERA_RECORD(uint32_t value) { return static_cast<bool>(((value)>>3) & 1); }
+extern const FieldDef g_fieldDef_DMA_BUFFER_INTERRUPTS_TIMERA_RECORD;
+
+
+/* Register DMA_CONTROL ($ff8901)*/
+/* Field REPLAY */
+static const uint32_t DMA_CONTROL_REPLAY_SHIFT = 0;
+static const uint32_t DMA_CONTROL_REPLAY_MASK = 1;
+inline bool GetField_DMA_CONTROL_REPLAY(uint32_t value) { return static_cast<bool>(((value)>>0) & 1); }
+extern const FieldDef g_fieldDef_DMA_CONTROL_REPLAY;
+
+/* Field LOOP_REPLAY */
+static const uint32_t DMA_CONTROL_LOOP_REPLAY_SHIFT = 1;
+static const uint32_t DMA_CONTROL_LOOP_REPLAY_MASK = 1;
+inline bool GetField_DMA_CONTROL_LOOP_REPLAY(uint32_t value) { return static_cast<bool>(((value)>>1) & 1); }
+extern const FieldDef g_fieldDef_DMA_CONTROL_LOOP_REPLAY;
+
+/* Field RECORD */
+static const uint32_t DMA_CONTROL_RECORD_SHIFT = 4;
+static const uint32_t DMA_CONTROL_RECORD_MASK = 1;
+inline bool GetField_DMA_CONTROL_RECORD(uint32_t value) { return static_cast<bool>(((value)>>4) & 1); }
+extern const FieldDef g_fieldDef_DMA_CONTROL_RECORD;
+
+/* Field LOOP_RECORD */
+static const uint32_t DMA_CONTROL_LOOP_RECORD_SHIFT = 5;
+static const uint32_t DMA_CONTROL_LOOP_RECORD_MASK = 1;
+inline bool GetField_DMA_CONTROL_LOOP_RECORD(uint32_t value) { return static_cast<bool>(((value)>>5) & 1); }
+extern const FieldDef g_fieldDef_DMA_CONTROL_LOOP_RECORD;
+
+/* Field SELECT */
+static const uint32_t DMA_CONTROL_SELECT_SHIFT = 7;
+static const uint32_t DMA_CONTROL_SELECT_MASK = 1;
+inline bool GetField_DMA_CONTROL_SELECT(uint32_t value) { return static_cast<bool>(((value)>>7) & 1); }
+extern const FieldDef g_fieldDef_DMA_CONTROL_SELECT;
+
+
+/* Register DMA_SND_MODE ($ff8921)*/
+/* Field DMA_FREQ */
+static const uint32_t DMA_SND_MODE_DMA_FREQ_SHIFT = 0;
+static const uint32_t DMA_SND_MODE_DMA_FREQ_MASK = 3;
+inline DMA_FREQ GetField_DMA_SND_MODE_DMA_FREQ(uint32_t value) { return static_cast<DMA_FREQ>(((value)>>0) & 3); }
+extern const FieldDef g_fieldDef_DMA_SND_MODE_DMA_FREQ;
+
+/* Field FORMAT */
+static const uint32_t DMA_SND_MODE_FORMAT_SHIFT = 7;
+static const uint32_t DMA_SND_MODE_FORMAT_MASK = 1;
+inline IS_STEREO GetField_DMA_SND_MODE_FORMAT(uint32_t value) { return static_cast<IS_STEREO>(((value)>>7) & 1); }
+extern const FieldDef g_fieldDef_DMA_SND_MODE_FORMAT;
+
+
 /* Register Field Sets */
 
 extern const FieldDef* g_regFieldsDef_MMU_CONFIG[];
@@ -1486,5 +1587,8 @@ extern const FieldDef* g_regFieldsDef_BLT_HALFTONE_OP[];
 extern const FieldDef* g_regFieldsDef_BLT_LOGICAL_OP[];
 extern const FieldDef* g_regFieldsDef_BLT_CTRL_1[];
 extern const FieldDef* g_regFieldsDef_BLT_CTRL_2[];
+extern const FieldDef* g_regFieldsDef_DMA_BUFFER_INTERRUPTS[];
+extern const FieldDef* g_regFieldsDef_DMA_CONTROL[];
+extern const FieldDef* g_regFieldsDef_DMA_SND_MODE[];
 } // namespace
 #endif
