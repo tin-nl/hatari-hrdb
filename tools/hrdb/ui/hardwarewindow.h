@@ -56,7 +56,7 @@ class HardwareTreeView : public QTreeView
 public:
     HardwareTreeView(QWidget* parent, Session* pSession);
 protected:
-    virtual void contextMenuEvent(QContextMenuEvent *event);
+    virtual void contextMenuEvent(QContextMenuEvent *event) override;
 
     // Menu actions
     QMenu*              m_pShowAddressMenu;

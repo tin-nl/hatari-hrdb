@@ -20,6 +20,7 @@ struct FieldDef
     uint8_t shift;
     const char* name;
     const StringDef* strings;
+    const char* comment;
 };
 
 // Look up a string in the table

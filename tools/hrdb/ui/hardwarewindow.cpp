@@ -8,6 +8,7 @@
 #include <QSettings>
 #include <QTreeView>
 #include <QVBoxLayout>
+#include <QToolTip>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -70,6 +71,7 @@ public:
 
     QString                    m_title;
     QString                    m_text;
+    QString                    m_tooltip;
     uint32_t                   m_memAddress;            // For right-click menu, or ~0U
     bool                       m_changed;
 
@@ -127,6 +129,7 @@ public:
         m_def(def)
     {
         m_memAddress = m_def.regAddr;
+        m_tooltip = def.comment;
     }
 
     bool Update(const TargetModel* pTarget);
@@ -568,6 +571,12 @@ QVariant HardwareTreeModel::data(const QModelIndex &index, int role) const
             return item->m_text;
         }
     }
+
+    if (role == Qt::ToolTipRole)
+    {
+        return item->m_tooltip;
+    }
+
     return QVariant();
 }
 
@@ -672,6 +681,7 @@ HardwareTreeView::HardwareTreeView(QWidget *parent, Session* pSession) :
     m_pShowAddressMenu = new QMenu("", this);
 }
 
+//-----------------------------------------------------------------------------
 void HardwareTreeView::contextMenuEvent(QContextMenuEvent *event)
 {
     QModelIndex ind = indexAt(event->pos());
