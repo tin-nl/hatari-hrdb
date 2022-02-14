@@ -11,6 +11,8 @@
 #include <QComboBox>
 #include <QTemporaryFile>
 #include <QTextStream>
+#include <QMessageBox>
+
 #include <QtGlobal> // for Q_OS_MACOS
 #include "../models/session.h"
 #include "quicklayout.h"
@@ -118,7 +120,6 @@ RunDialog::RunDialog(QWidget *parent, Session* pSession) :
     connect(pPrgButton, &QPushButton::clicked, this, &RunDialog::prgClicked);
     connect(pWDButton, &QPushButton::clicked, this, &RunDialog::workingDirectoryClicked);
     connect(pOkButton, &QPushButton::clicked, this, &RunDialog::okClicked);
-    connect(pOkButton, &QPushButton::clicked, this, &RunDialog::accept);
     connect(pCancelButton, &QPushButton::clicked, this, &RunDialog::reject);
     loadSettings();
     this->setLayout(pLayout);
@@ -209,7 +210,15 @@ void RunDialog::okClicked()
 
     QString prgText = m_pPrgTextEdit->text().trimmed();
     if (prgText.size() != 0)
-        args.push_back(prgText);
+    {
+        QFile prgFile(prgText);
+        if (!prgFile.exists())
+        {
+            QMessageBox::critical(this, "Error", "Program/Image does not exist.");
+            return;
+        }
+    }
+    args.push_back(prgText);
 
     // Actually launch the program
     QProcess proc;
@@ -219,6 +228,7 @@ void RunDialog::okClicked()
     proc.startDetached();
 
     saveSettings();
+    accept();       // Close only when successful
 }
 
 void RunDialog::exeClicked()
@@ -272,4 +282,3 @@ void RunDialog::workingDirectoryClicked()
         saveSettings();
     }
 }
-
