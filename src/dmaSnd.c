@@ -1488,9 +1488,6 @@ void DmaSnd_Info(FILE *fp, Uint32 dummy)
 
 void DmaSnd_RemoteDebugSync(void)
 {
-	if (!Config_IsMachineSTE())
-		return;
-
 	/* Esnure regs are updated in iomem */
 	DmaSnd_FrameCountHigh_ReadByte();
 	DmaSnd_FrameCountMed_ReadByte();
