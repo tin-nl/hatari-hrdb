@@ -224,6 +224,11 @@ void RunDialog::okClicked()
     QProcess proc;
     proc.setProgram(m_pExecutableTextEdit->text());
     proc.setArguments(args);
+
+    // Redirect outputs to NULL so that Hatari's own spew doesn't cause lockups
+    // if hrdb is killed and restarted (temp file contention?)
+    proc.setStandardOutputFile(QProcess::nullDevice());
+    proc.setStandardErrorFile(QProcess::nullDevice());
     proc.setWorkingDirectory(m_pWorkingDirectoryTextEdit->text());
     proc.startDetached();
 
