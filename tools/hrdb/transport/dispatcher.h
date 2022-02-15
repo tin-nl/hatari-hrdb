@@ -34,6 +34,8 @@ public:
 
     uint64_t InfoYm();
 
+    uint64_t SetRegister(int reg, uint32_t val);
+
 private slots:
 
    void connected();

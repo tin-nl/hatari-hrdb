@@ -93,6 +93,13 @@ uint64_t Dispatcher::InfoYm()
     return SendCommandPacket("infoym");
 }
 
+uint64_t Dispatcher::SetRegister(int reg, uint32_t val)
+{
+    const char* pRegName = Registers::s_names[reg];
+    QString cmd = QString::asprintf("console r %s=$%x", pRegName, val);
+    return SendCommandPacket(cmd.toStdString().c_str());
+}
+
 uint64_t Dispatcher::SendCommandPacket(const char *command)
 {
     return SendCommandShared(MemorySlot::kNone, command);

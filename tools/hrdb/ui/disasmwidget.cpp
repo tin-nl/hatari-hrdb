@@ -59,6 +59,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     // Actions for right-click menu
     m_pRunUntilAction = new QAction(tr("Run to here"), this);
     m_pBreakpointAction = new QAction(tr("Toggle Breakpoint"), this);
+    m_pSetPcAction = new QAction(tr("Set PC to here"), this);
     m_pNopAction = new QAction(tr("Replace with NOPs"), this);
 
     m_pEditMenu = new QMenu("Edit", this);
@@ -83,6 +84,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     // UI connects
     connect(m_pRunUntilAction,       &QAction::triggered, this, &DisasmWidget::runToCursorRightClick);
     connect(m_pBreakpointAction,     &QAction::triggered, this, &DisasmWidget::toggleBreakpointRightClick);
+    connect(m_pSetPcAction,          &QAction::triggered, this, &DisasmWidget::setPCRightClick);
     connect(m_pNopAction,            &QAction::triggered, this, &DisasmWidget::nopRightClick);
 
     connect(m_pShowMemMenus[0],      &QMenu::aboutToShow, this, &DisasmWidget::showMemMenu0Shown);
@@ -839,6 +841,18 @@ void DisasmWidget::ToggleBreakpoint(int row)
     }
 }
 
+void DisasmWidget::SetPC(int row)
+{
+    if (row < 0 || row >= m_disasm.lines.size())
+        return;
+
+    Disassembler::line& line = m_disasm.lines[row];
+    uint32_t addr = line.address;
+    m_pDispatcher->SetRegister(Registers::PC, addr);
+    // Re-request values so that main window is updated
+    m_pDispatcher->SendCommandPacket("regs");
+}
+
 void DisasmWidget::NopRow(int row)
 {
     if (row >= m_disasm.lines.size())
@@ -916,6 +930,7 @@ void DisasmWidget::contextMenuEvent(QContextMenuEvent *event)
     // Add the default actions
     menu.addAction(m_pRunUntilAction);
     menu.addAction(m_pBreakpointAction);
+    menu.addAction(m_pSetPcAction);
     menu.addMenu(m_pEditMenu);
 
     // Set up relevant menu items
@@ -953,6 +968,12 @@ void DisasmWidget::runToCursorRightClick()
 void DisasmWidget::toggleBreakpointRightClick()
 {
     ToggleBreakpoint(m_rightClickRow);
+    m_rightClickRow = -1;
+}
+
+void DisasmWidget::setPCRightClick()
+{
+    SetPC(m_rightClickRow);
     m_rightClickRow = -1;
 }
 

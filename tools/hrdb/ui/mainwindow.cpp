@@ -847,8 +847,7 @@ void MainWindow::skipPressed()
         return;
 
     const Disassembler::line& nextInst = m_disasm.lines[0];
-    QString cmd = QString::asprintf("console r pc=$%x", nextInst.GetEnd());
-    m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
+    m_pDispatcher->SetRegister(Registers::PC, nextInst.GetEnd());
 }
 
 void MainWindow::runToClicked()

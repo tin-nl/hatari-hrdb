@@ -336,8 +336,9 @@ char MemoryWidget::IsEditKey(const QKeyEvent* event)
     QChar ch = event->text().at(0);
     signed char ascii = ch.toLatin1();
 
-    if (m_requestId != 0)
-        return 0;
+    // Don't check the memory request here.
+    // Otherwise it will fall through and allow the "S"
+    // shortcut to step... only when there is a pending access.
 
     const ColInfo& info = m_columnMap[m_cursorCol];
     if (info.type == ColInfo::kSpace)
@@ -641,8 +642,11 @@ void MemoryWidget::keyPressEvent(QKeyEvent* event)
         char key = IsEditKey(event);
         if (key)
         {
-            if (EditKey(key))
-                return;
+            // We think a key should be acted upon.
+            // Try the work, and exit even if it failed,
+            // to block any accidental Shortcut trigger.
+            EditKey(key);
+            return;
         }
     }
     QWidget::keyPressEvent(event);

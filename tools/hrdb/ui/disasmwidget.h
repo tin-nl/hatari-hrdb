@@ -40,6 +40,7 @@ public:
     void PageDown(bool isKeyboard);
     void RunToRow(int row);
     void ToggleBreakpoint(int row);
+    void SetPC(int row);
     void NopRow(int row);
     void SetRowCount(int count);
     void SetShowHex(bool show);
@@ -134,6 +135,7 @@ private:
 
     void runToCursorRightClick();
     void toggleBreakpointRightClick();
+    void setPCRightClick();
     void nopRightClick();
 
     // Callbacks when the matching entry of m_pShowMemMenus is chosen
@@ -161,6 +163,7 @@ private:
     // Actions - top level rightclick
     QAction*              m_pRunUntilAction;
     QAction*              m_pBreakpointAction;
+    QAction*              m_pSetPcAction;
     QMenu*                m_pEditMenu;        // "edit this instruction" menu
     QAction*              m_pNopAction;
     ShowAddressActions    m_showAddressActions;
