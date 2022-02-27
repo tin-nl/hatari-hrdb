@@ -263,7 +263,8 @@ void RunDialog::exeClicked()
 
 void RunDialog::prgClicked()
 {
-    QString filter = "Programs (*.prg *.tos *.ttp);;Images (*.st *.stx *.msa *.ipf)";
+    QString filter = "Programs (*.prg *.tos *.ttp *.PRG *.TOS *.TTP);"
+            ";Images (*.st *.stx *.msa *.ipf *.ST *.STX *.MSA *.IPF)";
     QString filename = QFileDialog::getOpenFileName(this,
           tr("Choose program or image"),
           QString(), //dir
