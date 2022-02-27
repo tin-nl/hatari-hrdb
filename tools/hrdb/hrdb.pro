@@ -89,3 +89,7 @@ RESOURCES     = hrdb.qrc
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+DISTFILES += \
+    docs/README.txt \
+    docs/hrdb_release_notes.txt

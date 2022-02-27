@@ -1,6 +1,35 @@
 hrdb Release Notes
 ==================
 
+v0.006 (February 2022)
+
+- Hardware Window
+  - Rewrite view to support Macs better
+  - Show exception, interrupt, MFP vectors
+  - Show some DMA sound registers
+  - All address support right-click menus to e.g. open disassembly views at interrupt addresses
+  - Add "copy to clipboard" button (for easier offline state comparison)
+  - Add tooltips for most row types
+
+- Memory Window
+  - smarter handling of "S" (step) key when editing memory
+
+- Main Window
+  - Add "Shift+S" to skip over the current instruction without executing it
+    (request from Troed/SYNC)
+
+- Diassembly Window
+  - Add "Set PC to here" right-click menu action
+    (request from Troed/SYNC)
+
+- Run Dialog
+  - Support capitalized file extensions for executable (e.g. ".PRG" files as well as ".prg")
+
+- Hatari (target runtime)
+  - Fix display of many fields in Hardware view by making Hatari sync hardware register address data after stopping
+    (e.g. Blitter register, video display counter)
+
+
 v0.005 (December 2021)
 
 - Disassembly view
@@ -41,6 +70,7 @@ v0.004 (November 2021)
 - Disassembly view
   - Fix potential crash caused by branching arrows display
 
+
 v0.003 (September 2021)
 
 - Disassembly Window
@@ -52,6 +82,7 @@ v0.003 (September 2021)
 
 - General
   - Fixed: Focus for Step/Next/Until works when window is undocked.
+
 
 v0.002 (September 2021)
 
@@ -77,6 +108,7 @@ v0.002 (September 2021)
     Thomas van Noorden)
   - Alt+L now brings up the (L)aunch Hatari dialog, which was previously "Run Hatari"
   - Context menu "Show Address" options now include opening the Graphics Inspector
+
 
 v0.001 (August 2021)
 
