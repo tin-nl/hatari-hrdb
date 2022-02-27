@@ -7,7 +7,7 @@ v0.006 (February 2022)
   - Rewrite view to support Macs better
   - Show exception, interrupt, MFP vectors
   - Show some DMA sound registers
-  - All address support right-click menus to e.g. open disassembly views at interrupt addresses
+  - All addresses support right-click menus to e.g. open disassembly views at interrupt addresses
   - Add "copy to clipboard" button (for easier offline state comparison)
   - Add tooltips for most row types
 
