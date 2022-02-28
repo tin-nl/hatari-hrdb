@@ -1035,8 +1035,8 @@ int Inst_chk(buffer_reader& buffer, instruction& inst, uint32_t header)
 // ----------------------------------------------------------------------------
 int Inst_exg_dd(buffer_reader& /*header*/, instruction& inst, uint32_t header)
 {
-	uint8_t regx = (header >> 0) & 7;
-	uint8_t regy = (header >> 9) & 7;
+	uint8_t regx = (header >> 9) & 7;
+	uint8_t regy = (header >> 0) & 7;
 	set_dreg(inst.op0, regx);
 	set_dreg(inst.op1, regy);
 	return 0;
@@ -1045,8 +1045,8 @@ int Inst_exg_dd(buffer_reader& /*header*/, instruction& inst, uint32_t header)
 // ----------------------------------------------------------------------------
 int Inst_exg_aa(buffer_reader& /*header*/, instruction& inst, uint32_t header)
 {
-	uint8_t regx = (header >> 0) & 7;
-	uint8_t regy = (header >> 9) & 7;
+	uint8_t regx = (header >> 9) & 7;
+	uint8_t regy = (header >> 0) & 7;
 	set_areg(inst.op0, regx);
 	set_areg(inst.op1, regy);
 	return 0;
@@ -1055,8 +1055,8 @@ int Inst_exg_aa(buffer_reader& /*header*/, instruction& inst, uint32_t header)
 // ----------------------------------------------------------------------------
 int Inst_exg_da(buffer_reader& /*header*/, instruction& inst, uint32_t header)
 {
-	uint8_t regx = (header >> 0) & 7;
-	uint8_t regy = (header >> 9) & 7;
+	uint8_t regx = (header >> 9) & 7;
+	uint8_t regy = (header >> 0) & 7;
 	set_dreg(inst.op0, regx);
 	set_areg(inst.op1, regy);
 	return 0;
@@ -1370,6 +1370,9 @@ const matcher_entry g_matcher_table_1110[] =
 
 	MATCH_ENTRY1_IMPL(6,10,0b1110001011,			LSR,		Inst_asl_asr_mem ),
 	MATCH_ENTRY1_IMPL(6,10,0b1110001111,			LSL,		Inst_asl_asr_mem ),
+
+	MATCH_ENTRY1_IMPL(6,10,0b1110010011,			ROXR,		Inst_asl_asr_mem ),
+	MATCH_ENTRY1_IMPL(6,10,0b1110010111,			ROXL,		Inst_asl_asr_mem ),
 
 	MATCH_ENTRY3_IMPL(12,4,0b1110, 3,2,0, 8,1,1,	ASL,		Inst_shift_mem ),
 	MATCH_ENTRY3_IMPL(12,4,0b1110, 3,2,0, 8,1,0,	ASR,		Inst_shift_mem ),
