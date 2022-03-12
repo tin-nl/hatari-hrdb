@@ -15,7 +15,7 @@ inline void SetMarginsRows(QLayout* pLayout)
     pLayout->setContentsMargins(3, 1, 0, 3);
 }
 
-inline QWidget*    CreateHorizLayout(QWidget* parent, QWidget* pWidgets[])
+inline QGroupBox*    CreateHorizLayout(QWidget* parent, QWidget* pWidgets[])
 {
     QHBoxLayout* pLayout = new QHBoxLayout;
     SetMargins(pLayout);
@@ -31,7 +31,7 @@ inline QWidget*    CreateHorizLayout(QWidget* parent, QWidget* pWidgets[])
     return pBaseWidget;
 }
 
-inline QWidget*    CreateVertLayout(QWidget* parent, QWidget* pWidgets[])
+inline QGroupBox*    CreateVertLayout(QWidget* parent, QWidget* pWidgets[])
 {
     QVBoxLayout* pLayout = new QVBoxLayout;
     SetMargins(pLayout);
