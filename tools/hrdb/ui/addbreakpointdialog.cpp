@@ -42,8 +42,8 @@ AddBreakpointDialog::AddBreakpointDialog(QWidget *parent, TargetModel* pTargetMo
     QLabel* pChangeLabel = new QLabel("changes", this);
 
     QWidget* pSizeWidgets[] = {pButtonB, pButtonW, pButtonL, nullptr};
-    QGroupBox* pSizeLayout = CreateVertLayout(pPanel, pSizeWidgets);
-    pSizeLayout->setFlat(false);
+    QGroupBox* pMemorySizeGroupBox = CreateVertLayout(this, pSizeWidgets);
+    pMemorySizeGroupBox->setFlat(false);
     QPushButton* pChangeUseButton = new QPushButton("Use", this);
 
     m_pSymbolTableModel = new SymbolTableModel(this, m_pTargetModel->GetSymbolTable());
@@ -62,7 +62,7 @@ AddBreakpointDialog::AddBreakpointDialog(QWidget *parent, TargetModel* pTargetMo
     QPushButton* pCancelButton = new QPushButton("&Cancel", this);
 
     QWidget* pRow1[] = {pExpLabel, m_pExpressionEdit, nullptr};
-    QWidget* pRow2[] = {pAddressLabel, m_pMemoryAddressEdit, pSizeLayout, pChangeLabel, pChangeUseButton, nullptr};
+    QWidget* pRow2[] = {pAddressLabel, m_pMemoryAddressEdit, pMemorySizeGroupBox, pChangeLabel, pChangeUseButton, nullptr};
     QWidget* pRow3[] = {m_pOnceCheckBox, m_pTraceCheckBox, nullptr};
 
 
