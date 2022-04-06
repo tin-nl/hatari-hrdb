@@ -67,23 +67,36 @@ bool GetField(const TargetModel* pModel, const Regs::FieldDef& def, QString& res
 }
 
 //-----------------------------------------------------------------------------
-bool GetRegBinary(const TargetModel* pModel, uint32_t addr, QString& result)
+bool GetRegSigned16(const TargetModel* pModel, uint32_t addr, QString& result)
+{
+    if (!HasAddressMulti(pModel, addr, 2))
+        return false;
+
+    uint32_t regVal = ReadAddressMulti(pModel, addr, 2);
+    int16_t extracted = static_cast<int16_t>(regVal);
+    if (extracted < 0)
+        result = QString::asprintf("-$%x (%d)", -extracted, extracted);
+    else
+        result = QString::asprintf("$%x (%d)", extracted, extracted);
+    return true;
+}
+
+//-----------------------------------------------------------------------------
+bool GetRegBinary16(const TargetModel* pModel, uint32_t addr, QString& result)
 {
     if (!HasAddressMulti(pModel, addr, 2))
         return false;
 
     uint32_t regVal = ReadAddressMulti(pModel, addr, 2);
     uint32_t extracted = regVal;
-    QString b;
+    char binText[16];
+    // This is of course terrible
     for (uint32_t i = 0; i < 16; ++i)
     {
         uint32_t bit = 15 - i;
-        if ((extracted & (1 << bit)))
-            b += "1";
-        else
-            b += "0";
+        binText[i] = ((extracted & (1 << bit))) ? '1' : '0';
     }
-    result = b + QString::asprintf(" ($%x)", extracted);
+    result = QString(binText) + QString::asprintf(" ($%04x)", extracted);
     return true;
 }
 
@@ -186,10 +199,26 @@ public:
 
 //-----------------------------------------------------------------------------
 // Show 16-bit register as binary value
-class HardwareFieldRegBinary : public HardwareField
+class HardwareFieldRegBinary16 : public HardwareField
 {
 public:
-    HardwareFieldRegBinary(uint32_t addr) :
+    HardwareFieldRegBinary16(uint32_t addr) :
+        m_addr(addr)
+    {
+        m_memAddress = m_addr;
+    }
+
+    bool Update(const TargetModel* pTarget);
+
+    const uint32_t m_addr;
+};
+
+//-----------------------------------------------------------------------------
+// Show 16-bit register as signed value
+class HardwareFieldRegSigned16 : public HardwareField
+{
+public:
+    HardwareFieldRegSigned16(uint32_t addr) :
         m_addr(addr)
     {
         m_memAddress = m_addr;
@@ -348,10 +377,22 @@ bool HardwareFieldRegEnum::Update(const TargetModel* pTarget)
 }
 
 //-----------------------------------------------------------------------------
-bool HardwareFieldRegBinary::Update(const TargetModel* pTarget)
+bool HardwareFieldRegBinary16::Update(const TargetModel* pTarget)
 {
     QString str;
-    if (!GetRegBinary(pTarget, m_addr, str))
+    if (!GetRegBinary16(pTarget, m_addr, str))
+        return false;       // Wrong memory
+
+    m_changed = m_text != str;
+    m_text = str;
+    return true;
+}
+
+//-----------------------------------------------------------------------------
+bool HardwareFieldRegSigned16::Update(const TargetModel* pTarget)
+{
+    QString str;
+    if (!GetRegSigned16(pTarget, m_addr, str))
         return false;       // Wrong memory
 
     m_changed = m_text != str;
@@ -927,17 +968,17 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     addField(pExpMfp, "End-of-Interrupt",             Regs::g_fieldDef_MFP_VR_ENDINT);
 
 
-    addField(pExpMfp,  "Timer A Control Mode",         Regs::g_fieldDef_MFP_TACR_MODE_TIMER_A);
-    addField(pExpMfp,  "Timer A Data",                 Regs::g_fieldDef_MFP_TADR_ALL);
+    addField(pExpMfp,  "Timer A Control Mode",        Regs::g_fieldDef_MFP_TACR_MODE_TIMER_A);
+    addField(pExpMfp,  "Timer A Data",                Regs::g_fieldDef_MFP_TADR_ALL);
     addShared(pExpMfp, "Timer A Vector",              new HardwareFieldAddr(HardwareFieldAddr::Mfp, 13));
-    addField(pExpMfp,  "Timer B Control Mode",         Regs::g_fieldDef_MFP_TBCR_MODE_TIMER_B);
-    addField(pExpMfp,  "Timer B Data",                 Regs::g_fieldDef_MFP_TBDR_ALL);
+    addField(pExpMfp,  "Timer B Control Mode",        Regs::g_fieldDef_MFP_TBCR_MODE_TIMER_B);
+    addField(pExpMfp,  "Timer B Data",                Regs::g_fieldDef_MFP_TBDR_ALL);
     addShared(pExpMfp, "Timer B Vector",              new HardwareFieldAddr(HardwareFieldAddr::Mfp, 8));
-    addField(pExpMfp,  "Timer C Control Mode",         Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_C);
-    addField(pExpMfp,  "Timer C Data",                 Regs::g_fieldDef_MFP_TCDR_ALL);
+    addField(pExpMfp,  "Timer C Control Mode",        Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_C);
+    addField(pExpMfp,  "Timer C Data",                Regs::g_fieldDef_MFP_TCDR_ALL);
     addShared(pExpMfp, "Timer C Vector",              new HardwareFieldAddr(HardwareFieldAddr::Mfp, 5));
-    addField(pExpMfp,  "Timer D Control Mode",         Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_D);
-    addField(pExpMfp,  "Timer D Data",                 Regs::g_fieldDef_MFP_TDDR_ALL);
+    addField(pExpMfp,  "Timer D Control Mode",        Regs::g_fieldDef_MFP_TCDCR_MODE_TIMER_D);
+    addField(pExpMfp,  "Timer D Data",                Regs::g_fieldDef_MFP_TDDR_ALL);
     addShared(pExpMfp, "Timer D Vector",              new HardwareFieldAddr(HardwareFieldAddr::Mfp, 4));
 
     addField(pExpMfp, "Sync Char",                    Regs::g_fieldDef_MFP_SCR_ALL);
@@ -964,43 +1005,43 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     // TODO these need sign expansion etc
 
     // Halftone
-    addRegBinary(pExpBltHalftone, "Halftone 0",   Regs::BLT_HALFTONE_0);
-    addRegBinary(pExpBltHalftone, "Halftone 1",   Regs::BLT_HALFTONE_1);
-    addRegBinary(pExpBltHalftone, "Halftone 2",   Regs::BLT_HALFTONE_2);
-    addRegBinary(pExpBltHalftone, "Halftone 3",   Regs::BLT_HALFTONE_3);
-    addRegBinary(pExpBltHalftone, "Halftone 4",   Regs::BLT_HALFTONE_4);
-    addRegBinary(pExpBltHalftone, "Halftone 5",   Regs::BLT_HALFTONE_5);
-    addRegBinary(pExpBltHalftone, "Halftone 6",   Regs::BLT_HALFTONE_6);
-    addRegBinary(pExpBltHalftone, "Halftone 7",   Regs::BLT_HALFTONE_7);
-    addRegBinary(pExpBltHalftone, "Halftone 8",   Regs::BLT_HALFTONE_8);
-    addRegBinary(pExpBltHalftone, "Halftone 9",   Regs::BLT_HALFTONE_9);
-    addRegBinary(pExpBltHalftone, "Halftone 10",  Regs::BLT_HALFTONE_10);
-    addRegBinary(pExpBltHalftone, "Halftone 11",  Regs::BLT_HALFTONE_11);
-    addRegBinary(pExpBltHalftone, "Halftone 12",  Regs::BLT_HALFTONE_12);
-    addRegBinary(pExpBltHalftone, "Halftone 13",  Regs::BLT_HALFTONE_13);
-    addRegBinary(pExpBltHalftone, "Halftone 14",  Regs::BLT_HALFTONE_14);
-    addRegBinary(pExpBltHalftone, "Halftone 15",  Regs::BLT_HALFTONE_15);
-
-    addField( pExpBlt, "Src X Inc",        Regs::g_fieldDef_BLT_SRC_INC_X_ALL);
-    addField( pExpBlt, "Src Y Inc",        Regs::g_fieldDef_BLT_SRC_INC_Y_ALL);
-    addShared(pExpBlt, "Src Addr",         new HardwareFieldAddr(HardwareFieldAddr::BltSrc));
-    addField( pExpBlt, "Dst X Inc",        Regs::g_fieldDef_BLT_DST_INC_X_ALL);
-    addField( pExpBlt, "Dst Y Inc",        Regs::g_fieldDef_BLT_DST_INC_Y_ALL);
-    addShared(pExpBlt, "Dst Addr",         new HardwareFieldAddr(HardwareFieldAddr::BltDst));
-
-    addField(pExpBlt, "X Count",           Regs::g_fieldDef_BLT_XCOUNT_ALL);
-    addField(pExpBlt, "Y Count",           Regs::g_fieldDef_BLT_YCOUNT_ALL);
-
-    addField(pExpBlt, "Halftone Op",       Regs::g_fieldDef_BLT_HALFTONE_OP_OP);
+    addRegBinary16(pExpBltHalftone, "Halftone 0",   Regs::BLT_HALFTONE_0);
+    addRegBinary16(pExpBltHalftone, "Halftone 1",   Regs::BLT_HALFTONE_1);
+    addRegBinary16(pExpBltHalftone, "Halftone 2",   Regs::BLT_HALFTONE_2);
+    addRegBinary16(pExpBltHalftone, "Halftone 3",   Regs::BLT_HALFTONE_3);
+    addRegBinary16(pExpBltHalftone, "Halftone 4",   Regs::BLT_HALFTONE_4);
+    addRegBinary16(pExpBltHalftone, "Halftone 5",   Regs::BLT_HALFTONE_5);
+    addRegBinary16(pExpBltHalftone, "Halftone 6",   Regs::BLT_HALFTONE_6);
+    addRegBinary16(pExpBltHalftone, "Halftone 7",   Regs::BLT_HALFTONE_7);
+    addRegBinary16(pExpBltHalftone, "Halftone 8",   Regs::BLT_HALFTONE_8);
+    addRegBinary16(pExpBltHalftone, "Halftone 9",   Regs::BLT_HALFTONE_9);
+    addRegBinary16(pExpBltHalftone, "Halftone 10",  Regs::BLT_HALFTONE_10);
+    addRegBinary16(pExpBltHalftone, "Halftone 11",  Regs::BLT_HALFTONE_11);
+    addRegBinary16(pExpBltHalftone, "Halftone 12",  Regs::BLT_HALFTONE_12);
+    addRegBinary16(pExpBltHalftone, "Halftone 13",  Regs::BLT_HALFTONE_13);
+    addRegBinary16(pExpBltHalftone, "Halftone 14",  Regs::BLT_HALFTONE_14);
+    addRegBinary16(pExpBltHalftone, "Halftone 15",  Regs::BLT_HALFTONE_15);
     pExpBlt->AddChild(pExpBltHalftone);
-    addField(pExpBlt, "Logical Op",        Regs::g_fieldDef_BLT_LOGICAL_OP_OP);
 
-    addMultiField(pExpBlt, "Control 1",    Regs::g_regFieldsDef_BLT_CTRL_1);
-    addMultiField(pExpBlt, "Control 2",    Regs::g_regFieldsDef_BLT_CTRL_2);
+    addRegSigned16( pExpBlt, "Src X Inc",           Regs::BLT_SRC_INC_X);
+    addRegSigned16( pExpBlt, "Src Y Inc",           Regs::BLT_SRC_INC_Y);
+    addShared(pExpBlt,       "Src Addr",            new HardwareFieldAddr(HardwareFieldAddr::BltSrc));
+    addRegSigned16( pExpBlt, "Dst X Inc",           Regs::BLT_DST_INC_X);
+    addRegSigned16( pExpBlt, "Dst Y Inc",           Regs::BLT_DST_INC_Y);
+    addShared(pExpBlt,       "Dst Addr",            new HardwareFieldAddr(HardwareFieldAddr::BltDst));
 
-    addRegBinary(pExpBlt, "Endmask 1",     Regs::BLT_ENDMASK_1);
-    addRegBinary(pExpBlt, "Endmask 2",     Regs::BLT_ENDMASK_2);
-    addRegBinary(pExpBlt, "Endmask 3",     Regs::BLT_ENDMASK_3);
+    addField(pExpBlt,        "X Count",             Regs::g_fieldDef_BLT_XCOUNT_ALL);
+    addField(pExpBlt,        "Y Count",             Regs::g_fieldDef_BLT_YCOUNT_ALL);
+
+    addField(pExpBlt,        "Halftone Op",         Regs::g_fieldDef_BLT_HALFTONE_OP_OP);
+    addField(pExpBlt,        "Logical Op",          Regs::g_fieldDef_BLT_LOGICAL_OP_OP);
+
+    addMultiField(pExpBlt,   "Control 1",           Regs::g_regFieldsDef_BLT_CTRL_1);
+    addMultiField(pExpBlt,   "Control 2",           Regs::g_regFieldsDef_BLT_CTRL_2);
+
+    addRegBinary16(pExpBlt,  "Endmask 1",           Regs::BLT_ENDMASK_1);
+    addRegBinary16(pExpBlt,  "Endmask 2",           Regs::BLT_ENDMASK_2);
+    addRegBinary16(pExpBlt,  "Endmask 3",           Regs::BLT_ENDMASK_3);
 
     // ===== DMA SND ====
     addMultiField(pExpDmaSnd, "DMA Interrupts", Regs::g_regFieldsDef_DMA_BUFFER_INTERRUPTS);
@@ -1209,9 +1250,16 @@ void HardwareWindow::addField(HardwareBase* pLayout, const QString& title, const
 }
 
 //-----------------------------------------------------------------------------
-void HardwareWindow::addRegBinary(HardwareBase* pLayout, const QString& title, const uint32_t regAddr)
+void HardwareWindow::addRegBinary16(HardwareBase* pLayout, const QString& title, const uint32_t regAddr)
 {
-    HardwareFieldRegBinary* pField = new HardwareFieldRegBinary(regAddr);
+    HardwareFieldRegBinary16* pField = new HardwareFieldRegBinary16(regAddr);
+    addShared(pLayout, title, pField);
+}
+
+//-----------------------------------------------------------------------------
+void HardwareWindow::addRegSigned16(HardwareBase* pLayout, const QString& title, const uint32_t regAddr)
+{
+    HardwareFieldRegSigned16* pField = new HardwareFieldRegSigned16(regAddr);
     addShared(pLayout, title, pField);
 }
 

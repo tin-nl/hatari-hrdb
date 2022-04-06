@@ -87,7 +87,8 @@ public slots:
 
 private:
     void addField(HardwareBase* pLayout, const QString& title, const Regs::FieldDef& def);
-    void addRegBinary(HardwareBase* pLayout, const QString& title, uint32_t addr);
+    void addRegBinary16(HardwareBase* pLayout, const QString& title, uint32_t addr);
+    void addRegSigned16(HardwareBase* pLayout, const QString& title, uint32_t addr);
     void addMultiField(HardwareBase *pLayout, const QString &title, const Regs::FieldDef** defs);
     void addShared(HardwareBase *pLayout, const QString &title, HardwareField* pField);
 
