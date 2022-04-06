@@ -16,6 +16,7 @@
 #include "breakpointswidget.h"
 #include "consolewindow.h"
 #include "hardwarewindow.h"
+#include "profilewindow.h"
 #include "addbreakpointdialog.h"
 #include "exceptiondialog.h"
 #include "rundialog.h"
@@ -631,6 +632,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_pHardwareWindow = new HardwareWindow(this, &m_session);
     m_pHardwareWindow->setWindowTitle("Hardware (Alt+H)");
+    m_pProfileWindow = new ProfileWindow(this, &m_session);
 
     m_pExceptionDialog = new ExceptionDialog(this, m_pTargetModel, m_pDispatcher);
     m_pRunDialog = new RunDialog(this, &m_session);
@@ -672,6 +674,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pBreakpointsWidget);
     this->addDockWidget(Qt::BottomDockWidgetArea, m_pConsoleWindow);
     this->addDockWidget(Qt::RightDockWidgetArea, m_pHardwareWindow);
+    this->addDockWidget(Qt::RightDockWidgetArea, m_pProfileWindow);
 
     loadSettings();
 
@@ -721,6 +724,9 @@ void MainWindow::connectChangedSlot()
 {
     PopulateRunningSquare();
     updateButtonEnable();
+
+    //if (m_pTargetModel->IsConnected())
+    //    m_pDispatcher->SendCommandPacket("profile 1");
 }
 
 void MainWindow::startStopChangedSlot()
@@ -947,6 +953,7 @@ void MainWindow::updateWindowMenu()
     m_pBreakpointsWindowAct->setChecked(m_pBreakpointsWidget->isVisible());
     m_pConsoleWindowAct->setChecked(m_pConsoleWindow->isVisible());
     m_pHardwareWindowAct->setChecked(m_pHardwareWindow->isVisible());
+    m_pProfileWindowAct->setChecked(m_pProfileWindow->isVisible());
 }
 
 void MainWindow::updateButtonEnable()
@@ -988,6 +995,7 @@ void MainWindow::loadSettings()
         m_pBreakpointsWidget->setVisible(true);
         m_pConsoleWindow->setVisible(false);
         m_pHardwareWindow->setVisible(false);
+        m_pProfileWindow->setVisible(false);
     }
     else
     {
@@ -995,6 +1003,7 @@ void MainWindow::loadSettings()
         {
             m_pBreakpointsWidget, m_pGraphicsInspector,
             m_pConsoleWindow, m_pHardwareWindow,
+            m_pProfileWindow,
             nullptr
         };
         QDockWidget** pCurr = wlist;
@@ -1038,6 +1047,7 @@ void MainWindow::saveSettings()
     m_pGraphicsInspector->saveSettings();
     m_pConsoleWindow->saveSettings();
     m_pHardwareWindow->saveSettings();
+    m_pProfileWindow->saveSettings();
 }
 
 void MainWindow::menuConnect()
@@ -1151,6 +1161,10 @@ void MainWindow::createActions()
     m_pHardwareWindowAct->setStatusTip(tr("Show the Hardware window"));
     m_pHardwareWindowAct->setCheckable(true);
 
+    m_pProfileWindowAct = new QAction(tr("&Profile"), this);
+    m_pProfileWindowAct->setStatusTip(tr("Show the Profile window"));
+    m_pProfileWindowAct->setCheckable(true);
+
     for (int i = 0; i < kNumDisasmViews; ++i)
         connect(m_pDisasmWindowActs[i], &QAction::triggered, this,     [=] () { this->enableVis(m_pDisasmWidgets[i]); m_pDisasmWidgets[i]->keyFocus(); } );
 
@@ -1161,6 +1175,7 @@ void MainWindow::createActions()
     connect(m_pBreakpointsWindowAct, &QAction::triggered, this, [=] () { this->enableVis(m_pBreakpointsWidget); m_pBreakpointsWidget->keyFocus(); } );
     connect(m_pConsoleWindowAct,     &QAction::triggered, this, [=] () { this->enableVis(m_pConsoleWindow); m_pConsoleWindow->keyFocus(); } );
     connect(m_pHardwareWindowAct,    &QAction::triggered, this, [=] () { this->enableVis(m_pHardwareWindow); m_pHardwareWindow->keyFocus(); } );
+    connect(m_pProfileWindowAct,     &QAction::triggered, this, [=] () { this->enableVis(m_pProfileWindow); m_pProfileWindow->keyFocus(); } );
 
     // "About"
     m_pAboutAct = new QAction(tr("&About"), this);
@@ -1202,6 +1217,7 @@ void MainWindow::createMenus()
     m_pWindowMenu->addAction(m_pBreakpointsWindowAct);
     m_pWindowMenu->addAction(m_pConsoleWindowAct);
     m_pWindowMenu->addAction(m_pHardwareWindowAct);
+    m_pWindowMenu->addAction(m_pProfileWindowAct);
 
     m_pHelpMenu = menuBar()->addMenu(tr("Help"));
     m_pHelpMenu->addAction(m_pAboutAct);

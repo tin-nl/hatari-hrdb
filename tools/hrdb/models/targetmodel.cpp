@@ -1,7 +1,8 @@
 #include "targetmodel.h"
-
 #include <iostream>
 #include <QTimer>
+
+#include "profiledata.h"
 
 YmState::YmState()
 {
@@ -26,12 +27,14 @@ void TargetChangedFlags::Clear()
 TargetModel::TargetModel() :
 	QObject(),
     m_bConnected(false),
-    m_bRunning(true)
+    m_bRunning(true),
+    m_bProfileEnabled(0)
 {
     for (int i = 0; i < MemorySlot::kMemorySlotCount; ++i)
         m_pMemory[i] = nullptr;
 
     m_changedFlags.Clear();
+    m_pProfileData = new ProfileData();
 
     m_pDelayedUpdateTimer = new QTimer(this);
     connect(m_pDelayedUpdateTimer, &QTimer::timeout, this, &TargetModel::delayedTimer);
@@ -42,6 +45,7 @@ TargetModel::~TargetModel()
     for (int i = 0; i < MemorySlot::kMemorySlotCount; ++i)
         delete m_pMemory[i];
 
+    delete m_pProfileData;
     delete m_pDelayedUpdateTimer;
 }
 
@@ -133,6 +137,22 @@ void TargetModel::NotifyMemoryChanged(uint32_t address, uint32_t size)
     emit otherMemoryChangedSignal(address, size);
 }
 
+void TargetModel::AddProfileDelta(const ProfileDelta& delta)
+{
+    m_pProfileData->Add(delta);
+}
+
+void TargetModel::ProfileDeltaComplete(int enabled)
+{
+    m_bProfileEnabled = enabled;
+    emit profileChangedSignal();
+}
+
+void TargetModel::ProfileReset()
+{
+    m_pProfileData->Reset();
+    emit profileChangedSignal();
+}
 
 // User-added console command. Anything can happen, so tell everything
 // to update
@@ -148,6 +168,11 @@ void TargetModel::Flush(uint64_t commmandId)
 {
     emit flushSignal(m_changedFlags, commmandId);
     m_changedFlags.Clear();
+}
+
+void TargetModel::GetProfileData(uint32_t addr, uint32_t& count, uint32_t& cycles)
+{
+    m_pProfileData->Get(addr, count, cycles);
 }
 
 void TargetModel::delayedTimer()

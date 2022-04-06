@@ -13,6 +13,8 @@
 #include "../hardware/hardware_st.h"
 
 class QTimer;
+class ProfileData;
+struct ProfileDelta;
 
 class TargetChangedFlags
 {
@@ -74,6 +76,13 @@ public:
     void SetYm(const YmState& state);
     void NotifyMemoryChanged(uint32_t address, uint32_t size);
 
+    // Update profiling data
+    void AddProfileDelta(const ProfileDelta& delta);
+    void ProfileDeltaComplete(int enabled);
+
+    // (Called from UI)
+    void ProfileReset();
+
     // User-added console command. Anything can happen!
     void ConsoleCommand();
 
@@ -85,7 +94,9 @@ public:
 
     int IsConnected() const { return m_bConnected; }
     int IsRunning() const { return m_bRunning; }
-	uint32_t GetPC() const { return m_pc; }
+    int IsProfileEnabled() const { return m_bProfileEnabled; }
+
+    uint32_t GetPC() const { return m_pc; }
 	Registers GetRegs() const { return m_regs; }
     const Memory* GetMemory(MemorySlot slot) const
     {
@@ -95,6 +106,9 @@ public:
     const SymbolTable& GetSymbolTable() const { return m_symbolTable; }
     const ExceptionMask& GetExceptionMask() const { return m_exceptionMask; }
     YmState GetYm() const { return m_ymState; }
+
+    // Profiling access
+    void GetProfileData(uint32_t addr, uint32_t& count, uint32_t& cycles);
 
 public slots:
 
@@ -125,6 +139,8 @@ signals:
     // Something edited memory
     void otherMemoryChangedSignal(uint32_t address, uint32_t size);
 
+    // Profile data changed
+    void profileChangedSignal();
 private slots:
 
     // Called shortly after stop notification received
@@ -138,6 +154,7 @@ private:
 
     int             m_bConnected;   // 0 == disconnected, 1 == connected
     int             m_bRunning;		// 0 == stopped, 1 == running
+    int             m_bProfileEnabled; // 0 == off, 1 == collecting
     uint32_t        m_pc;			// PC register (for next instruction)
 
     Registers       m_regs;			// Current register values
@@ -145,6 +162,7 @@ private:
     SymbolTable     m_symbolTable;
     ExceptionMask   m_exceptionMask;
     YmState         m_ymState;
+    ProfileData*    m_pProfileData;
 
     // Actual current memory contents
     const Memory*   m_pMemory[MemorySlot::kMemorySlotCount];

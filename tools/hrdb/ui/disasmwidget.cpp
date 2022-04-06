@@ -80,6 +80,7 @@ DisasmWidget::DisasmWidget(QWidget *parent, Session* pSession, int windowIndex):
     connect(m_pTargetModel, &TargetModel::connectChangedSignal,     this, &DisasmWidget::connectChangedSlot);
     connect(m_pTargetModel, &TargetModel::registersChangedSignal,   this, &DisasmWidget::CalcOpAddresses);
     connect(m_pTargetModel, &TargetModel::otherMemoryChangedSignal, this, &DisasmWidget::otherMemoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::profileChangedSignal,     this, &DisasmWidget::profileChangedSlot);
 
     // UI connects
     connect(m_pRunUntilAction,       &QAction::triggered, this, &DisasmWidget::runToCursorRightClick);
@@ -376,6 +377,15 @@ void DisasmWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
         RequestMemory();
 }
 
+void DisasmWidget::profileChangedSlot()
+{
+    if (m_pTargetModel->IsProfileEnabled())
+    {
+        CalcDisasm();
+        update();
+    }
+}
+
 void DisasmWidget::paintEvent(QPaintEvent* ev)
 {
     QWidget::paintEvent(ev);
@@ -468,6 +478,9 @@ void DisasmWidget::paintEvent(QPaintEvent* ev)
                 case kHex:
                     if (m_bShowHex)
                         painter.drawText(x, text_y, t.hex);
+                    break;
+                case kCycles:
+                    painter.drawText(x, text_y, t.cycles);
                     break;
                 case kDisasm:
                     painter.drawText(x, text_y, t.disasm);
@@ -678,6 +691,12 @@ void DisasmWidget::CalcDisasm()
         // Hex
         for (uint32_t i = 0; i < line.inst.byte_count; ++i)
             t.hex += QString::asprintf("%02x", line.mem[i]);
+
+        // Cycles
+        uint32_t count, cycles;
+        m_pTargetModel->GetProfileData(addr, count, cycles);
+        if (count)
+            t.cycles = QString::asprintf("%d/%d", count, cycles);
 
         // Disassembly
         QTextStream ref(&t.disasm);
@@ -1047,7 +1066,8 @@ void DisasmWidget::RecalcColums()
     m_columnLeft[kPC] = pos; pos += 1;
     m_columnLeft[kBreakpoint] = pos; pos += 1;
     m_columnLeft[kHex] = pos; pos += (m_bShowHex) ? 10 * 2 + 1 : 0;
-    m_columnLeft[kDisasm] = pos; pos += 42;
+    m_columnLeft[kCycles] = pos; pos += 20;
+    m_columnLeft[kDisasm] = pos; pos += 8+18+9+1; // movea.l $12345678(pc,d0.w),$12345678
     m_columnLeft[kComments] = pos; pos += 80;
     m_columnLeft[kNumColumns] = pos;
 }

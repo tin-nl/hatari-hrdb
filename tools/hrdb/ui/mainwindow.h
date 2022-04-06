@@ -29,6 +29,7 @@ class GraphicsInspectorWidget;
 class BreakpointsWindow;
 class ConsoleWindow;
 class HardwareWindow;
+class ProfileWindow;
 class ExceptionDialog;
 class RunDialog;
 class PrefsDialog;
@@ -210,6 +211,7 @@ private:
     BreakpointsWindow*          m_pBreakpointsWidget;
     ConsoleWindow*              m_pConsoleWindow;
     HardwareWindow*             m_pHardwareWindow;
+    ProfileWindow*              m_pProfileWindow;
 
     // Low-level data
     Session                     m_session;
@@ -247,6 +249,7 @@ private:
     QAction* m_pBreakpointsWindowAct;
     QAction* m_pConsoleWindowAct;
     QAction* m_pHardwareWindowAct;
+    QAction* m_pProfileWindowAct;
 
     QAction* m_pAboutAct;
     QAction* m_pAboutQtAct;

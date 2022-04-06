@@ -782,7 +782,7 @@ static void Main_Init(void)
 	
 	/* done as last, needs CPU & DSP running... */
 	DebugUI_Init();
-    RemoteDebug_Init();
+	RemoteDebug_Init();
 }
 
 

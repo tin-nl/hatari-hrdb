@@ -56,6 +56,7 @@ private slots:
     void breakpointsChangedSlot(uint64_t commandId);
     void symbolTableChangedSlot(uint64_t commandId);
     void otherMemoryChangedSlot(uint32_t address, uint32_t size);
+    void profileChangedSlot();
 
     void runToCursor();
     void toggleBreakpoint();
@@ -95,6 +96,7 @@ private:
         bool        isBreakpoint;
 
         QString     hex;
+        QString     cycles;
         QString     disasm;
         QString     comments;
 
@@ -185,6 +187,7 @@ private:
         kPC,
         kBreakpoint,
         kHex,
+        kCycles,
         kDisasm,
         kComments,
         kNumColumns

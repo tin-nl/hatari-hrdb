@@ -44,6 +44,7 @@
 #include "psg.h"
 #include "dmaSnd.h"
 #include "blitter.h"
+#include "profile.h"
 
 // For status bar updates
 #include "screen.h"
@@ -225,6 +226,39 @@ static int RemoteDebug_NotifyConfig(RemoteDebugState* state)
 	send_hex(state, system->nCpuLevel);
 	send_term(state);
 	return 0;
+}
+
+static void RemoteDebug_NotifyProfile(RemoteDebugState* state)
+{
+	int index;
+	ProfileLine result;
+	Uint32 lastaddr;
+
+	send_str(state, "!profile");
+	send_sep(state);
+	send_hex(state, Profile_CpuIsEnabled() ? 1 : 0);
+	send_sep(state);
+	
+	index = 0;
+	lastaddr = 0;
+	while (Profile_CpuQuery(index, &result))
+	{
+		if (result.count)
+		{
+			// NOTE: address is encoded as delta from previous
+			// entry, starting from 0. This provides a very simple
+			// size reduction.
+			send_hex(state, result.addr - lastaddr);
+			send_sep(state);
+			send_hex(state, result.count);
+			send_sep(state);
+			send_hex(state, result.cycles);
+			send_sep(state);
+			lastaddr = result.addr;
+		}
+		++index;
+	}
+	send_term(state);
 }
 
 // -----------------------------------------------------------------------------
@@ -750,6 +784,25 @@ static int RemoteDebug_infoym(int nArgc, char *psArgs[], RemoteDebugState* state
 }
 
 // -----------------------------------------------------------------------------
+/* "profile <int>" Enables/disables CPU profiling. */
+/* returns "OK <val>" if successful */
+static int RemoteDebug_profile(int nArgc, char *psArgs[], RemoteDebugState* state)
+{
+	int enable;
+	if (nArgc == 2)
+	{
+		enable = atoi(psArgs[1]);
+		Profile_CpuEnable(enable);
+
+		send_str(state, "OK");
+		send_sep(state);
+		send_hex(state, enable);
+		return 0;
+	}
+	return 1;
+}
+
+// -----------------------------------------------------------------------------
 /* DebugUI command structure */
 typedef struct
 {
@@ -775,6 +828,7 @@ static const rdbcommand_t remoteDebugCommandList[] = {
 	{ RemoteDebug_console,	"console"	, false		},
 	{ RemoteDebug_setstd,	"setstd"	, true		},
 	{ RemoteDebug_infoym,	"infoym"	, false		},
+	{ RemoteDebug_profile,	"profile"	, true		},
 
 	/* Terminator */
 	{ NULL, NULL }
@@ -1094,6 +1148,7 @@ static bool RemoteDebug_BreakLoop(void)
 		// Notify after state change happens
 		RemoteDebug_NotifyConfig(state);
 		RemoteDebug_NotifyState(state);
+		RemoteDebug_NotifyProfile(state);
 		flush_data(state);
 	}
 

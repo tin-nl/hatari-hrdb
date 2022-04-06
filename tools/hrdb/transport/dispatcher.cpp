@@ -7,6 +7,7 @@
 #include "../models/targetmodel.h"
 #include "../models/stringsplitter.h"
 #include "../models/stringparsers.h"
+#include "../models/profiledata.h"
 
 //#define DISPATCHER_DEBUG
 
@@ -456,6 +457,14 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         }
         m_pTargetModel->SetYm(state);
     }
+    else if (type == "profile")
+    {
+        uint32_t enabled = 0;
+        std::string enabledStr = splitResp.Split(SEP_CHAR);
+        if (!StringParsers::ParseHexString(enabledStr.c_str(), enabled))
+            return;
+        m_pTargetModel->ProfileDeltaComplete(static_cast<int>(enabled));
+    }
 }
 
 void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
@@ -501,6 +510,45 @@ void Dispatcher::ReceiveNotification(const RemoteNotification& cmd)
         std::cout << "Connection acknowleged by server" << std::endl;
         // Flag for the UI to request the data it wants
         m_pTargetModel->SetConnected(1);
+    }
+    else if (type == "!profile")
+    {
+        uint32_t enabled = 0;
+        std::string enabledStr = s.Split(SEP_CHAR);
+        if (!StringParsers::ParseHexString(enabledStr.c_str(), enabled))
+            return;
+
+        uint32_t lastaddr = 0;
+        int numDeltas = 0;
+        while (true)
+        {
+            std::string addrDeltaStr = s.Split(SEP_CHAR);
+            if (addrDeltaStr.size() == 0)
+                break;
+            std::string countStr = s.Split(SEP_CHAR);
+            std::string cyclesStr = s.Split(SEP_CHAR);
+
+            uint32_t addrDelta = 0;
+            uint32_t count = 0;
+            uint32_t cycles = 0;
+
+            if (!StringParsers::ParseHexString(addrDeltaStr.c_str(), addrDelta))
+                return;
+            if (!StringParsers::ParseHexString(countStr.c_str(), count))
+                return;
+            if (!StringParsers::ParseHexString(cyclesStr.c_str(), cycles))
+                return;
+
+            uint32_t newaddr = lastaddr + addrDelta;
+            ProfileDelta delta;
+            delta.addr = newaddr;
+            delta.count = count;
+            delta.cycles = cycles;
+            m_pTargetModel->AddProfileDelta(delta);
+            lastaddr = newaddr;
+            ++numDeltas;
+        }
+        m_pTargetModel->ProfileDeltaComplete(static_cast<int>(enabled));
     }
 }
 

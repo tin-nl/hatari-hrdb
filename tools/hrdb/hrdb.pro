@@ -17,12 +17,17 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    hardware/hardware_st.cpp \
+    hardware/regs_st.cpp \
     hopper/decode.cpp \
     main.cpp \
     models/breakpoint.cpp \
     models/disassembler.cpp \
     models/exceptionmask.cpp \
     models/memory.cpp \
+    models/profiledata.cpp \
+    models/registers.cpp \
+    models/session.cpp \
     models/stringparsers.cpp \
     models/stringsplitter.cpp \
     models/symboltable.cpp \
@@ -31,24 +36,23 @@ SOURCES += \
     transport/dispatcher.cpp \
     ui/addbreakpointdialog.cpp \
     ui/breakpointswidget.cpp \
+    ui/consolewindow.cpp \
     ui/disasmwidget.cpp \
     ui/exceptiondialog.cpp \
     ui/graphicsinspector.cpp \
+    ui/hardwarewindow.cpp \
     ui/mainwindow.cpp \
     ui/memoryviewwidget.cpp \
-    ui/rundialog.cpp \
-    ui/consolewindow.cpp \
-    models/session.cpp \
-    models/registers.cpp \
-    ui/prefsdialog.cpp \
-    ui/showaddressactions.cpp \
-    ui/hardwarewindow.cpp \
-    hardware/regs_st.cpp \
-    hardware/hardware_st.cpp \
     ui/nonantialiasimage.cpp \
-    ui/symboltext.cpp
+    ui/prefsdialog.cpp \
+    ui/profilewindow.cpp \
+    ui/rundialog.cpp \
+    ui/showaddressactions.cpp \
+    ui/symboltext.cpp \
 
 HEADERS += \
+    hardware/hardware_st.h \
+    hardware/regs_st.h \
     hopper/buffer.h \
     hopper/decode.h \
     hopper/instruction.h \
@@ -56,6 +60,7 @@ HEADERS += \
     models/disassembler.h \
     models/exceptionmask.h \
     models/memory.h \
+    models/profiledata.h \
     models/registers.h \
     models/session.h \
     models/stringparsers.h \
@@ -67,20 +72,19 @@ HEADERS += \
     transport/remotecommand.h \
     ui/addbreakpointdialog.h \
     ui/breakpointswidget.h \
+    ui/consolewindow.h \
     ui/disasmwidget.h \
     ui/exceptiondialog.h \
     ui/graphicsinspector.h \
+    ui/hardwarewindow.h \
     ui/mainwindow.h \
     ui/memoryviewwidget.h \
+    ui/nonantialiasimage.h \
+    ui/prefsdialog.h \
+    ui/profilewindow.h \
     ui/quicklayout.h \
     ui/rundialog.h \
-    ui/consolewindow.h \
-    hardware/hardware_st.h \
-    ui/prefsdialog.h \
     ui/showaddressactions.h \
-    ui/hardwarewindow.h \
-    hardware/regs_st.h \
-    ui/nonantialiasimage.h \
     ui/symboltext.h
 
 RESOURCES     = hrdb.qrc    
