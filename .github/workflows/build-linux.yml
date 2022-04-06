@@ -22,7 +22,7 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Install libs
         run: |
-           apt-get -y install qt5
+           sudo apt-get -y install qt5
       - name: build hrdb
         run: |
           cd tools/hrdb
