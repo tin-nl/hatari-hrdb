@@ -116,8 +116,12 @@ void DisasmWidget::SetAddress(uint32_t addr)
 void DisasmWidget::RequestMemory()
 {
     uint32_t addr = m_logicalAddr;
-    uint32_t lowAddr = (addr > 100) ? addr - 100 : 0;
-    uint32_t size = static_cast<uint32_t>((m_rowCount * 10) + 100);
+
+    uint32_t pageSize = static_cast<uint32_t>(m_rowCount) * 10U;  // Maximum disassem size for the page "above"
+    uint32_t lowAddr = (addr > pageSize) ? addr - pageSize : 0;
+    uint32_t highAddr = addr + pageSize;
+
+    uint32_t size = highAddr - lowAddr;
     if (m_pTargetModel->IsConnected())
     {
         m_requestId = m_pDispatcher->RequestMemory(m_memSlot, lowAddr, size);
@@ -234,9 +238,9 @@ void DisasmWidget::MoveDown()
     }
 }
 
-void DisasmWidget::PageUp(bool isKeyboard)
+void DisasmWidget::PageUp()
 {
-    if (isKeyboard && m_cursorRow != 0)
+    if (m_cursorRow != 0)
     {
         m_cursorRow = 0;
         update();
@@ -247,15 +251,16 @@ void DisasmWidget::PageUp(bool isKeyboard)
         return; // not up to date
 
     // TODO we should actually disassemble upwards to see if something sensible appears
-    if (m_logicalAddr > 20)
-        SetAddress(m_logicalAddr - 20);
+    uint32_t moveSize = 2U * static_cast<uint32_t>(m_rowCount);
+    if (m_logicalAddr > moveSize)
+        SetAddress(m_logicalAddr - moveSize);
     else
         SetAddress(0);
 }
 
-void DisasmWidget::PageDown(bool isKeyboard)
+void DisasmWidget::PageDown()
 {
-    if (isKeyboard && m_rowCount > 0 && m_cursorRow < m_rowCount - 1)
+    if (m_rowCount > 0 && m_cursorRow < m_rowCount - 1)
     {
         // Just move to the bottom row
         m_cursorRow = m_rowCount - 1;
@@ -271,6 +276,29 @@ void DisasmWidget::PageDown(bool isKeyboard)
         // This will go off and request the memory itself
         SetAddress(m_disasm.lines.back().GetEnd());
     }
+}
+
+void DisasmWidget::MouseScrollUp()
+{
+    if (m_requestId != 0)
+        return; // not up to date
+
+    // Mouse wheel moves a fixed number of bytes so up/down comes back to the same place
+    uint32_t moveSize = 2U * static_cast<uint32_t>(m_rowCount);
+    if (m_logicalAddr > moveSize)
+        SetAddress(m_logicalAddr - moveSize);
+    else
+        SetAddress(0);
+}
+
+void DisasmWidget::MouseScrollDown()
+{
+    if (m_requestId != 0)
+        return; // not up to date
+
+    // Mouse wheel moves a fixed number of bytes so up/down comes back to the same place
+    uint32_t moveSize = 2U * static_cast<uint32_t>(m_rowCount);
+    SetAddress(m_logicalAddr + moveSize);
 }
 
 void DisasmWidget::RunToRow(int row)
@@ -561,8 +589,8 @@ void DisasmWidget::keyPressEvent(QKeyEvent* event)
     {
     case Qt::Key_Up:         MoveUp();            return;
     case Qt::Key_Down:       MoveDown();          return;
-    case Qt::Key_PageUp:     PageUp(true);        return;
-    case Qt::Key_PageDown:   PageDown(true);      return;
+    case Qt::Key_PageUp:     PageUp();            return;
+    case Qt::Key_PageDown:   PageDown();          return;
     default: break;
     }
 
@@ -606,12 +634,12 @@ void DisasmWidget::wheelEvent(QWheelEvent *event)
     m_wheelAngleDelta += event->angleDelta().y();
     if (m_wheelAngleDelta >= 15)
     {
-        PageUp(false);
+        MouseScrollUp();
         m_wheelAngleDelta = 0;
     }
     else if (m_wheelAngleDelta <= -15)
     {
-        PageDown(false);
+        MouseScrollDown();
         m_wheelAngleDelta = 0;
     }
     event->accept();
@@ -1211,12 +1239,12 @@ void DisasmWindow::keyUpPressed()
 
 void DisasmWindow::keyPageDownPressed()
 {
-    m_pDisasmWidget->PageDown(true);
+    m_pDisasmWidget->PageDown();
 }
 
 void DisasmWindow::keyPageUpPressed()
 {
-    m_pDisasmWidget->PageUp(true);
+    m_pDisasmWidget->PageUp();
 }
 
 void DisasmWindow::returnPressedSlot()

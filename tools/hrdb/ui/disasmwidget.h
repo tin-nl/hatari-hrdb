@@ -36,8 +36,13 @@ public:
     bool SetAddress(std::string addr);
     void MoveUp();
     void MoveDown();
-    void PageUp(bool isKeyboard);
-    void PageDown(bool isKeyboard);
+
+    void PageUp();
+    void PageDown();
+
+    void MouseScrollUp();
+    void MouseScrollDown();
+
     void RunToRow(int row);
     void ToggleBreakpoint(int row);
     void SetPC(int row);
