@@ -407,11 +407,9 @@ void DisasmWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
 
 void DisasmWidget::profileChangedSlot()
 {
-    if (m_pTargetModel->IsProfileEnabled())
-    {
-        CalcDisasm();
-        update();
-    }
+    RecalcColums();
+    CalcDisasm();
+    update();
 }
 
 void DisasmWidget::paintEvent(QPaintEvent* ev)
@@ -721,10 +719,13 @@ void DisasmWidget::CalcDisasm()
             t.hex += QString::asprintf("%02x", line.mem[i]);
 
         // Cycles
-        uint32_t count, cycles;
-        m_pTargetModel->GetProfileData(addr, count, cycles);
-        if (count)
-            t.cycles = QString::asprintf("%d/%d", count, cycles);
+        if (m_pTargetModel->IsProfileEnabled())
+        {
+            uint32_t count, cycles;
+            m_pTargetModel->GetProfileData(addr, count, cycles);
+            if (count)
+                t.cycles = QString::asprintf("%d/%d", count, cycles);
+        }
 
         // Disassembly
         QTextStream ref(&t.disasm);
@@ -1094,7 +1095,8 @@ void DisasmWidget::RecalcColums()
     m_columnLeft[kPC] = pos; pos += 1;
     m_columnLeft[kBreakpoint] = pos; pos += 1;
     m_columnLeft[kHex] = pos; pos += (m_bShowHex) ? 10 * 2 + 1 : 0;
-    m_columnLeft[kCycles] = pos; pos += 20;
+    m_columnLeft[kCycles] = pos;
+    pos += (m_pTargetModel->IsProfileEnabled()) ? 20 : 0;
     m_columnLeft[kDisasm] = pos; pos += 8+18+9+1; // movea.l $12345678(pc,d0.w),$12345678
     m_columnLeft[kComments] = pos; pos += 80;
     m_columnLeft[kNumColumns] = pos;
