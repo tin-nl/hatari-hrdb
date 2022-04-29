@@ -89,13 +89,15 @@ bool GetRegBinary16(const TargetModel* pModel, uint32_t addr, QString& result)
 
     uint32_t regVal = ReadAddressMulti(pModel, addr, 2);
     uint32_t extracted = regVal;
-    char binText[16];
+    char binText[17];
     // This is of course terrible
     for (uint32_t i = 0; i < 16; ++i)
     {
         uint32_t bit = 15 - i;
         binText[i] = ((extracted & (1 << bit))) ? '1' : '0';
     }
+    // Add terminator
+    binText[16] = 0;
     result = QString(binText) + QString::asprintf(" ($%04x)", extracted);
     return true;
 }
