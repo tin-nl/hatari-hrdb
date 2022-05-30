@@ -108,7 +108,8 @@ public:
     YmState GetYm() const { return m_ymState; }
 
     // Profiling access
-    void GetProfileData(uint32_t addr, uint32_t& count, uint32_t& cycles);
+    void GetProfileData(uint32_t addr, uint32_t& count, uint32_t& cycles) const;
+    const ProfileData& GetRawProfileData() const;
 
 public slots:
 

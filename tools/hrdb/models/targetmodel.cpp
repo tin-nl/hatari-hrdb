@@ -170,9 +170,14 @@ void TargetModel::Flush(uint64_t commmandId)
     m_changedFlags.Clear();
 }
 
-void TargetModel::GetProfileData(uint32_t addr, uint32_t& count, uint32_t& cycles)
+void TargetModel::GetProfileData(uint32_t addr, uint32_t& count, uint32_t& cycles) const
 {
     m_pProfileData->Get(addr, count, cycles);
+}
+
+const ProfileData& TargetModel::GetRawProfileData() const
+{
+    return *m_pProfileData;
 }
 
 void TargetModel::delayedTimer()
