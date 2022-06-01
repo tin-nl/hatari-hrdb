@@ -294,7 +294,7 @@ void RegisterWidget::memoryChangedSlot(int slot, uint64_t /*commandId*/)
     if (!pMem)
         return;
 
-    buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize());
+    buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize(), pMem->GetAddress());
     Disassembler::decode_buf(disasmBuf, m_disasm, pMem->GetAddress(), 2);
     PopulateRegisters();
 }
@@ -772,7 +772,7 @@ void MainWindow::memoryChangedSlot(int slot, uint64_t /*commandId*/)
         return;
 
     // Fetch data and decode the next instruction.
-    buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize());
+    buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize(), pMem->GetAddress());
     Disassembler::decode_buf(disasmBuf, m_disasm, pMem->GetAddress(), 1);
 }
 

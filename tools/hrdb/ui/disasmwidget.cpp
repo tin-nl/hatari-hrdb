@@ -190,7 +190,7 @@ void DisasmWidget::MoveUp()
             // Get memory buffer for this range
             uint32_t offset = targetAddr - m_memory.GetAddress();
             uint32_t size = m_memory.GetSize() - offset;
-            buffer_reader disasmBuf(m_memory.GetData() + offset, size);
+            buffer_reader disasmBuf(m_memory.GetData() + offset, size, m_memory.GetAddress() + offset);
             instruction inst;
             if (Disassembler::decode_inst(disasmBuf, inst) == 0)
             {
@@ -665,7 +665,7 @@ void DisasmWidget::CalcDisasm()
     // Work out where we need to start disassembling from
     uint32_t offset = m_logicalAddr - m_memory.GetAddress();
     uint32_t size = m_memory.GetSize() - offset;
-    buffer_reader disasmBuf(m_memory.GetData() + offset, size);
+    buffer_reader disasmBuf(m_memory.GetData() + offset, size, m_memory.GetAddress() + offset);
     m_disasm.lines.clear();
     Disassembler::decode_buf(disasmBuf, m_disasm, m_logicalAddr, m_rowCount);
     CalcOpAddresses();
