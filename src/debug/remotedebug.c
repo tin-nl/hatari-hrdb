@@ -324,9 +324,6 @@ static void RemoteDebug_HardwareSync(void)
 	The call to m68k_dumpstate_file actually *updates* these registers,
 	so they are stale until you view the registers in the command line
 	debugger (and possibly stale when evaluating breakpoints.)
-
-	Ideally I think this fix should happen when break occurs, but that
-	might be a bit drastic.
 	*/
 	if (regs.s == 0)
 		regs.usp = regs.regs[REG_A7];
@@ -1389,6 +1386,7 @@ void RemoteDebug_CheckRemoteBreak(void)
 	if (bRemoteBreakRequest)
 	{
 		bRemoteBreakRequest = false;
+
 		// Stop and wait for inputs from the control socket
 		DebugUI(REASON_USER);
 	}
