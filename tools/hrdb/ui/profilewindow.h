@@ -3,6 +3,7 @@
 
 #include <QDockWidget>
 #include <QTableView>
+#include "showaddressactions.h"
 
 class TargetModel;
 class Dispatcher;
@@ -19,7 +20,8 @@ public:
     struct Entry
     {
         QModelIndex     index;
-        QString         address;
+        uint32_t        address;
+        QString         text;
         uint32_t        instructionCount;
         unsigned long   cycleCount;
     };
@@ -27,8 +29,8 @@ public:
     enum Column
     {
         kColAddress,
-        kColInstructionCount,
         kColCycles,
+        kColInstructionCount,
         kColCount
     };
 
@@ -39,6 +41,12 @@ public:
     virtual int columnCount(const QModelIndex &parent) const override;
     virtual QVariant data(const QModelIndex &index, int role) const override;
     virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+
+    const Entry& GetEntry(int row) const
+    {
+        return entries[row];
+    }
+
 
 public slots:
 
@@ -61,12 +69,13 @@ class ProfileTableView : public QTableView
 {
     Q_OBJECT
 public:
-    ProfileTableView(QWidget* parent, ProfileTableModel* pModel);
+    ProfileTableView(QWidget* parent, ProfileTableModel* pModel, Session* pSession);
     virtual ~ProfileTableView() override;
 
 public slots:
 
 protected:
+    virtual void contextMenuEvent(QContextMenuEvent *event) override;
 
 private:
 
@@ -77,7 +86,7 @@ private:
 
     // Remembers which row we right-clicked on
     int                     m_rightClickRow;
-
+    ShowAddressActions      m_showAddressActions;
 };
 
 class ProfileWindow : public QDockWidget

@@ -8,6 +8,7 @@
 #include <QSettings>
 #include <QDebug>
 #include <QPushButton>
+#include <QMenu>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -51,7 +52,7 @@ QVariant ProfileTableModel::data(const QModelIndex &index, int role) const
     if (role == Qt::DisplayRole)
     {
         if (index.column() == kColAddress)
-            return ent.address;
+            return ent.text;
         else if (index.column() == kColInstructionCount)
             return ent.instructionCount;
         else if (index.column() == kColCycles)
@@ -112,27 +113,47 @@ void ProfileTableModel::updateRows()
     const SymbolTable& symbols = m_pTargetModel->GetSymbolTable();
     Symbol result;
 
+    uint32_t bits = 8;
+    uint32_t mask = 0xffffffff << bits;
+    uint32_t rest = 0xffffffff ^ mask;
+
+    // This converts the entry to a label or a memory block
     for (const ProfileData::Pair ent : data.m_entries)
     {
-        if (symbols.FindLowerOrEqual(ent.first, result))
-        {
-            QMap<uint32_t, Entry>::iterator it = map.find(result.address);
+        uint32_t addr = 0;
+        QString label;
 
-            if (it == map.end())
-            {
-                Entry entry;
-                entry.address = QString::fromStdString(result.name);
-                entry.instructionCount = ent.second.count;
-                entry.cycleCount = ent.second.cycles;
-                map.insert(result.address, entry);
-            }
-            else {
-                it->instructionCount += ent.second.count;
-                it->cycleCount += ent.second.cycles;
-            }
+        if (0)
+        {
+            if (!symbols.FindLowerOrEqual(ent.first, result))
+                continue;
+
+            addr = result.address;
+            label = QString::fromStdString(result.name);
+        }
+        else
+        {
+            addr = ent.first & mask;
+            label = QString::asprintf("$%x - $%x", addr, addr + rest);
+        }
+
+        QMap<uint32_t, Entry>::iterator it = map.find(addr);
+        if (it == map.end())
+        {
+            Entry entry;
+            entry.address = addr;
+            entry.text = label;
+            entry.instructionCount = ent.second.count;
+            entry.cycleCount = ent.second.cycles;
+            map.insert(addr, entry);
+        }
+        else {
+            it->instructionCount += ent.second.count;
+            it->cycleCount += ent.second.cycles;
         }
     }
 
+    // This is rubbish and will lose cursor position etc
     emit beginResetModel();
     entries.clear();
     for (auto it : map)
@@ -144,10 +165,11 @@ void ProfileTableModel::updateRows()
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-ProfileTableView::ProfileTableView(QWidget* parent, ProfileTableModel* pModel) :
+ProfileTableView::ProfileTableView(QWidget* parent, ProfileTableModel* pModel, Session* pSession) :
     QTableView(parent),
     m_pTableModel(pModel),
-    m_rightClickRow(-1)
+    m_rightClickRow(-1),
+    m_showAddressActions(pSession)
 {
     // This table gets the focus from the parent docking widget
     setFocus();
@@ -156,6 +178,33 @@ ProfileTableView::ProfileTableView(QWidget* parent, ProfileTableModel* pModel) :
 //-----------------------------------------------------------------------------
 ProfileTableView::~ProfileTableView()
 {
+
+}
+
+//-----------------------------------------------------------------------------
+void ProfileTableView::contextMenuEvent(QContextMenuEvent *event)
+{
+    // Right click menus are instantiated on demand, so we can
+    // dynamically add to them
+    QMenu menu(this);
+
+    // Add the default actions
+    QMenu* pAddressMenu = nullptr;
+    int rowIdx = this->rowAt(event->y());
+    if (rowIdx >= 0)
+    {
+        const ProfileTableModel::Entry& ent = m_pTableModel->GetEntry(rowIdx);
+
+        pAddressMenu = new QMenu("", &menu);
+        pAddressMenu->setTitle(QString::asprintf("Address $%08x", ent.address));
+
+        m_showAddressActions.addActionsToMenu(pAddressMenu);
+        m_showAddressActions.setAddress(ent.address);
+        menu.addMenu(pAddressMenu);
+
+        // Run it
+        menu.exec(event->globalPos());
+    }
 
 }
 
@@ -178,8 +227,10 @@ ProfileWindow::ProfileWindow(QWidget *parent, Session* pSession) :
     m_pStartStopButton = new QPushButton("Start", this);
     m_pResetButton = new QPushButton("Reset", this);
     m_pTableModel = new ProfileTableModel(this, m_pTargetModel, m_pDispatcher);
-    m_pTableView = new ProfileTableView(this, m_pTableModel);
+    m_pTableView = new ProfileTableView(this, m_pTableModel, m_pSession);
     m_pTableView->setModel(m_pTableModel);
+    m_pTableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
+    m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
 
     pTopLayout->addWidget(m_pStartStopButton);
     pTopLayout->addWidget(m_pResetButton);
