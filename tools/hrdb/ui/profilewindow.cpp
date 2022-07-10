@@ -17,10 +17,43 @@
 #include "quicklayout.h"
 
 //-----------------------------------------------------------------------------
+//      Sorting comparators
+//-----------------------------------------------------------------------------
+bool CompCyclesAsc(ProfileTableModel::Entry& m1, ProfileTableModel::Entry& m2)
+{
+    return m1.cycleCount < m2.cycleCount;
+}
+bool CompCyclesDesc(ProfileTableModel::Entry& m1, ProfileTableModel::Entry& m2)
+{
+    return m1.cycleCount > m2.cycleCount;
+}
+
+bool CompCountAsc(ProfileTableModel::Entry& m1, ProfileTableModel::Entry& m2)
+{
+    return m1.instructionCount < m2.instructionCount;
+}
+bool CompCountDesc(ProfileTableModel::Entry& m1, ProfileTableModel::Entry& m2)
+{
+    return m1.instructionCount > m2.instructionCount;
+}
+
+bool CompAddressAsc(ProfileTableModel::Entry& m1, ProfileTableModel::Entry& m2)
+{
+    return m1.text < m2.text;
+}
+bool CompAddressDesc(ProfileTableModel::Entry& m1, ProfileTableModel::Entry& m2)
+{
+    return m1.text > m2.text;
+}
+
+//-----------------------------------------------------------------------------
 ProfileTableModel::ProfileTableModel(QObject *parent, TargetModel *pTargetModel, Dispatcher* pDispatcher) :
     QAbstractTableModel(parent),
     m_pTargetModel(pTargetModel),
-    m_pDispatcher(pDispatcher)
+    m_pDispatcher(pDispatcher),
+    m_sortColumn(kColCycles),
+    m_sortOrder(Qt::DescendingOrder),
+    m_grouping(kGroupingSymbol)
 {
     connect(m_pTargetModel, &TargetModel::profileChangedSignal,     this, &ProfileTableModel::profileChangedSlot);
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &ProfileTableModel::symbolChangedSlot);
@@ -93,19 +126,41 @@ QVariant ProfileTableModel::headerData(int section, Qt::Orientation orientation,
 }
 
 //-----------------------------------------------------------------------------
+void ProfileTableModel::sort(int column, Qt::SortOrder order)
+{
+    switch (column)
+    {
+    case kColCycles:
+        std::sort(entries.begin(), entries.end(), order == Qt::SortOrder::AscendingOrder ? CompCyclesAsc : CompCyclesDesc);
+        populateFromEntries();
+        break;
+    case kColInstructionCount:
+        std::sort(entries.begin(), entries.end(), order == Qt::SortOrder::AscendingOrder ? CompCyclesAsc : CompCyclesDesc);
+        populateFromEntries();
+        break;
+    case kColAddress:
+        std::sort(entries.begin(), entries.end(), order == Qt::SortOrder::AscendingOrder ? CompAddressAsc : CompAddressDesc);
+        populateFromEntries();
+        break;
+    }
+    m_sortColumn = column;
+    m_sortOrder = order;
+}
+
+//-----------------------------------------------------------------------------
 void ProfileTableModel::profileChangedSlot()
 {
-    updateRows();
+    rebuildEntries();
 }
 
 //-----------------------------------------------------------------------------
 void ProfileTableModel::symbolChangedSlot()
 {
-    updateRows();
+    rebuildEntries();
 }
 
 //-----------------------------------------------------------------------------
-void ProfileTableModel::updateRows()
+void ProfileTableModel::rebuildEntries()
 {
     map.clear();
     QString text;
@@ -123,7 +178,7 @@ void ProfileTableModel::updateRows()
         uint32_t addr = 0;
         QString label;
 
-        if (0)
+        if (m_grouping == kGroupingSymbol)
         {
             if (!symbols.FindLowerOrEqual(ent.first, result))
                 continue;
@@ -131,10 +186,10 @@ void ProfileTableModel::updateRows()
             addr = result.address;
             label = QString::fromStdString(result.name);
         }
-        else
+        else if (m_grouping == kGroupingAddress256)
         {
             addr = ent.first & mask;
-            label = QString::asprintf("$%x-$%x", addr, addr + rest);
+            label = QString::asprintf("$%08x-$%08x", addr, addr + rest);
         }
 
         QMap<uint32_t, Entry>::iterator it = map.find(addr);
@@ -152,19 +207,26 @@ void ProfileTableModel::updateRows()
             it->cycleCount += ent.second.cycles;
         }
     }
-
-    // This is rubbish and will lose cursor position etc
-    emit beginResetModel();
     entries.clear();
     for (auto it : map)
     {
         entries.push_back(it);
     }
+
+    sort(m_sortColumn, m_sortOrder);
+    populateFromEntries();
+}
+
+//-----------------------------------------------------------------------------
+void ProfileTableModel::populateFromEntries()
+{
+    // This is rubbish and will lose cursor position etc
+    emit beginResetModel();
     emit endResetModel();
 }
 
 //-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 ProfileTableView::ProfileTableView(QWidget* parent, ProfileTableModel* pModel, Session* pSession) :
     QTableView(parent),
     m_pTableModel(pModel),
@@ -173,8 +235,6 @@ ProfileTableView::ProfileTableView(QWidget* parent, ProfileTableModel* pModel, S
 {
     // This table gets the focus from the parent docking widget
     setFocus();
-    this->setSortingEnabled(true);
-
 }
 
 //-----------------------------------------------------------------------------
@@ -324,6 +384,8 @@ void ProfileWindow::settingsChangedSlot()
     m_pTableView->verticalHeader()->setTextElideMode(Qt::TextElideMode::ElideRight);
     m_pTableView->verticalHeader()->setDefaultSectionSize(fm.height());
     m_pTableView->setWordWrap(false);
+    m_pTableView->setSortingEnabled(true);
+    m_pTableView->sortByColumn(ProfileTableModel::kColCycles, Qt::SortOrder::DescendingOrder);
 }
 
 void ProfileWindow::startStopClicked()

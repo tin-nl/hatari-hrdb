@@ -12,6 +12,7 @@ class QLabel;
 class QPushButton;
 class QTextEdit;
 
+//-----------------------------------------------------------------------------
 class ProfileTableModel : public QAbstractTableModel
 {
     Q_OBJECT
@@ -34,6 +35,12 @@ public:
         kColCount
     };
 
+    enum Grouping
+    {
+        kGroupingSymbol,
+        kGroupingAddress256
+    };
+
     ProfileTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* pDispatcher);
 
     // "When subclassing QAbstractTableModel, you must implement rowCount(), columnCount(), and data()."
@@ -41,6 +48,7 @@ public:
     virtual int columnCount(const QModelIndex &parent) const override;
     virtual QVariant data(const QModelIndex &index, int role) const override;
     virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+    virtual void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
 
     const Entry& GetEntry(int row) const
     {
@@ -49,22 +57,25 @@ public:
 
 
 public slots:
-
-    // NO CHECK add symbol change slot
     void profileChangedSlot();
     void symbolChangedSlot();
 
 private:
 
-    void updateRows();
+    void rebuildEntries();
+    void populateFromEntries();
 
     TargetModel*    m_pTargetModel;
     Dispatcher*     m_pDispatcher;
 
     QMap<uint32_t, Entry>   map;
     QVector<Entry>          entries;
+    int                     m_sortColumn;
+    Qt::SortOrder           m_sortOrder;
+    Grouping                m_grouping;
 };
 
+//-----------------------------------------------------------------------------
 class ProfileTableView : public QTableView
 {
     Q_OBJECT
