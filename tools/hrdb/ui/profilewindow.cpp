@@ -134,7 +134,7 @@ void ProfileTableModel::updateRows()
         else
         {
             addr = ent.first & mask;
-            label = QString::asprintf("$%x - $%x", addr, addr + rest);
+            label = QString::asprintf("$%x-$%x", addr, addr + rest);
         }
 
         QMap<uint32_t, Entry>::iterator it = map.find(addr);
@@ -173,6 +173,8 @@ ProfileTableView::ProfileTableView(QWidget* parent, ProfileTableModel* pModel, S
 {
     // This table gets the focus from the parent docking widget
     setFocus();
+    this->setSortingEnabled(true);
+
 }
 
 //-----------------------------------------------------------------------------
@@ -319,7 +321,9 @@ void ProfileWindow::settingsChangedSlot()
     QFontMetrics fm(m_pSession->GetSettings().m_font);
     // Down the side
     m_pTableView->verticalHeader()->hide();
+    m_pTableView->verticalHeader()->setTextElideMode(Qt::TextElideMode::ElideRight);
     m_pTableView->verticalHeader()->setDefaultSectionSize(fm.height());
+    m_pTableView->setWordWrap(false);
 }
 
 void ProfileWindow::startStopClicked()
