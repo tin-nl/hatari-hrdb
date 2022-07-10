@@ -60,10 +60,61 @@ uint64_t Dispatcher::InsertFlush()
     return pNewCmd->m_uid;
 }
 
-uint64_t Dispatcher::RequestMemory(MemorySlot slot, uint32_t address, uint32_t size)
+uint64_t Dispatcher::ReadMemory(MemorySlot slot, uint32_t address, uint32_t size)
 {
     std::string command = std::string("mem ") + std::to_string(address) + " " + std::to_string(size);
     return SendCommandShared(slot, command);
+}
+
+uint64_t Dispatcher::ReadInfoYm()
+{
+    return SendCommandPacket("infoym");
+}
+
+uint64_t Dispatcher::ReadBreakpoints()
+{
+    return SendCommandPacket("bplist");
+}
+
+uint64_t Dispatcher::ReadExceptionMask()
+{
+    return SendCommandPacket("exmask");
+}
+
+uint64_t Dispatcher::ReadSymbols()
+{
+    return SendCommandPacket("symlist");
+}
+
+uint64_t Dispatcher::WriteMemory(uint32_t address, const QVector<uint8_t> &data)
+{
+    uint64_t ReadMemory(MemorySlot slot, uint32_t address, uint32_t size);
+
+    QString command = QString::asprintf("memset %u %d ", address, data.size());
+    for (int i = 0; i <  data.size(); ++i)
+        command += QString::asprintf("%02x", data[i]);
+
+    return SendCommandPacket(command.toStdString().c_str());
+}
+
+uint64_t Dispatcher::Break()
+{
+    return SendCommandPacket("break");
+}
+
+uint64_t Dispatcher::Run()
+{
+    return SendCommandPacket("run");
+}
+
+uint64_t Dispatcher::Step()
+{
+    return SendCommandPacket("step");
+}
+
+uint64_t Dispatcher::ReadRegisters()
+{
+    return SendCommandPacket("regs");
 }
 
 uint64_t Dispatcher::RunToPC(uint32_t next_pc)
@@ -89,10 +140,6 @@ uint64_t Dispatcher::DeleteBreakpoint(uint32_t breakpointId)
     return SendCommandPacket("bplist");
 }
 
-uint64_t Dispatcher::InfoYm()
-{
-    return SendCommandPacket("infoym");
-}
 
 uint64_t Dispatcher::SetRegister(int reg, uint32_t val)
 {
@@ -101,9 +148,32 @@ uint64_t Dispatcher::SetRegister(int reg, uint32_t val)
     return SendCommandPacket(cmd.toStdString().c_str());
 }
 
-uint64_t Dispatcher::SendCommandPacket(const char *command)
+uint64_t Dispatcher::SetExceptionMask(uint32_t mask)
 {
-    return SendCommandShared(MemorySlot::kNone, command);
+    return SendCommandPacket(QString::asprintf("exmask %u", mask).toStdString().c_str());
+}
+
+uint64_t Dispatcher::SetLoggingFile(const std::string& filename)
+{
+    // Tell the target to redirect
+    std::string cmd("setstd ");
+    cmd += filename;
+    return SendCommandPacket(cmd.c_str());
+}
+
+uint64_t Dispatcher::SetProfileEnable(bool enable)
+{
+    if (enable)
+        SendCommandPacket("profile 0");
+    else
+        SendCommandPacket("profile 1");
+}
+
+uint64_t Dispatcher::SendConsoleCommand(const std::string& cmd)
+{
+    std::string packet = "console ";
+    packet += cmd;
+    return SendCommandPacket(packet.c_str());
 }
 
 void Dispatcher::ReceivePacket(const char* response)
@@ -245,6 +315,11 @@ void Dispatcher::readyRead()
         }
     }
     delete[] data;
+}
+
+uint64_t Dispatcher::SendCommandPacket(const char *command)
+{
+    return SendCommandShared(MemorySlot::kNone, command);
 }
 
 uint64_t Dispatcher::SendCommandShared(MemorySlot slot, std::string command)

@@ -1187,15 +1187,15 @@ void HardwareWindow::startStopChangedSlot()
     if (!m_pTargetModel->IsRunning())
     {
         // Stopped -- request data
-        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowMmu,     Regs::MMU_CONFIG,    0x1);
-        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowVideo,   Regs::VID_REG_BASE,  0x70);
+        m_pDispatcher->ReadMemory(MemorySlot::kHardwareWindowMmu,     Regs::MMU_CONFIG,    0x1);
+        m_pDispatcher->ReadMemory(MemorySlot::kHardwareWindowVideo,   Regs::VID_REG_BASE,  0x70);
 
         // This one triggers an extra memory request in memoryChangedSlot() for the MFP vectors
         // which are dependent on a register
-        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowMfp,     Regs::MFP_GPIP,      0x30);
-        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowBlitter, Regs::BLT_HALFTONE_0,0x40);
-        m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowDmaSnd,  Regs::DMA_SND_BASE,  0x40);
-        m_pDispatcher->InfoYm();
+        m_pDispatcher->ReadMemory(MemorySlot::kHardwareWindowMfp,     Regs::MFP_GPIP,      0x30);
+        m_pDispatcher->ReadMemory(MemorySlot::kHardwareWindowBlitter, Regs::BLT_HALFTONE_0,0x40);
+        m_pDispatcher->ReadMemory(MemorySlot::kHardwareWindowDmaSnd,  Regs::DMA_SND_BASE,  0x40);
+        m_pDispatcher->ReadInfoYm();
     }
 }
 
@@ -1229,7 +1229,7 @@ void HardwareWindow::memoryChangedSlot(int memorySlot, uint64_t /*commandId*/)
             uint32_t vecAddr = vecIndex * 4;
 
             // Request memory
-            m_pDispatcher->RequestMemory(MemorySlot::kHardwareWindowMfpVecs, vecAddr, 4 * 32);
+            m_pDispatcher->ReadMemory(MemorySlot::kHardwareWindowMfpVecs, vecAddr, 4 * 32);
 
             // Insert the flush.
             // The flush's callback will trigger recalculation of the table model.

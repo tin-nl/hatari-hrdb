@@ -397,10 +397,7 @@ void ProfileWindow::startStopClicked()
     if (!m_pTargetModel->IsConnected())
         return;
 
-    if (m_pTargetModel->IsProfileEnabled())
-        m_pDispatcher->SendCommandPacket("profile 0");
-    else
-        m_pDispatcher->SendCommandPacket("profile 1");
+    m_pDispatcher->SetProfileEnable(m_pTargetModel->IsProfileEnabled());
 }
 
 void ProfileWindow::resetClicked()

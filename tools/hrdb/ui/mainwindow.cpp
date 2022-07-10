@@ -741,20 +741,20 @@ void MainWindow::startStopChangedSlot()
         // The Main Window does this and other windows feed from it.
 
         // Do all the "essentials" straight away.
-        m_pDispatcher->SendCommandPacket("regs");
-        m_pDispatcher->RequestMemory(MemorySlot::kMainPC, m_pTargetModel->GetPC(), 10);
+        m_pDispatcher->ReadRegisters();
+        m_pDispatcher->ReadMemory(MemorySlot::kMainPC, m_pTargetModel->GetPC(), 10);
 
-        m_pDispatcher->SendCommandPacket("bplist");
-        m_pDispatcher->SendCommandPacket("exmask");
+        m_pDispatcher->ReadBreakpoints();
+        m_pDispatcher->ReadExceptionMask();
 
         // Basepage makes things much easier
-        m_pDispatcher->RequestMemory(MemorySlot::kBasePage, 0, 0x200);
+        m_pDispatcher->ReadMemory(MemorySlot::kBasePage, 0, 0x200);
         // Video memory is generally handy
-        m_pDispatcher->RequestMemory(MemorySlot::kVideo, Regs::VID_REG_BASE, 0x70);
+        m_pDispatcher->ReadMemory(MemorySlot::kVideo, Regs::VID_REG_BASE, 0x70);
 
         // Only re-request symbols if we didn't find any the first time
         if (m_pTargetModel->GetSymbolTable().GetHatariSubTable().Count() == 0)
-            m_pDispatcher->SendCommandPacket("symlist");
+            m_pDispatcher->ReadSymbols();
     }
     PopulateRunningSquare();
     updateButtonEnable();
@@ -782,9 +782,9 @@ void MainWindow::startStopClicked()
         return;
 
     if (m_pTargetModel->IsRunning())
-        m_pDispatcher->SendCommandPacket("break");
+        m_pDispatcher->Break();
 	else
-        m_pDispatcher->SendCommandPacket("run");
+        m_pDispatcher->Run();
 }
 
 void MainWindow::singleStepClicked()
@@ -795,7 +795,7 @@ void MainWindow::singleStepClicked()
     if (m_pTargetModel->IsRunning())
         return;
 
-    m_pDispatcher->SendCommandPacket("step");
+    m_pDispatcher->Step();
 }
 
 void MainWindow::nextClicked()
@@ -829,7 +829,7 @@ void MainWindow::nextClicked()
     }
     else
     {
-        m_pDispatcher->SendCommandPacket("step");
+        m_pDispatcher->Step();
     }
 }
 
@@ -874,7 +874,7 @@ void MainWindow::runToClicked()
         m_pDispatcher->SetBreakpoint("HBL ! HBL", true);        // VBL
     else
         return;
-    m_pDispatcher->SendCommandPacket("run");
+    m_pDispatcher->Run();
 }
 
 void MainWindow::addBreakpointPressed()
@@ -889,7 +889,7 @@ void MainWindow::breakPressed()
         return;
 
     if (m_pTargetModel->IsRunning())
-        m_pDispatcher->SendCommandPacket("break");
+        m_pDispatcher->Break();
 }
 
 // Actions

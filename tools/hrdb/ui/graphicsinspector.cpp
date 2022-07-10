@@ -299,7 +299,7 @@ void GraphicsInspectorWidget::startStopChangedSlot()
     if (!m_pTargetModel->IsRunning())
     {
         // Trigger a full refresh of registers
-        m_requestIdVideoRegs = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspectorVideoRegs, Regs::VID_REG_BASE, 0x70);
+        m_requestIdVideoRegs = m_pDispatcher->ReadMemory(MemorySlot::kGraphicsInspectorVideoRegs, Regs::VID_REG_BASE, 0x70);
     }
     else
     {
@@ -572,7 +572,7 @@ void GraphicsInspectorWidget::RequestMemory()
     // Request video memory area
     EffectiveData data;
     GetEffectiveData(data);
-    m_requestIdBitmap = m_pDispatcher->RequestMemory(MemorySlot::kGraphicsInspector, m_address, data.requiredSize);
+    m_requestIdBitmap = m_pDispatcher->ReadMemory(MemorySlot::kGraphicsInspector, m_address, data.requiredSize);
 }
 
 bool GraphicsInspectorWidget::SetAddressFromVideo()

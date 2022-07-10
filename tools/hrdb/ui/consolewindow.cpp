@@ -118,10 +118,7 @@ void ConsoleWindow::connectChangedSlot()
             m_tempFile.open(QIODevice::ReadOnly| QIODevice::Unbuffered);
             m_tempFileTextStream.setDevice(&m_tempFile);
 
-            // Tell the target to redirect
-            QString logCmd("setstd ");
-            logCmd += filename;
-            m_pDispatcher->SendCommandPacket(logCmd.toStdString().c_str());
+            m_pDispatcher->SetLoggingFile(filename.toStdString());
         }
     }
     else
@@ -139,10 +136,7 @@ void ConsoleWindow::textEditChangedSlot()
 {
     if (m_pTargetModel->IsConnected() && !m_pTargetModel->IsRunning())
     {
-        QString string = "console ";
-        string += m_pLineEdit->text();
-        m_pDispatcher->SendCommandPacket(string.toStdString().c_str());
-
+        m_pDispatcher->SendConsoleCommand(m_pLineEdit->text().toStdString());
         m_pTextArea->append(QString(">>") + m_pLineEdit->text());
     }
     m_pLineEdit->clear();

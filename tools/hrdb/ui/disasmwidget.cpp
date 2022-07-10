@@ -124,7 +124,7 @@ void DisasmWidget::RequestMemory()
     uint32_t size = highAddr - lowAddr;
     if (m_pTargetModel->IsConnected())
     {
-        m_requestId = m_pDispatcher->RequestMemory(m_memSlot, lowAddr, size);
+        m_requestId = m_pDispatcher->ReadMemory(m_memSlot, lowAddr, size);
     }
 }
 
@@ -897,8 +897,9 @@ void DisasmWidget::SetPC(int row)
     Disassembler::line& line = m_disasm.lines[row];
     uint32_t addr = line.address;
     m_pDispatcher->SetRegister(Registers::PC, addr);
+
     // Re-request values so that main window is updated
-    m_pDispatcher->SendCommandPacket("regs");
+    m_pDispatcher->ReadRegisters();
 }
 
 void DisasmWidget::NopRow(int row)
@@ -909,11 +910,14 @@ void DisasmWidget::NopRow(int row)
     Disassembler::line& line = m_disasm.lines[row];
     uint32_t addr = line.address;
 
-    QString command = QString::asprintf("memset %u %u ", addr, line.inst.byte_count);
-    for (int i = 0; i <  line.inst.byte_count /2; ++i)
-        command += "4e71";
+    QVector<uint8_t> data;
 
-    m_pDispatcher->SendCommandPacket(command.toStdString().c_str());
+    for (int i = 0; i <  line.inst.byte_count / 2; ++i)
+    {
+        data.push_back(0x4e);
+        data.push_back(0x71);
+    }
+    m_pDispatcher->WriteMemory(addr, data);
 }
 
 void DisasmWidget::SetRowCount(int count)

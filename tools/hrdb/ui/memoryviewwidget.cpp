@@ -313,8 +313,11 @@ bool MemoryWidget::EditKey(char key)
     {
         cursorByte = static_cast<uint8_t>(key);
     }
+
+    QVector<uint8_t> data(1);
+    data[0] = cursorByte;
     QString cmd = QString::asprintf("memset $%x 1 %02x", address, cursorByte);
-    m_pDispatcher->SendCommandPacket(cmd.toStdString().c_str());
+    m_pDispatcher->WriteMemory(address, data);
 
     // Replace the value so that editing still works
     m_rows[m_cursorRow].m_rawBytes[info.byteOffset] = cursorByte;
@@ -778,7 +781,7 @@ void MemoryWidget::RequestMemory()
 {
     uint32_t size = static_cast<uint32_t>(m_rowCount * m_bytesPerRow);
     if (m_pTargetModel->IsConnected())
-        m_requestId = m_pDispatcher->RequestMemory(m_memSlot, m_address, size);
+        m_requestId = m_pDispatcher->ReadMemory(m_memSlot, m_address, size);
 }
 
 void MemoryWidget::RecalcLockedExpression()
