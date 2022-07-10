@@ -130,7 +130,7 @@ private:
     Dispatcher*         m_pDispatcher;
 
     QPushButton*        m_pStartStopButton;
-    QPushButton*        m_pResetButton;
+    QPushButton*        m_pClearButton;
 
     ProfileTableView*   m_pTableView;
     ProfileTableModel*  m_pTableModel;

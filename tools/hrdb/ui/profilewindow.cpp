@@ -287,15 +287,23 @@ ProfileWindow::ProfileWindow(QWidget *parent, Session* pSession) :
     auto pTopRegion = new QWidget(this);      // top buttons/edits
 
     m_pStartStopButton = new QPushButton("Start", this);
-    m_pResetButton = new QPushButton("Reset", this);
+    m_pClearButton = new QPushButton("Clear", this);
     m_pTableModel = new ProfileTableModel(this, m_pTargetModel, m_pDispatcher);
     m_pTableView = new ProfileTableView(this, m_pTableModel, m_pSession);
     m_pTableView->setModel(m_pTableModel);
     m_pTableView->setSelectionBehavior(QAbstractItemView::SelectionBehavior::SelectRows);
     m_pTableView->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
+    m_pTableView->verticalHeader()->hide();
+    m_pTableView->verticalHeader()->setTextElideMode(Qt::TextElideMode::ElideRight);
+    m_pTableView->setWordWrap(false);
+    m_pTableView->setSortingEnabled(true);
+    //m_pTableView->setShowGrid(false);
+    m_pTableView->sortByColumn(ProfileTableModel::kColCycles, Qt::SortOrder::DescendingOrder);
 
+    m_pTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeMode::ResizeToContents);
+    m_pTableView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeMode::ResizeToContents);
     pTopLayout->addWidget(m_pStartStopButton);
-    pTopLayout->addWidget(m_pResetButton);
+    pTopLayout->addWidget(m_pClearButton);
     pMainLayout->addWidget(pTopRegion);
     pMainLayout->addWidget(m_pTableView);
 
@@ -314,7 +322,7 @@ ProfileWindow::ProfileWindow(QWidget *parent, Session* pSession) :
     connect(m_pSession,         &Session::settingsChanged,              this, &ProfileWindow::settingsChangedSlot);
 
     connect(m_pStartStopButton, &QAbstractButton::clicked,              this, &ProfileWindow::startStopClicked);
-    connect(m_pResetButton,     &QAbstractButton::clicked,              this, &ProfileWindow::resetClicked);
+    connect(m_pClearButton,     &QAbstractButton::clicked,              this, &ProfileWindow::resetClicked);
 
     // Refresh enable state
     connectChangedSlot();
@@ -354,14 +362,14 @@ void ProfileWindow::connectChangedSlot()
 {
     bool enable = m_pTargetModel->IsConnected() && !m_pTargetModel->IsRunning();
     m_pStartStopButton->setEnabled(enable);
-    m_pResetButton->setEnabled(enable);
+    m_pClearButton->setEnabled(enable);
 }
 
 void ProfileWindow::startStopChangedSlot()
 {
     bool enable = m_pTargetModel->IsConnected() && !m_pTargetModel->IsRunning();
     m_pStartStopButton->setEnabled(enable);
-    m_pResetButton->setEnabled(enable);
+    m_pClearButton->setEnabled(enable);
 }
 
 void ProfileWindow::profileChangedSlot()
@@ -377,15 +385,11 @@ void ProfileWindow::profileChangedSlot()
 
 void ProfileWindow::settingsChangedSlot()
 {
-    m_pTableView->setFont(m_pSession->GetSettings().m_font);
     QFontMetrics fm(m_pSession->GetSettings().m_font);
+
     // Down the side
-    m_pTableView->verticalHeader()->hide();
-    m_pTableView->verticalHeader()->setTextElideMode(Qt::TextElideMode::ElideRight);
+    m_pTableView->setFont(m_pSession->GetSettings().m_font);
     m_pTableView->verticalHeader()->setDefaultSectionSize(fm.height());
-    m_pTableView->setWordWrap(false);
-    m_pTableView->setSortingEnabled(true);
-    m_pTableView->sortByColumn(ProfileTableModel::kColCycles, Qt::SortOrder::DescendingOrder);
 }
 
 void ProfileWindow::startStopClicked()
