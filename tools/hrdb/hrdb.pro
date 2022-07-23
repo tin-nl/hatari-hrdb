@@ -24,6 +24,7 @@ SOURCES += \
     models/breakpoint.cpp \
     models/disassembler.cpp \
     models/exceptionmask.cpp \
+    models/launcher.cpp \
     models/memory.cpp \
     models/profiledata.cpp \
     models/registers.cpp \
@@ -59,6 +60,7 @@ HEADERS += \
     models/breakpoint.h \
     models/disassembler.h \
     models/exceptionmask.h \
+    models/launcher.h \
     models/memory.h \
     models/profiledata.h \
     models/registers.h \

@@ -3,17 +3,15 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QLabel>
-#include <QProcess>
 #include <QSettings>
 #include <QCloseEvent>
 #include <QFileDialog>
 #include <QPushButton>
 #include <QComboBox>
-#include <QTemporaryFile>
-#include <QTextStream>
 #include <QMessageBox>
 
 #include <QtGlobal> // for Q_OS_MACOS
+#include "../models/launcher.h"
 #include "../models/session.h"
 #include "quicklayout.h"
 
@@ -72,9 +70,9 @@ RunDialog::RunDialog(QWidget *parent, Session* pSession) :
     m_pPrgTextEdit = new QLineEdit("", this);
     m_pWorkingDirectoryTextEdit = new QLineEdit("", this);
     m_pBreakModeCombo = new QComboBox(this);
-    m_pBreakModeCombo->addItem(tr("None"), BreakMode::kNone);
-    m_pBreakModeCombo->addItem(tr("Boot"), BreakMode::kBoot);
-    m_pBreakModeCombo->addItem(tr("Program Start"), BreakMode::kProgStart);
+    m_pBreakModeCombo->addItem(tr("None"), LaunchSettings::BreakMode::kNone);
+    m_pBreakModeCombo->addItem(tr("Boot"), LaunchSettings::BreakMode::kBoot);
+    m_pBreakModeCombo->addItem(tr("Program Start"), LaunchSettings::BreakMode::kProgStart);
     m_pBreakModeCombo->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
 
     QLabel* pArgumentLink = new QLabel(this);
@@ -134,28 +132,32 @@ void RunDialog::loadSettings()
 {
     QSettings settings;
     settings.beginGroup("RunDialog");
-
     restoreGeometry(settings.value("geometry").toByteArray());
-    m_pExecutableTextEdit->setText(settings.value("exe", QVariant("hatari")).toString());
-    m_pArgsTextEdit->setText(settings.value("args", QVariant("")).toString());
-    m_pPrgTextEdit->setText(settings.value("prg", QVariant("")).toString());
-    m_pWorkingDirectoryTextEdit->setText(settings.value("workingDirectory", QVariant("")).toString());
-    m_pBreakModeCombo->setCurrentIndex(settings.value("breakMode", QVariant("0")).toInt());
     settings.endGroup();
+
+    // Take a copy of existing settings internally
+    m_launchSettings = m_pSession->GetLaunchSettings();
+
+    // Update UI from these settings
+    m_pExecutableTextEdit->setText(m_launchSettings.m_hatariFilename);
+    m_pPrgTextEdit->setText(m_launchSettings.m_prgFilename);
+    m_pArgsTextEdit->setText(m_launchSettings.m_argsTxt);
+    m_pWorkingDirectoryTextEdit->setText(m_launchSettings.m_workingDirectory);
+    m_pBreakModeCombo->setCurrentIndex(m_launchSettings.m_breakMode);
 }
 
 void RunDialog::saveSettings()
 {
     QSettings settings;
     settings.beginGroup("RunDialog");
-
     settings.setValue("geometry", saveGeometry());
-    settings.setValue("exe", m_pExecutableTextEdit->text());
-    settings.setValue("args", m_pArgsTextEdit->text());
-    settings.setValue("prg", m_pPrgTextEdit->text());
-    settings.setValue("workingDirectory", m_pWorkingDirectoryTextEdit->text());
-    settings.setValue("breakMode", m_pBreakModeCombo->currentIndex());
     settings.endGroup();
+
+    // Now write the settings back into the session
+    m_pSession->SetLaunchSettings(m_launchSettings);
+
+    // Force serialisation
+    m_pSession->saveSettings();
 }
 
 void RunDialog::showEvent(QShowEvent *event)
@@ -165,48 +167,15 @@ void RunDialog::showEvent(QShowEvent *event)
 
 void RunDialog::closeEvent(QCloseEvent *event)
 {
+    updateInternalSettingsFromUI();
     saveSettings();
     event->accept();
 }
 
 void RunDialog::okClicked()
 {
-    QStringList args;
-
-    // Start with the "other args" then add the rest around it
-    QString otherArgsText = m_pArgsTextEdit->text();
-    otherArgsText = otherArgsText.trimmed();
-    if (otherArgsText.size() != 0)
-        args = otherArgsText.split(" ");
-
-    // First make a temp file for breakpoints etc
-    BreakMode breakMode = (BreakMode) m_pBreakModeCombo->currentIndex();
-    if (breakMode != BreakMode::kNone)
-    {
-        QString tmpContents;
-        QTextStream ref(&tmpContents);
-
-        // Generate some commands for
-        // Break at boot/start commands
-        if (breakMode == BreakMode::kBoot)
-            ref << QString("b pc ! 0 : once\r\n");
-        else if (breakMode == BreakMode::kProgStart)
-            ref << QString("b pc=TEXT && pc<$e00000 : once\r\n");
-
-        // Create the temp file
-        // In theory we need to be careful about reuse?
-        QTemporaryFile& tmp(*m_pSession->m_pStartupFile);
-        if (!tmp.open())
-            return;
-
-        tmp.setTextModeEnabled(true);
-        tmp.write(tmpContents.toUtf8());
-        tmp.close();
-
-        // Prepend the "--parse N" part (backwards!)
-        args.push_front(tmp.fileName());
-        args.push_front("--parse");
-    }
+    // update m_launchSettings from UI elements, ready to launch
+    updateInternalSettingsFromUI();
 
     QString prgText = m_pPrgTextEdit->text().trimmed();
     if (prgText.size() != 0)
@@ -218,22 +187,21 @@ void RunDialog::okClicked()
             return;
         }
     }
-    args.push_back(prgText);
 
-    // Actually launch the program
-    QProcess proc;
-    proc.setProgram(m_pExecutableTextEdit->text());
-    proc.setArguments(args);
-
-    // Redirect outputs to NULL so that Hatari's own spew doesn't cause lockups
-    // if hrdb is killed and restarted (temp file contention?)
-    proc.setStandardOutputFile(QProcess::nullDevice());
-    proc.setStandardErrorFile(QProcess::nullDevice());
-    proc.setWorkingDirectory(m_pWorkingDirectoryTextEdit->text());
-    proc.startDetached();
-
+    // Sync settings back, whether we succeed or not
     saveSettings();
-    accept();       // Close only when successful
+
+    // Execute
+    bool success = LaunchHatari(m_launchSettings, m_pSession);
+    if (success)
+    {
+        // Force settings save
+        accept();       // Close only when successful
+    }
+    else
+    {
+        QMessageBox::critical(this, "Error", "Failed to launch.");
+    }
 }
 
 void RunDialog::exeClicked()
@@ -257,7 +225,7 @@ void RunDialog::exeClicked()
 #endif
             m_pExecutableTextEdit->setText(name);
         }
-        saveSettings();
+        updateInternalSettingsFromUI();
     }
 }
 
@@ -271,7 +239,7 @@ void RunDialog::prgClicked()
           filter);
     if (filename.size() != 0)
         m_pPrgTextEdit->setText(QDir::toNativeSeparators(filename));
-    saveSettings();
+    updateInternalSettingsFromUI();
 }
 
 void RunDialog::workingDirectoryClicked()
@@ -285,6 +253,17 @@ void RunDialog::workingDirectoryClicked()
         fileNames = dialog.selectedFiles();
         if (fileNames.length() > 0)
             m_pWorkingDirectoryTextEdit->setText(QDir::toNativeSeparators(fileNames[0]));
-        saveSettings();
+        updateInternalSettingsFromUI();
     }
+}
+
+void RunDialog::updateInternalSettingsFromUI()
+{
+    // Create the launcher settings as temporaries
+    m_launchSettings.m_hatariFilename = m_pExecutableTextEdit->text();
+    m_launchSettings.m_prgFilename = m_pPrgTextEdit->text().trimmed();
+    m_launchSettings.m_argsTxt = m_pArgsTextEdit->text().trimmed();
+    m_launchSettings.m_breakMode = static_cast<LaunchSettings::BreakMode>(m_pBreakModeCombo->currentIndex());
+    m_launchSettings.m_workingDirectory = m_pWorkingDirectoryTextEdit->text();
+    m_launchSettings.m_hatariFilename = m_pExecutableTextEdit->text();
 }

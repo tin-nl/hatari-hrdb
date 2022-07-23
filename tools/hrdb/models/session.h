@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QFont>
+#include "launcher.h"
 
 class QTcpSocket;
 class QTimer;
@@ -42,7 +43,7 @@ public:
 
     // Standard functions
     Session();
-    virtual ~Session();
+    virtual ~Session() override;
     void Connect();
     void Disconnect();
 
@@ -55,9 +56,12 @@ public:
     TargetModel*    m_pTargetModel;
 
     const Settings& GetSettings() const;
+    const LaunchSettings& GetLaunchSettings() const;
+
     // Apply settings in prefs dialog.
     // Also emits settingsChanged()
     void SetSettings(const Settings& newSettings);
+    void SetLaunchSettings(const LaunchSettings& newSettings);
 
     void loadSettings();
     void saveSettings();
@@ -78,7 +82,8 @@ private:
     bool             m_autoConnect;
 
     // Actual stored settings object
-    Settings        m_settings;
+    Settings         m_settings;
+    LaunchSettings   m_launchSettings;
 };
 
 #endif // SESSION_H

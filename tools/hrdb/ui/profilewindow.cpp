@@ -230,6 +230,7 @@ void ProfileTableModel::populateFromEntries()
 ProfileTableView::ProfileTableView(QWidget* parent, ProfileTableModel* pModel, Session* pSession) :
     QTableView(parent),
     m_pTableModel(pModel),
+    m_pSession(pSession),
     m_rightClickRow(-1),
     m_showAddressActions(pSession)
 {
@@ -267,7 +268,17 @@ void ProfileTableView::contextMenuEvent(QContextMenuEvent *event)
         // Run it
         menu.exec(event->globalPos());
     }
+}
 
+//-----------------------------------------------------------------------------
+void ProfileTableView::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    int rowIdx = this->rowAt(event->y());
+    if (rowIdx >= 0)
+    {
+        const ProfileTableModel::Entry& ent = m_pTableModel->GetEntry(rowIdx);
+        emit m_pSession->addressRequested(Session::kDisasmWindow, 0, ent.address);
+    }
 }
 
 //-----------------------------------------------------------------------------

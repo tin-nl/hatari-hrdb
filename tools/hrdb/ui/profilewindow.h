@@ -87,13 +87,14 @@ public slots:
 
 protected:
     virtual void contextMenuEvent(QContextMenuEvent *event) override;
-
+    virtual void mouseDoubleClickEvent(QMouseEvent *event) override;
 private:
 
 private slots:
 
 private:
     ProfileTableModel*      m_pTableModel;
+    Session*                m_pSession;
 
     // Remembers which row we right-clicked on
     int                     m_rightClickRow;
