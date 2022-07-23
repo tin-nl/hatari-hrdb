@@ -20,6 +20,7 @@ SOURCES += \
     hardware/hardware_st.cpp \
     hardware/regs_st.cpp \
     hopper/decode.cpp \
+    hrdbapplication.cpp \
     main.cpp \
     models/breakpoint.cpp \
     models/disassembler.cpp \
@@ -57,6 +58,7 @@ HEADERS += \
     hopper/buffer.h \
     hopper/decode.h \
     hopper/instruction.h \
+    hrdbapplication.h \
     models/breakpoint.h \
     models/disassembler.h \
     models/exceptionmask.h \

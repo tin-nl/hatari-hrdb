@@ -581,8 +581,9 @@ int RegisterWidget::GetRowFromPixel(int y) const
     return (y - Session::kWidgetBorderY) / m_lineHeight;
 }
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+MainWindow::MainWindow(Session& session, QWidget *parent)
+    : QMainWindow(parent),
+      m_session(session)
 {
     setObjectName("MainWindow");
     m_pTargetModel = m_session.m_pTargetModel;

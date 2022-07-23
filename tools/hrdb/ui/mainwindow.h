@@ -140,11 +140,11 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+    MainWindow(Session& session, QWidget *parent = nullptr);
+    ~MainWindow() override;
 
 protected:
-    virtual void closeEvent(QCloseEvent *event);
+    virtual void closeEvent(QCloseEvent *event) override;
 
 private slots:
     void connectChangedSlot();
@@ -214,7 +214,7 @@ private:
     ProfileWindow*              m_pProfileWindow;
 
     // Low-level data
-    Session                     m_session;
+    Session&                    m_session;
     Dispatcher*             	m_pDispatcher;
     TargetModel*                m_pTargetModel;
 
