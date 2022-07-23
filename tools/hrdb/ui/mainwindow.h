@@ -177,6 +177,7 @@ private:
     void QuickLaunchTriggered();
     void ConnectTriggered();
     void DisconnectTriggered();
+    void WarmResetTriggered();
 
     // Exception Menu
     void ExceptionsDialogTriggered();
@@ -239,6 +240,7 @@ private:
     QAction* m_pQuickLaunchAct;
     QAction* m_pConnectAct;
     QAction* m_pDisconnectAct;
+    QAction* m_pWarmResetAct;
     QAction* m_pExitAct;
 
     QAction* m_pExceptionsAct;

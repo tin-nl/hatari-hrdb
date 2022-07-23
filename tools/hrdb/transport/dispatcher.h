@@ -15,7 +15,7 @@ class Dispatcher : public QObject
 {
 public:
     Dispatcher(QTcpSocket* tcpSocket, TargetModel* pTargetModel);
-    virtual ~Dispatcher();
+    virtual ~Dispatcher() override;
 
     uint64_t InsertFlush();
 
@@ -29,6 +29,9 @@ public:
     uint64_t ReadSymbols();
 
     uint64_t WriteMemory(uint32_t address, const QVector<uint8_t>& data);
+
+    // System control
+    uint64_t ResetWarm();
 
     // CPU control
     uint64_t Break();

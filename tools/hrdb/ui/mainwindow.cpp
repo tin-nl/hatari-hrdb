@@ -918,6 +918,17 @@ void MainWindow::DisconnectTriggered()
     m_session.Disconnect();
 }
 
+void MainWindow::WarmResetTriggered()
+{
+    m_pDispatcher->ResetWarm();
+    // TODO: ideally we should clear out the symbol tables here
+
+    // Restart if in break mode
+    if (!m_pTargetModel->IsRunning())
+        m_pDispatcher->Run();
+
+}
+
 void MainWindow::ExceptionsDialogTriggered()
 {
     m_pExceptionDialog->setModal(true);
@@ -980,7 +991,7 @@ void MainWindow::updateButtonEnable()
     // Menu items...
     m_pConnectAct->setEnabled(!isConnected);
     m_pDisconnectAct->setEnabled(isConnected);
-
+    m_pWarmResetAct->setEnabled(isConnected);
     m_pExceptionsAct->setEnabled(isConnected);
 }
 
@@ -1121,6 +1132,10 @@ void MainWindow::createActions()
     m_pDisconnectAct->setStatusTip(tr("Disconnect from Hatari"));
     connect(m_pDisconnectAct, &QAction::triggered, this, &MainWindow::DisconnectTriggered);
 
+    m_pWarmResetAct = new QAction(tr("Warm Reset"), this);
+    m_pWarmResetAct->setStatusTip(tr("Warm-Reset the machine"));
+    connect(m_pWarmResetAct, &QAction::triggered, this, &MainWindow::WarmResetTriggered);
+
     m_pExitAct = new QAction(tr("E&xit"), this);
     m_pExitAct->setShortcuts(QKeySequence::Quit);
     m_pExitAct->setStatusTip(tr("Exit the application"));
@@ -1207,6 +1222,9 @@ void MainWindow::createToolBar()
     QToolBar* pToolbar = new QToolBar(this);
     pToolbar->addAction(m_pQuickLaunchAct);
     pToolbar->addAction(m_pLaunchAct);
+    pToolbar->addSeparator();
+    pToolbar->addAction(m_pWarmResetAct);
+
     this->addToolBar(Qt::ToolBarArea::TopToolBarArea, pToolbar);
 }
 
@@ -1218,6 +1236,7 @@ void MainWindow::createMenus()
     m_pFileMenu->addAction(m_pLaunchAct);
     m_pFileMenu->addAction(m_pConnectAct);
     m_pFileMenu->addAction(m_pDisconnectAct);
+    m_pFileMenu->addAction(m_pWarmResetAct);
     m_pFileMenu->addSeparator();
     m_pFileMenu->addAction(m_pExitAct);
 

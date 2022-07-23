@@ -45,11 +45,11 @@
 #include "dmaSnd.h"
 #include "blitter.h"
 #include "profile.h"
-
 // For status bar updates
 #include "screen.h"
 #include "statusbar.h"
 #include "video.h"	/* FIXME: video.h is dependent on HBL_PALETTE_LINES from screen.h */
+#include "reset.h"
 
 // TCP port for remote debugger access
 #define RDB_PORT                   (56001)
@@ -74,7 +74,8 @@ static bool bRemoteBreakRequest = false;
 static bool bRemoteBreakIsActive = false;
 
 /* ID of a protocol for the transfers, so we can detect hatari<->mismatch in future */
-#define REMOTEDEBUG_PROTOCOL_ID	(0x1002)
+/* 0x1003 -- add reset commands */
+#define REMOTEDEBUG_PROTOCOL_ID	(0x1003)
 
 /* Char ID to denote terminator of a token. This is under the ASCII "normal"
 	character value range so that 32-255 can be used */
@@ -800,6 +801,32 @@ static int RemoteDebug_profile(int nArgc, char *psArgs[], RemoteDebugState* stat
 }
 
 // -----------------------------------------------------------------------------
+/* "resetwarm" Trigger system warm reset */
+/* returns "OK <val>" if successful */
+static int RemoteDebug_resetwarm(int nArgc, char *psArgs[], RemoteDebugState* state)
+{
+	if (Reset_Warm() == 0)
+	{
+		send_str(state, "OK");
+		return 0;
+	}
+	return 1;
+}
+
+// -----------------------------------------------------------------------------
+/* "resetcold" Trigger system cold reset */
+/* returns "OK <val>" if successful */
+static int RemoteDebug_resetcold(int nArgc, char *psArgs[], RemoteDebugState* state)
+{
+	if (Reset_Cold() == 0)
+	{
+		send_str(state, "OK");
+		return 0;
+	}
+	return 1;
+}
+
+// -----------------------------------------------------------------------------
 /* DebugUI command structure */
 typedef struct
 {
@@ -826,6 +853,8 @@ static const rdbcommand_t remoteDebugCommandList[] = {
 	{ RemoteDebug_setstd,	"setstd"	, true		},
 	{ RemoteDebug_infoym,	"infoym"	, false		},
 	{ RemoteDebug_profile,	"profile"	, true		},
+	{ RemoteDebug_resetwarm,"resetwarm"	, true		},
+	{ RemoteDebug_resetcold,"resetcold"	, true		},
 
 	/* Terminator */
 	{ NULL, NULL }

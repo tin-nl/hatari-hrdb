@@ -97,6 +97,11 @@ uint64_t Dispatcher::WriteMemory(uint32_t address, const QVector<uint8_t> &data)
     return SendCommandPacket(command.toStdString().c_str());
 }
 
+uint64_t Dispatcher::ResetWarm()
+{
+    return SendCommandPacket("resetwarm");
+}
+
 uint64_t Dispatcher::Break()
 {
     return SendCommandPacket("break");
@@ -539,6 +544,12 @@ void Dispatcher::ReceiveResponsePacket(const RemoteCommand& cmd)
         if (!StringParsers::ParseHexString(enabledStr.c_str(), enabled))
             return;
         m_pTargetModel->ProfileDeltaComplete(static_cast<int>(enabled));
+    }
+    else if (type == "resetwarm")
+    {
+        // Set up an empty symbol table on reset so that we re-request it
+        SymbolSubTable syms;
+        m_pTargetModel->SetSymbolTable(syms, cmd.m_uid);
     }
 }
 
