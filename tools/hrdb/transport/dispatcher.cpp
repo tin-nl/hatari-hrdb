@@ -164,9 +164,9 @@ uint64_t Dispatcher::SetLoggingFile(const std::string& filename)
 uint64_t Dispatcher::SetProfileEnable(bool enable)
 {
     if (enable)
-        SendCommandPacket("profile 0");
+        return SendCommandPacket("profile 0");
     else
-        SendCommandPacket("profile 1");
+        return SendCommandPacket("profile 1");
 }
 
 uint64_t Dispatcher::SendConsoleCommand(const std::string& cmd)
