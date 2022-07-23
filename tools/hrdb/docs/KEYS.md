@@ -14,6 +14,8 @@ Normal focus
 - Alt+G - Focus Graphics Inspector
 - Alt+B - Focus Breakpoints View
 - Alt+H - Focus Hardware View
+- Alt+L - Launch (run Hatari dialog)
+- Alt+Q - QuickLaunch (run Hatari with previous settings)
 
 Disassembly focus
 =================

@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QShortcut>
 #include <QFontDatabase>
+#include <QToolBar>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -682,6 +683,7 @@ MainWindow::MainWindow(Session& session, QWidget *parent)
     // Set up menus (reflecting current state)
     createActions();
     createMenus();
+    createToolBar();
 
     // Listen for target changes
     connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
@@ -901,6 +903,11 @@ void MainWindow::LaunchTriggered()
     // We can't connect here since the dialog hasn't really run yet.
 }
 
+void MainWindow::QuickLaunchTriggered()
+{
+    LaunchHatari(m_session.GetLaunchSettings(), &m_session);
+}
+
 void MainWindow::ConnectTriggered()
 {
     m_session.Connect();
@@ -1100,6 +1107,12 @@ void MainWindow::createActions()
     m_pLaunchAct->setShortcut(QKeySequence("Alt+L"));
     connect(m_pLaunchAct, &QAction::triggered, this, &MainWindow::LaunchTriggered);
 
+    // "Quicklaunch"
+    m_pQuickLaunchAct = new QAction(tr("&QuickLaunch"), this);
+    m_pQuickLaunchAct->setStatusTip(tr("Launch Hatari with previous settings"));
+    m_pQuickLaunchAct->setShortcut(QKeySequence("Alt+Q"));
+    connect(m_pQuickLaunchAct, &QAction::triggered, this, &MainWindow::QuickLaunchTriggered);
+
     m_pConnectAct = new QAction(tr("&Connect"), this);
     m_pConnectAct->setStatusTip(tr("Connect to Hatari"));
     connect(m_pConnectAct, &QAction::triggered, this, &MainWindow::ConnectTriggered);
@@ -1189,10 +1202,19 @@ void MainWindow::createActions()
     connect(m_pAboutQtAct, &QAction::triggered, this, &MainWindow::aboutQt);
 }
 
+void MainWindow::createToolBar()
+{
+    QToolBar* pToolbar = new QToolBar(this);
+    pToolbar->addAction(m_pQuickLaunchAct);
+    pToolbar->addAction(m_pLaunchAct);
+    this->addToolBar(Qt::ToolBarArea::TopToolBarArea, pToolbar);
+}
+
 void MainWindow::createMenus()
 {
     // "File"
     m_pFileMenu = menuBar()->addMenu(tr("&File"));
+    m_pFileMenu->addAction(m_pQuickLaunchAct);
     m_pFileMenu->addAction(m_pLaunchAct);
     m_pFileMenu->addAction(m_pConnectAct);
     m_pFileMenu->addAction(m_pDisconnectAct);

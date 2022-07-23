@@ -174,6 +174,7 @@ private:
     // QAction callbacks
     // File Menu
     void LaunchTriggered();
+    void QuickLaunchTriggered();
     void ConnectTriggered();
     void DisconnectTriggered();
 
@@ -223,6 +224,7 @@ private:
 
     // Menus
     void createActions();
+    void createToolBar();
     void createMenus();
 
     // Shared function to show a sub-window, called by Action callbacks
@@ -234,6 +236,7 @@ private:
     QMenu* m_pHelpMenu;
 
     QAction* m_pLaunchAct;
+    QAction* m_pQuickLaunchAct;
     QAction* m_pConnectAct;
     QAction* m_pDisconnectAct;
     QAction* m_pExitAct;
