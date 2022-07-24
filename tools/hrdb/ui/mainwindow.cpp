@@ -199,8 +199,6 @@ void MainWindow::startStopChangedSlot()
 
         // Basepage makes things much easier
         m_pDispatcher->ReadMemory(MemorySlot::kBasePage, 0, 0x200);
-        // Video memory is generally handy
-        m_pDispatcher->ReadMemory(MemorySlot::kVideo, Regs::VID_REG_BASE, 0x70);
 
         // Only re-request symbols if we didn't find any the first time
         if (m_pTargetModel->GetSymbolTable().GetHatariSubTable().Count() == 0)

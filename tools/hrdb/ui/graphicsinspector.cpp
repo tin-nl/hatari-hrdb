@@ -573,12 +573,13 @@ void GraphicsInspectorWidget::RequestMemory()
     EffectiveData data;
     GetEffectiveData(data);
     m_requestIdBitmap = m_pDispatcher->ReadMemory(MemorySlot::kGraphicsInspector, m_address, data.requiredSize);
+    DisplayAddress();
 }
 
 bool GraphicsInspectorWidget::SetAddressFromVideo()
 {
     // Update to current video regs
-    const Memory* pVideoRegs = m_pTargetModel->GetMemory(MemorySlot::kVideo);
+    const Memory* pVideoRegs = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
     if (!pVideoRegs)
         return false;
 
@@ -695,8 +696,7 @@ void GraphicsInspectorWidget::UpdateUIElements()
     m_pModeComboBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
 
     m_pPaletteComboBox->setEnabled(!m_pLockPaletteToVideoCheckBox->isChecked());
-
-    m_pAddressLineEdit->setText(QString::asprintf("$%x", m_address));
+    DisplayAddress();
 }
 
 GraphicsInspectorWidget::Mode GraphicsInspectorWidget::GetEffectiveMode() const
