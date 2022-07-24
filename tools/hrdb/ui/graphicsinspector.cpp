@@ -530,8 +530,8 @@ void GraphicsInspectorWidget::otherMemoryChangedSlot(uint32_t address, uint32_t 
 
 void GraphicsInspectorWidget::runningRefreshTimerSlot()
 {
-    //if (m_pSession->GetSettings().m_liveRefresh)
-    //    StartMemoryRequests();
+    if (m_pTargetModel->IsConnected() && m_pSession->GetSettings().m_liveRefresh)
+        StartMemoryRequests();
 }
 
 void GraphicsInspectorWidget::widthChangedSlot(int value)
