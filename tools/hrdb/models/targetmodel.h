@@ -122,6 +122,9 @@ signals:
 
     void startStopChangedSignalDelayed(int running);
 
+    // When running, and the periodic refresh timer signals
+    void runningRefreshTimerSignal();
+
     // When a user-inserted flush is the next command
     void flushSignal(const TargetChangedFlags& flags, uint64_t uid);
 
@@ -146,6 +149,7 @@ private slots:
 
     // Called shortly after stop notification received
     void delayedTimer();
+    void runningRefreshTimerSlot();
 
 private:
     TargetChangedFlags  m_changedFlags;
@@ -171,6 +175,9 @@ private:
     // Timer running to trigger events after CPU has stopped for a while
     // (e.g. Graphics Inspector refresh)
     QTimer*         m_pDelayedUpdateTimer;
+
+    // Timer running to support refresh while running
+    QTimer*         m_pRunningRefreshTimer;
 };
 
 // Helper functions to check broad machine types

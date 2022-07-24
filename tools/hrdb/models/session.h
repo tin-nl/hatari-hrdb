@@ -34,6 +34,9 @@ public:
         QFont       m_font;
         // GRAPHICS INSPECTOR
         bool        m_bSquarePixels;
+
+        // LIVE UPDATE
+        bool        m_liveRefresh;
     };
 
     // DRAWING LAYOUT OPTIONS
