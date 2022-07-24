@@ -530,8 +530,8 @@ void GraphicsInspectorWidget::otherMemoryChangedSlot(uint32_t address, uint32_t 
 
 void GraphicsInspectorWidget::runningRefreshTimerSlot()
 {
-    if (m_pSession->GetSettings().m_liveRefresh)
-        StartMemoryRequests();
+    //if (m_pSession->GetSettings().m_liveRefresh)
+    //    StartMemoryRequests();
 }
 
 void GraphicsInspectorWidget::widthChangedSlot(int value)
@@ -571,9 +571,23 @@ void GraphicsInspectorWidget::requestAddress(Session::WindowType type, int windo
     RequestBitmapMemory();
 }
 
+void GraphicsInspectorWidget::StartMemoryRequests()
+{
+    m_requestIdVideoRegs = 0;
+
+    // This is the main entry point for grabbing the data.
+    // Trigger a full refresh of registers
+    if (!m_pTargetModel->IsConnected())
+        return;
+
+    m_requestIdVideoRegs = m_pDispatcher->ReadMemory(MemorySlot::kGraphicsInspectorVideoRegs, Regs::VID_REG_BASE, 0x70);
+}
+
+
 // Request enough memory based on m_rowCount and m_logicalAddr
 void GraphicsInspectorWidget::RequestBitmapMemory()
 {
+    m_requestIdBitmap = 0;
     if (!m_pTargetModel->IsConnected())
         return;
 
@@ -706,13 +720,6 @@ void GraphicsInspectorWidget::UpdateUIElements()
 
     m_pPaletteComboBox->setEnabled(!m_pLockPaletteToVideoCheckBox->isChecked());
     DisplayAddress();
-}
-
-void GraphicsInspectorWidget::StartMemoryRequests()
-{
-    // This is the main entry point for grabbing the data.
-    // Trigger a full refresh of registers
-    m_requestIdVideoRegs = m_pDispatcher->ReadMemory(MemorySlot::kGraphicsInspectorVideoRegs, Regs::VID_REG_BASE, 0x70);
 }
 
 GraphicsInspectorWidget::Mode GraphicsInspectorWidget::GetEffectiveMode() const

@@ -84,7 +84,8 @@ RegisterWidget::RegisterWidget(QWidget *parent, Session* pSession) :
     connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal,      this, &RegisterWidget::symbolTableChangedSlot);
     connect(m_pTargetModel, &TargetModel::startStopChangedSignalDelayed, this, &RegisterWidget::startStopDelayedSlot);
 
-    connect(m_pSession, &Session::settingsChanged, this, &RegisterWidget::settingsChangedSlot);
+    connect(m_pSession, &Session::settingsChanged,  this, &RegisterWidget::settingsChangedSlot);
+    connect(m_pSession, &Session::mainStateUpdated, this, &RegisterWidget::mainStateUpdatedSlot);
     setFocusPolicy(Qt::FocusPolicy::StrongFocus);
     setMouseTracking(true);
     UpdateFont();
@@ -246,7 +247,8 @@ void RegisterWidget::startStopChangedSlot()
 
 void RegisterWidget::startStopDelayedSlot(int running)
 {
-    if (m_pTargetModel->IsConnected() && running)
+    if (m_pTargetModel->IsConnected() && running &&
+            !m_pSession->GetSettings().m_liveRefresh)
     {
         m_tokens.clear();
         m_tokenUnderMouseIndex = -1;
@@ -255,25 +257,8 @@ void RegisterWidget::startStopDelayedSlot(int running)
     }
 }
 
-void RegisterWidget::settingsChangedSlot()
+void RegisterWidget::mainStateUpdatedSlot()
 {
-    UpdateFont();
-    PopulateRegisters();
-    UpdateTokenUnderMouse();
-    update();
-}
-
-void RegisterWidget::registersChangedSlot(uint64_t /*commandId*/)
-{
-    // Update text here
-    PopulateRegisters();
-}
-
-void RegisterWidget::memoryChangedSlot(int slot, uint64_t /*commandId*/)
-{
-    if (slot != MemorySlot::kMainPC)
-        return;
-
     // Disassemble the first instruction
     m_disasm.lines.clear();
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kMainPC);
@@ -282,7 +267,31 @@ void RegisterWidget::memoryChangedSlot(int slot, uint64_t /*commandId*/)
 
     buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize(), pMem->GetAddress());
     Disassembler::decode_buf(disasmBuf, m_disasm, pMem->GetAddress(), 2);
+
     PopulateRegisters();
+    update();
+}
+
+void RegisterWidget::settingsChangedSlot()
+{
+    UpdateFont();
+    PopulateRegisters();
+    update();
+}
+
+void RegisterWidget::registersChangedSlot(uint64_t /*commandId*/)
+{
+    // Update text here
+    //PopulateRegisters();
+}
+
+void RegisterWidget::memoryChangedSlot(int slot, uint64_t /*commandId*/)
+{
+    if (slot != MemorySlot::kMainPC)
+        return;
+
+    // This will be done when all main state updates
+//    PopulateRegisters();
 }
 
 void RegisterWidget::symbolTableChangedSlot(uint64_t /*commandId*/)
@@ -439,6 +448,7 @@ void RegisterWidget::PopulateRegisters()
     AddReg32(14, row, Registers::USP, m_prevRegs, m_currRegs); AddSymbol(28, row, m_currRegs.m_value[Registers::USP]);
     row++;
     AddReg32(14, row, Registers::ISP, m_prevRegs, m_currRegs); AddSymbol(28, row, m_currRegs.m_value[Registers::ISP]);
+    row++;
     row++;
 
     // Sundry info

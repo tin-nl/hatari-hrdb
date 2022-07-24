@@ -31,7 +31,9 @@
 
 MainWindow::MainWindow(Session& session, QWidget *parent)
     : QMainWindow(parent),
-      m_session(session)
+      m_session(session),
+      m_mainStateUpdateRequest(0),
+      m_liveRegisterReadRequest(0)
 {
     setObjectName("MainWindow");
     m_pTargetModel = m_session.m_pTargetModel;
@@ -133,9 +135,11 @@ MainWindow::MainWindow(Session& session, QWidget *parent)
     createToolBar();
 
     // Listen for target changes
-    connect(m_pTargetModel, &TargetModel::startStopChangedSignal, this, &MainWindow::startStopChangedSlot);
-    connect(m_pTargetModel, &TargetModel::connectChangedSignal,   this, &MainWindow::connectChangedSlot);
-    connect(m_pTargetModel, &TargetModel::memoryChangedSignal,    this, &MainWindow::memoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::startStopChangedSignal,    this, &MainWindow::startStopChangedSlot);
+    connect(m_pTargetModel, &TargetModel::connectChangedSignal,      this, &MainWindow::connectChangedSlot);
+    connect(m_pTargetModel, &TargetModel::memoryChangedSignal,       this, &MainWindow::memoryChangedSlot);
+    connect(m_pTargetModel, &TargetModel::runningRefreshTimerSignal, this, &MainWindow::runningRefreshTimerSlot);
+    connect(m_pTargetModel, &TargetModel::flushSignal,               this, &MainWindow::flushSlot);
 
     // Wire up buttons to actions
     connect(m_pStartStopButton, &QAbstractButton::clicked, this, &MainWindow::startStopClicked);
@@ -189,20 +193,9 @@ void MainWindow::startStopChangedSlot()
         // STOPPED
 		// TODO this is where all windows should put in requests for data
         // The Main Window does this and other windows feed from it.
-
-        // Do all the "essentials" straight away.
-        m_pDispatcher->ReadRegisters();
-        m_pDispatcher->ReadMemory(MemorySlot::kMainPC, m_pTargetModel->GetPC(), 10);
-
-        m_pDispatcher->ReadBreakpoints();
-        m_pDispatcher->ReadExceptionMask();
-
-        // Basepage makes things much easier
-        m_pDispatcher->ReadMemory(MemorySlot::kBasePage, 0, 0x200);
-
-        // Only re-request symbols if we didn't find any the first time
-        if (m_pTargetModel->GetSymbolTable().GetHatariSubTable().Count() == 0)
-            m_pDispatcher->ReadSymbols();
+        // NOTE: we assume here that PC is already updated (normally this
+        // is done with a notification at the stop)
+        requestMainState(m_pTargetModel->GetStartStopPC());
     }
     PopulateRunningSquare();
     updateButtonEnable();
@@ -213,6 +206,9 @@ void MainWindow::memoryChangedSlot(int slot, uint64_t /*commandId*/)
     if (slot != MemorySlot::kMainPC)
         return;
 
+    // This is the last part of the main state update, so flag it
+    emit m_session.mainStateUpdated();
+
     // Disassemble the first instruction
     m_disasm.lines.clear();
     const Memory* pMem = m_pTargetModel->GetMemory(MemorySlot::kMainPC);
@@ -222,6 +218,36 @@ void MainWindow::memoryChangedSlot(int slot, uint64_t /*commandId*/)
     // Fetch data and decode the next instruction.
     buffer_reader disasmBuf(pMem->GetData(), pMem->GetSize(), pMem->GetAddress());
     Disassembler::decode_buf(disasmBuf, m_disasm, pMem->GetAddress(), 1);
+}
+
+void MainWindow::runningRefreshTimerSlot()
+{
+    if (!m_pTargetModel->IsConnected())
+        return;
+
+    if (m_session.GetSettings().m_liveRefresh)
+    {
+        // This will trigger an update of the RegisterWindow
+        m_pDispatcher->ReadRegisters();
+        m_liveRegisterReadRequest = m_pDispatcher->InsertFlush();
+    }
+}
+
+void MainWindow::flushSlot(const TargetChangedFlags& flags, uint64_t commandId)
+{
+    if (commandId == m_liveRegisterReadRequest)
+    {
+        // Now that we have registers from the live request, get disassmbly memory
+        // using the full register bank
+        requestMainState(m_pTargetModel->GetRegs().Get(Registers::PC));
+        m_liveRegisterReadRequest = 0;
+    }
+    else if (commandId == m_mainStateUpdateRequest)
+    {
+        // This is where we should
+        emit m_session.mainStateUpdated();
+        m_mainStateUpdateRequest = 0;
+    }
 }
 
 void MainWindow::startStopClicked()
@@ -262,7 +288,7 @@ void MainWindow::nextClicked()
     // the PC we are stepping from. This slows down stepping a little (since there is
     // a round-trip). In theory we could send the next instruction opcode as part of
     // the "status" notification if we want it to be faster.
-    if(m_disasm.lines[0].address != m_pTargetModel->GetPC())
+    if(m_disasm.lines[0].address != m_pTargetModel->GetStartStopPC())
         return;
 
     const Disassembler::line& nextInst = m_disasm.lines[0];
@@ -297,7 +323,7 @@ void MainWindow::skipPressed()
     // the PC we are stepping from. This slows down stepping a little (since there is
     // a round-trip). In theory we could send the next instruction opcode as part of
     // the "status" notification if we want it to be faster.
-    if(m_disasm.lines[0].address != m_pTargetModel->GetPC())
+    if(m_disasm.lines[0].address != m_pTargetModel->GetStartStopPC())
         return;
 
     const Disassembler::line& nextInst = m_disasm.lines[0];
@@ -553,6 +579,28 @@ void MainWindow::about()
 
 void MainWindow::aboutQt()
 {
+}
+
+void MainWindow::requestMainState(uint32_t pc)
+{
+    // Do all the "essentials" straight away.
+    m_pDispatcher->ReadRegisters();
+
+    // This is the memory for the current instruction.
+    // It's used by this and Register windows.
+    // *** NOTE this code assumes PC register is already available ***
+    m_pDispatcher->ReadMemory(MemorySlot::kMainPC, pc, 10);
+    m_pDispatcher->ReadBreakpoints();
+    m_pDispatcher->ReadExceptionMask();
+
+    // Basepage makes things much easier
+    m_pDispatcher->ReadMemory(MemorySlot::kBasePage, 0, 0x200);
+
+    // Only re-request symbols if we didn't find any the first time
+    if (m_pTargetModel->GetSymbolTable().GetHatariSubTable().Count() == 0)
+        m_pDispatcher->ReadSymbols();
+
+    m_mainStateUpdateRequest = m_pDispatcher->InsertFlush();
 }
 
 void MainWindow::createActions()

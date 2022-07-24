@@ -10,6 +10,7 @@
 #include <QMainWindow>
 #include "../models/memory.h"
 #include "../models/disassembler.h"
+#include "../models/targetmodel.h"
 
 class QPushButton;
 class QLabel;
@@ -53,6 +54,8 @@ private slots:
     void connectChangedSlot();
 	void startStopChangedSlot();
     void memoryChangedSlot(int slot, uint64_t commandId);
+    void runningRefreshTimerSlot();
+    void flushSlot(const TargetChangedFlags& flags, uint64_t commandId);
 
     // Button callbacks
     void startStopClicked();
@@ -72,6 +75,7 @@ private slots:
     void aboutQt();
 
 private:
+    void requestMainState(uint32_t pc);
     void updateWindowMenu();
 
     // QAction callbacks
@@ -125,6 +129,12 @@ private:
 
     // Target data -- used for single-stepping
     Disassembler::disassembly   m_disasm;
+
+    // Flush request made after all main state is fetched
+    uint64_t                    m_mainStateUpdateRequest;
+
+    // Flush request made by live update (fetching registers)
+    uint64_t                    m_liveRegisterReadRequest;
 
     // Menus
     void createActions();

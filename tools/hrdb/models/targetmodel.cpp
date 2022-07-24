@@ -64,6 +64,10 @@ void TargetModel::SetConnected(int connected)
 
         Breakpoints dummyBreak;
         SetBreakpoints(dummyBreak, 0);
+
+        // Clear potentially running timers
+        m_pDelayedUpdateTimer->stop();
+        m_pRunningRefreshTimer->stop();
     }
 
     emit connectChangedSignal();
@@ -72,23 +76,21 @@ void TargetModel::SetConnected(int connected)
 void TargetModel::SetStatus(bool running, uint32_t pc)
 {
     m_bRunning = running;
-	m_pc = pc;
+    m_startStopPc = pc;
     m_changedFlags.SetChanged(TargetChangedFlags::kPC);
     emit startStopChangedSignal();
 
     m_pDelayedUpdateTimer->stop();
     m_pRunningRefreshTimer->stop();
 
-    //    if (!m_bRunning)
-    {
-        m_pDelayedUpdateTimer->setSingleShot(true);
-        m_pDelayedUpdateTimer->start(500);
-    }
+    // The delay timer always fires
+    m_pDelayedUpdateTimer->setSingleShot(true);
+    m_pDelayedUpdateTimer->start(500);
 
     if (m_bRunning)
     {
         m_pRunningRefreshTimer->setSingleShot(false);
-        m_pRunningRefreshTimer->start(500);
+        m_pRunningRefreshTimer->start(1000);
     }
 }
 

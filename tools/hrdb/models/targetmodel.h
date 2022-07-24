@@ -96,7 +96,9 @@ public:
     int IsRunning() const { return m_bRunning; }
     int IsProfileEnabled() const { return m_bProfileEnabled; }
 
-    uint32_t GetPC() const { return m_pc; }
+    // This is the PC from start/stop notifications, so it's not valid when
+    // running
+    uint32_t GetStartStopPC() const { return m_startStopPc; }
 	Registers GetRegs() const { return m_regs; }
     const Memory* GetMemory(MemorySlot slot) const
     {
@@ -160,7 +162,7 @@ private:
     int             m_bConnected;   // 0 == disconnected, 1 == connected
     int             m_bRunning;		// 0 == stopped, 1 == running
     int             m_bProfileEnabled; // 0 == off, 1 == collecting
-    uint32_t        m_pc;			// PC register (for next instruction)
+    uint32_t        m_startStopPc;			// PC register (for next instruction)
 
     Registers       m_regs;			// Current register values
     Breakpoints     m_breakpoints;  // Current breakpoint list

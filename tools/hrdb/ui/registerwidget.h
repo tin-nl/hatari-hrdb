@@ -29,6 +29,8 @@ private slots:
     void memoryChangedSlot(int slot, uint64_t commandId);
     void symbolTableChangedSlot(uint64_t commandId);
     void startStopDelayedSlot(int running);
+
+    void mainStateUpdatedSlot();
     void settingsChangedSlot();
 
 private:

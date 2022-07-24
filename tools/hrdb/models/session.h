@@ -76,6 +76,9 @@ signals:
     // Qt seems to have no central message dispatch, so use signals/slots
     void addressRequested(WindowType windowType, int windowId, uint32_t address);
 
+    // Called by the main window when all data such as regs, breakpoints, symbols
+    // are updated.
+    void mainStateUpdated();
 private slots:
 
     // Called shortly after stop notification received
