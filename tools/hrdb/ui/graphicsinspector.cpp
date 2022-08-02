@@ -534,7 +534,8 @@ void GraphicsInspectorWidget::lockPaletteToVideoChangedSlot()
 
 void GraphicsInspectorWidget::modeChangedSlot(int index)
 {
-    m_mode = static_cast<Mode>(index);
+    int modeInt = m_pModeComboBox->itemData(index).toInt();
+    m_mode = static_cast<Mode>(modeInt);
     RequestBitmapMemory();
 }
 
