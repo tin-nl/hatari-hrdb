@@ -106,14 +106,13 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
 
     // Third line
     m_pPaletteComboBox = new QComboBox(this);
+    m_pPaletteComboBox->addItem(tr("Registers"), kRegisters);
     m_pPaletteComboBox->addItem(tr("Greyscale"), kGreyscale);
     m_pPaletteComboBox->addItem(tr("Contrast1"), kContrast1);
     m_pPaletteComboBox->addItem(tr("Bitplane0"), kBitplane0);
     m_pPaletteComboBox->addItem(tr("Bitplane1"), kBitplane1);
     m_pPaletteComboBox->addItem(tr("Bitplane2"), kBitplane2);
     m_pPaletteComboBox->addItem(tr("Bitplane3"), kBitplane3);
-
-    m_pLockPaletteToVideoCheckBox = new QCheckBox(tr("Use Registers"), this);
     m_pInfoLabel = new QLabel(this);
 
     // Bottom
@@ -152,7 +151,6 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     hlayout3->setAlignment(Qt::AlignLeft);
     hlayout3->addWidget(new QLabel(tr("Palette:"), this));
     hlayout3->addWidget(m_pPaletteComboBox);
-    hlayout3->addWidget(m_pLockPaletteToVideoCheckBox);
     hlayout3->addWidget(m_pInfoLabel);
     QWidget* pContainer3 = new QWidget(this);
     pContainer3->setLayout(hlayout3);
@@ -182,7 +180,6 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     connect(m_pLockAddressToVideoCheckBox,  &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockAddressToVideoChangedSlot);
     connect(m_pLockFormatToVideoCheckBox,   &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockFormatToVideoChangedSlot);
     connect(m_pLockAddressToVideoCheckBox,  &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockAddressToVideoChangedSlot);
-    connect(m_pLockPaletteToVideoCheckBox,  &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockPaletteToVideoChangedSlot);
 
     connect(m_pModeComboBox,    SIGNAL(currentIndexChanged(int)),         SLOT(modeChangedSlot(int)));
     connect(m_pPaletteComboBox, SIGNAL(currentIndexChanged(int)),         SLOT(paletteChangedSlot(int)));
@@ -227,7 +224,6 @@ void GraphicsInspectorWidget::loadSettings()
     m_pPaddingSpinBox->setValue(m_padding);
     m_pLockAddressToVideoCheckBox->setChecked(settings.value("lockAddress", QVariant(true)).toBool());
     m_pLockFormatToVideoCheckBox->setChecked(settings.value("lockFormat", QVariant(true)).toBool());
-    m_pLockPaletteToVideoCheckBox->setChecked(settings.value("lockPalette", QVariant(true)).toBool());
 
     int palette = settings.value("palette", QVariant((int)Palette::kGreyscale)).toInt();
     m_pPaletteComboBox->setCurrentIndex(palette);
@@ -245,7 +241,6 @@ void GraphicsInspectorWidget::saveSettings()
     settings.setValue("padding", m_padding);
     settings.setValue("lockAddress", m_pLockAddressToVideoCheckBox->isChecked());
     settings.setValue("lockFormat", m_pLockFormatToVideoCheckBox->isChecked());
-    settings.setValue("lockPalette", m_pLockPaletteToVideoCheckBox->isChecked());
     settings.setValue("mode", static_cast<int>(m_mode));
     settings.setValue("palette", m_pPaletteComboBox->currentIndex());
     settings.endGroup();
@@ -522,16 +517,6 @@ void GraphicsInspectorWidget::lockFormatToVideoChangedSlot()
     UpdateUIElements();
 }
 
-void GraphicsInspectorWidget::lockPaletteToVideoChangedSlot()
-{
-    UpdatePaletteFromSettings();
-
-    // Ensure pixmap is updated
-    m_pImageWidget->setPixmap(GetEffectiveWidth(), GetEffectiveHeight());
-
-    UpdateUIElements();
-}
-
 void GraphicsInspectorWidget::modeChangedSlot(int index)
 {
     int modeInt = m_pModeComboBox->itemData(index).toInt();
@@ -652,45 +637,45 @@ void GraphicsInspectorWidget::UpdatePaletteFromSettings()
 {
     // Colours are ARGB
     m_pImageWidget->m_colours.clear();
+    int rawIdx = m_pPaletteComboBox->itemData(m_pPaletteComboBox->currentIndex()).toInt();
+    Palette pal = static_cast<Palette>(rawIdx);
 
     // Now update palette
-    if (m_pLockPaletteToVideoCheckBox->isChecked())
+    switch (pal)
     {
-        const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
-        if (!pMemOrig)
-            return;
-        static const uint32_t stToRgb[16] =
+        case kRegisters:
         {
-            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
-            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee
-        };
-        static const uint32_t steToRgb[16] =
-        {
-            0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
-            0x11, 0x33, 0x55, 0x77, 0x99, 0xbb, 0xdd, 0xff
-        };
+            const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
+            if (!pMemOrig)
+                return;
+            static const uint32_t stToRgb[16] =
+            {
+                0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
+                0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee
+            };
+            static const uint32_t steToRgb[16] =
+            {
+                0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
+                0x11, 0x33, 0x55, 0x77, 0x99, 0xbb, 0xdd, 0xff
+            };
 
-        bool isST = IsMachineST(m_pTargetModel->GetMachineType());
-        const uint32_t* pPalette = isST ? stToRgb : steToRgb;
+            bool isST = IsMachineST(m_pTargetModel->GetMachineType());
+            const uint32_t* pPalette = isST ? stToRgb : steToRgb;
+            for (uint i = 0; i < 16; ++i)
+            {
+                uint32_t addr = Regs::VID_PAL_0 + i*2;
+                uint32_t  r = pMemOrig->ReadAddressByte(addr + 0) & 0xf;
+                uint32_t  g = pMemOrig->ReadAddressByte(addr + 1) >> 4;
+                uint32_t  b = pMemOrig->ReadAddressByte(addr + 1) & 0xf;
 
-
-        for (uint i = 0; i < 16; ++i)
-        {
-            uint32_t addr = Regs::VID_PAL_0 + i*2;
-            uint32_t  r = pMemOrig->ReadAddressByte(addr + 0) & 0xf;
-            uint32_t  g = pMemOrig->ReadAddressByte(addr + 1) >> 4;
-            uint32_t  b = pMemOrig->ReadAddressByte(addr + 1) & 0xf;
-
-            uint32_t colour = 0xff000000U;
-            colour |= pPalette[r] << 16;
-            colour |= pPalette[g] << 8;
-            colour |= pPalette[b] << 0;
-            m_pImageWidget->m_colours.append(colour);
+                uint32_t colour = 0xff000000U;
+                colour |= pPalette[r] << 16;
+                colour |= pPalette[g] << 8;
+                colour |= pPalette[b] << 0;
+                m_pImageWidget->m_colours.append(colour);
+            }
+            break;
         }
-    }
-    else {
-        switch (m_pPaletteComboBox->currentIndex())
-        {
         case kGreyscale:
             for (uint i = 0; i < 16; ++i)
             {
@@ -713,9 +698,6 @@ void GraphicsInspectorWidget::UpdatePaletteFromSettings()
         case kBitplane3:
             CreateBitplanePalette(m_pImageWidget->m_colours, 0x220000, 0x2200, 0x22, 0xbbbbbb);
             break;
-        default:
-            break;
-        }
     }
 }
 
@@ -745,8 +727,6 @@ void GraphicsInspectorWidget::UpdateUIElements()
     m_pHeightSpinBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
     m_pPaddingSpinBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
     m_pModeComboBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
-
-    m_pPaletteComboBox->setEnabled(!m_pLockPaletteToVideoCheckBox->isChecked());
     DisplayAddress();
 }
 

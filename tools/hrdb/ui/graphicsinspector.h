@@ -24,7 +24,7 @@ class GraphicsInspectorWidget : public QDockWidget
 public:
     GraphicsInspectorWidget(QWidget *parent,
                             Session* pSession);
-    ~GraphicsInspectorWidget();
+    virtual ~GraphicsInspectorWidget() override;
 
     // Grab focus and point to the main widget
     void keyFocus();
@@ -41,7 +41,6 @@ private:
     void textEditChangedSlot();
     void lockAddressToVideoChangedSlot();
     void lockFormatToVideoChangedSlot();
-    void lockPaletteToVideoChangedSlot();
 
 private slots:
     void modeChangedSlot(int index);
@@ -71,6 +70,7 @@ private:
         kBitplane1,
         kBitplane2,
         kBitplane3,
+        kRegisters
     };
 
     void UpdateUIElements();
@@ -115,7 +115,6 @@ private:
     QSpinBox*       m_pPaddingSpinBox;
     QCheckBox*      m_pLockAddressToVideoCheckBox;
     QCheckBox*      m_pLockFormatToVideoCheckBox;
-    QCheckBox*      m_pLockPaletteToVideoCheckBox;
     QComboBox*      m_pPaletteComboBox;
     QLabel*         m_pInfoLabel;
 
