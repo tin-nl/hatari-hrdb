@@ -94,6 +94,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_pLockFormatToVideoCheckBox = new QCheckBox(tr("Use Registers"), this);
 
     m_pModeComboBox->addItem(tr("4 Plane"), Mode::k4Bitplane);
+    m_pModeComboBox->addItem(tr("3 Plane"), Mode::k3Bitplane);
     m_pModeComboBox->addItem(tr("2 Plane"), Mode::k2Bitplane);
     m_pModeComboBox->addItem(tr("1 Plane"), Mode::k1Bitplane);
     m_pWidthSpinBox->setRange(1, 40);
@@ -393,9 +394,35 @@ void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t com
                     pChunk += 8;
                     pDestPixels += 16;
                 }
-
             }
+        }
+        else if (mode == k3Bitplane)
+        {
+            for (int y = 0; y < height; ++y)
+            {
+                const uint8_t* pChunk = pMemOrig->GetData() + y * data.bytesPerLine;
+                for (int x = 0; x < width; ++x)
+                {
+                    int32_t pSrc[3];    // top 16 bits never used
+                    pSrc[2] = (pChunk[0] << 8) | pChunk[1];
+                    pSrc[1] = (pChunk[2] << 8) | pChunk[3];
+                    pSrc[0] = (pChunk[4] << 8) | pChunk[5];
+                    for (int pix = 15; pix >= 0; --pix)
+                    {
+                        uint8_t val;
+                        val  = (pSrc[0] & 1); val <<= 1;
+                        val |= (pSrc[1] & 1); val <<= 1;
+                        val |= (pSrc[2] & 1);
 
+                        pDestPixels[pix] = val;
+                        pSrc[0] >>= 1;
+                        pSrc[1] >>= 1;
+                        pSrc[2] >>= 1;
+                    }
+                    pChunk += 6;
+                    pDestPixels += 16;
+                }
+            }
         }
         else if (mode == k2Bitplane)
         {
@@ -803,6 +830,7 @@ int32_t GraphicsInspectorWidget::BytesPerMode(GraphicsInspectorWidget::Mode mode
     switch (mode)
     {
     case k4Bitplane: return 8;
+    case k3Bitplane: return 6;
     case k2Bitplane: return 4;
     case k1Bitplane: return 2;
     }

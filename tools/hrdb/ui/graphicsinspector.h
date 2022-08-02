@@ -60,6 +60,7 @@ private:
         k4Bitplane,
         k2Bitplane,
         k1Bitplane,
+        k3Bitplane      // NOTE: this is in the wrong order to preserve Settings serialisation
     };
 
     enum Palette
