@@ -642,30 +642,15 @@ void GraphicsInspectorWidget::UpdateImage()
             const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorPalette);
             if (!pMemOrig)
                 return;
-            static const uint32_t stToRgb[16] =
-            {
-                0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
-                0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee
-            };
-            static const uint32_t steToRgb[16] =
-            {
-                0x00, 0x22, 0x44, 0x66, 0x88, 0xaa, 0xcc, 0xee,
-                0x11, 0x33, 0x55, 0x77, 0x99, 0xbb, 0xdd, 0xff
-            };
 
-            bool isST = IsMachineST(m_pTargetModel->GetMachineType());
-            const uint32_t* pPalette = isST ? stToRgb : steToRgb;
             for (uint i = 0; i < 16; ++i)
             {
-                uint32_t addr = i*2;
-                uint32_t  r = pMemOrig->Get(addr) & 0xf;
-                uint32_t  g = pMemOrig->Get(addr + 1) >> 4;
-                uint32_t  b = pMemOrig->Get(addr + 1) & 0xf;
+                uint16_t regVal = pMemOrig->Get(i * 2);
+                regVal <<= 8;
+                regVal |= pMemOrig->Get(i * 2 + 1);
 
                 uint32_t colour = 0xff000000U;
-                colour |= pPalette[r] << 16;
-                colour |= pPalette[g] << 8;
-                colour |= pPalette[b] << 0;
+                HardwareST::GetColour(regVal, m_pTargetModel->GetMachineType(), colour);
                 m_pImageWidget->m_colours.append(colour);
             }
             break;
