@@ -38,7 +38,8 @@ private:
     void otherMemoryChangedSlot(uint32_t address, uint32_t size);
     void runningRefreshTimerSlot();
 
-    void textEditChangedSlot();
+    void bitmapAddressChangedSlot();
+    void paletteAddressChangedSlot();
     void lockAddressToVideoChangedSlot();
     void lockFormatToVideoChangedSlot();
 
@@ -49,7 +50,6 @@ private slots:
     void heightChangedSlot(int height);
     void paddingChangedSlot(int height);
     void tooltipStringChangedSlot();
-    void requestAddress(Session::WindowType type, int windowIndex, uint32_t address);
 protected:
     virtual void keyPressEvent(QKeyEvent *ev);
 
@@ -70,24 +70,28 @@ private:
         kBitplane1,
         kBitplane2,
         kBitplane3,
-        kRegisters
+        kRegisters,
+        kUserMemory
     };
 
+    void RequestBitmapAddress(Session::WindowType type, int windowIndex, uint32_t address);
+
+    // Looks at dirty requests, and issues them in the correct orders
+    void UpdateMemoryRequests();
+
+    // Turn boxes on/off depending on mode, palette etc
     void UpdateUIElements();
 
-    // This requests the video regs, which ultimately triggers RequestBitmapMemory
-    void StartMemoryRequests();
-    // This requests the bitmap area, so assumes that the address/size etc is correctly set
-    void RequestBitmapMemory();
+    bool SetBitmapAddressFromVideoRegs();
 
-    bool SetAddressFromVideo();
+    // Update the text boxes with the active bitmap/palette addresses
     void DisplayAddress();
 
-    // Either copy from registers, or use the user settings
-    void UpdatePaletteFromSettings();
-
     // Copy format from video regs if required
-    void UpdateFormatFromSettings();
+    void UpdateFormatFromUI();
+
+    // Finally update palette+bitmap for display
+    void UpdateImage();
 
     struct EffectiveData
     {
@@ -108,7 +112,8 @@ private:
 
     static int32_t BytesPerMode(Mode mode);
 
-    QLineEdit*      m_pAddressLineEdit;
+    QLineEdit*      m_pBitmapAddressLineEdit;
+    QLineEdit*      m_pPaletteAddressLineEdit;
     QComboBox*      m_pModeComboBox;
     QSpinBox*       m_pWidthSpinBox;
     QSpinBox*       m_pHeightSpinBox;
@@ -127,13 +132,38 @@ private:
     QAbstractItemModel* m_pSymbolTableModel;
 
     Mode            m_mode;
-    uint32_t        m_address;
+    uint32_t        m_bitmapAddress;
     int             m_width;            // in "chunks"
     int             m_height;
     int             m_padding;          // in bytes
 
-    uint64_t        m_requestIdBitmap;
-    uint64_t        m_requestIdVideoRegs;
+    Palette         m_paletteMode;
+    uint32_t        m_paletteAddress;
+
+    // Stores state of "memory wanted" vs "memory request in flight"
+    struct Request
+    {
+        bool isDirty;       // We've put in a request
+        uint64_t requestId; // ID of active mem request, or 0
+
+        Request()
+        {
+            Clear();
+        }
+        void Clear()
+        {
+            isDirty = false; requestId = 0;
+        }
+
+        void Dirty()
+        {
+            isDirty = true; requestId = 0;
+        }
+    };
+
+    Request         m_requestRegs;
+    Request         m_requestPalette;
+    Request         m_requestBitmap;
 };
 
 #endif // GRAPHICSINSPECTOR_H

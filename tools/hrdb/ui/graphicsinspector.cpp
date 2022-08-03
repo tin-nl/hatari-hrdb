@@ -24,12 +24,26 @@
 #include "quicklayout.h"
 
 /* A note on memory requests:
- * When doing update, the entry point is StartMemoryRequests()
- * This requests the video regs (whether needed or not)
- * When that memory is returned, a further memory request is made
- * by RequestBitmapMemory.
- * Once that memory is returned the UI's bitmap is created/updated.
- */
+
+    The code uses a dependency system, since it needs 3 bits of memory
+    * the video regs
+    * the palette (which might be memory or not
+    * the bitmap, (which might depend on registers)
+
+    The bitmap cannot be requested until video regs and palette have been
+    updated when necessary.
+
+    Each one of these hsa a "Request" structure to check whether it needs
+    re-requesting, or checking if it has been received.
+
+    We flag a request as "dirty" (needs a new request) then call UpdateMemoryRequests
+    which sorts out calling the dispatcher. Also when we receive memory
+    we clear the request dirty flags and also call UpdateMemoryRequests to
+    fetch any dependent memory.
+
+    Finally when all requests are done we can call UpdateImage which creates
+    the bitmap and final palette.
+*/
 
 static void CreateBitplanePalette(QVector<uint32_t>& palette,
                                   uint32_t col0,
@@ -60,13 +74,14 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     QDockWidget(parent),
     m_pSession(pSession),
     m_mode(k4Bitplane),
-    m_address(0U),
+    m_bitmapAddress(0U),
     m_width(20),
     m_height(200),
     m_padding(0),
-    m_requestIdBitmap(0U),
-    m_requestIdVideoRegs(0U)
+    m_paletteMode(kRegisters)
 {
+    m_paletteAddress = Regs::VID_PAL_0;
+
     m_pTargetModel = m_pSession->m_pTargetModel;
     m_pDispatcher = m_pSession->m_pDispatcher;
 
@@ -79,12 +94,12 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     m_pImageWidget = new NonAntiAliasImage(this, pSession);
 
     // top line
-    m_pAddressLineEdit = new QLineEdit(this);
+    m_pBitmapAddressLineEdit = new QLineEdit(this);
     m_pLockAddressToVideoCheckBox = new QCheckBox(tr("Use Registers"), this);
     m_pSymbolTableModel = new SymbolTableModel(this, m_pTargetModel->GetSymbolTable());
     QCompleter* pCompl = new QCompleter(m_pSymbolTableModel, this);
     pCompl->setCaseSensitivity(Qt::CaseSensitivity::CaseInsensitive);
-    m_pAddressLineEdit->setCompleter(pCompl);
+    m_pBitmapAddressLineEdit->setCompleter(pCompl);
 
     // Second line
     m_pModeComboBox = new QComboBox(this);
@@ -107,12 +122,16 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     // Third line
     m_pPaletteComboBox = new QComboBox(this);
     m_pPaletteComboBox->addItem(tr("Registers"), kRegisters);
+    m_pPaletteComboBox->addItem(tr("Memory..."), kUserMemory);
     m_pPaletteComboBox->addItem(tr("Greyscale"), kGreyscale);
     m_pPaletteComboBox->addItem(tr("Contrast1"), kContrast1);
     m_pPaletteComboBox->addItem(tr("Bitplane0"), kBitplane0);
     m_pPaletteComboBox->addItem(tr("Bitplane1"), kBitplane1);
     m_pPaletteComboBox->addItem(tr("Bitplane2"), kBitplane2);
     m_pPaletteComboBox->addItem(tr("Bitplane3"), kBitplane3);
+    m_pPaletteAddressLineEdit = new QLineEdit(this);
+    m_pPaletteAddressLineEdit->setCompleter(pCompl);    // use same completer as address box
+
     m_pInfoLabel = new QLabel(this);
 
     // Bottom
@@ -123,22 +142,34 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     SetMargins(hlayout1);
     hlayout1->setAlignment(Qt::AlignLeft);
     hlayout1->addWidget(new QLabel(tr("Address:"), this));
-    hlayout1->addWidget(m_pAddressLineEdit);
+    hlayout1->addWidget(m_pBitmapAddressLineEdit);
     hlayout1->addWidget(m_pLockAddressToVideoCheckBox);
     QWidget* pContainer1 = new QWidget(this);
     pContainer1->setLayout(hlayout1);
 
     // Layout Second line
+    QString widthTooltip(tr("Width in 16-pixel chunks"));
+    QString padTooltip(tr("Line stride padding in bytes"));
+
     QHBoxLayout *hlayout2 = new QHBoxLayout();
     SetMargins(hlayout2);
     hlayout2->setAlignment(Qt::AlignLeft);
     hlayout2->addWidget(new QLabel(tr("Format:"), this));
     hlayout2->addWidget(m_pModeComboBox);
-    hlayout2->addWidget(new QLabel(tr("Width:"), this));
+
+    QLabel* pWidthLabel = new QLabel(tr("Width:"), this);
+    pWidthLabel->setToolTip(widthTooltip);
+    m_pWidthSpinBox->setToolTip(widthTooltip);
+    hlayout2->addWidget(pWidthLabel);
     hlayout2->addWidget(m_pWidthSpinBox);
+
     hlayout2->addWidget(new QLabel(tr("Height:"), this));
     hlayout2->addWidget(m_pHeightSpinBox);
-    hlayout2->addWidget(new QLabel(tr("Pad:"), this));
+
+    QLabel* pPaddingLabel = new QLabel(tr("Pad:"), this);
+    pPaddingLabel->setToolTip(padTooltip);
+    m_pPaddingSpinBox->setToolTip(padTooltip);
+    hlayout2->addWidget(pPaddingLabel);
     hlayout2->addWidget(m_pPaddingSpinBox);
 
     hlayout2->addWidget(m_pLockFormatToVideoCheckBox);
@@ -151,6 +182,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     hlayout3->setAlignment(Qt::AlignLeft);
     hlayout3->addWidget(new QLabel(tr("Palette:"), this));
     hlayout3->addWidget(m_pPaletteComboBox);
+    hlayout3->addWidget(m_pPaletteAddressLineEdit);
     hlayout3->addWidget(m_pInfoLabel);
     QWidget* pContainer3 = new QWidget(this);
     pContainer3->setLayout(hlayout3);
@@ -176,7 +208,8 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     connect(m_pTargetModel,  &TargetModel::otherMemoryChangedSignal,      this, &GraphicsInspectorWidget::otherMemoryChangedSlot);
     connect(m_pTargetModel,  &TargetModel::runningRefreshTimerSignal,     this, &GraphicsInspectorWidget::runningRefreshTimerSlot);
 
-    connect(m_pAddressLineEdit,             &QLineEdit::returnPressed,    this, &GraphicsInspectorWidget::textEditChangedSlot);
+    connect(m_pBitmapAddressLineEdit,       &QLineEdit::returnPressed,    this, &GraphicsInspectorWidget::bitmapAddressChangedSlot);
+    connect(m_pPaletteAddressLineEdit,      &QLineEdit::returnPressed,    this, &GraphicsInspectorWidget::paletteAddressChangedSlot);
     connect(m_pLockAddressToVideoCheckBox,  &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockAddressToVideoChangedSlot);
     connect(m_pLockFormatToVideoCheckBox,   &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockFormatToVideoChangedSlot);
     connect(m_pLockAddressToVideoCheckBox,  &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockAddressToVideoChangedSlot);
@@ -189,7 +222,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
 
     connect(m_pImageWidget,  &NonAntiAliasImage::StringChanged,           this, &GraphicsInspectorWidget::tooltipStringChangedSlot);
 
-    connect(m_pSession,      &Session::addressRequested,                  this, &GraphicsInspectorWidget::requestAddress);
+    connect(m_pSession,      &Session::addressRequested,                  this, &GraphicsInspectorWidget::RequestBitmapAddress);
 
     loadSettings();
     UpdateUIElements();
@@ -270,18 +303,20 @@ void GraphicsInspectorWidget::keyPressEvent(QKeyEvent* ev)
     else if (ev->key() == Qt::Key::Key_Right)
         offset = 2;
 
-    if (offset && m_requestIdBitmap == 0)
+    // Check nothing is being loaded still before moving
+    if (offset && m_requestBitmap.requestId == 0)
     {
         // Going up or down by a small amount is OK
-        if (offset > 0 || m_address > -offset)
+        if (offset > 0 || m_bitmapAddress > -offset)
         {
-            m_address += offset;
+            m_bitmapAddress += offset;
         }
         else {
-            m_address = 0;
+            m_bitmapAddress = 0;
         }
         m_pLockAddressToVideoCheckBox->setChecked(false);
-        RequestBitmapMemory();
+        m_requestBitmap.Dirty();
+        UpdateMemoryRequests();
         DisplayAddress();
 
         return;
@@ -309,7 +344,10 @@ void GraphicsInspectorWidget::startStopDelayedChangedSlot()
     // Request new memory for the view
     if (!m_pTargetModel->IsRunning())
     {
-        StartMemoryRequests();
+        m_requestPalette.Dirty();
+        m_requestBitmap.Dirty();
+        m_requestRegs.Dirty();
+        UpdateMemoryRequests();
         // Don't clear the Running flag for the widget, do that when the memory arrives
     }
     else {
@@ -320,168 +358,39 @@ void GraphicsInspectorWidget::startStopDelayedChangedSlot()
 
 void GraphicsInspectorWidget::memoryChangedSlot(int /*memorySlot*/, uint64_t commandId)
 {
-    if (commandId == m_requestIdVideoRegs)
+    if (commandId == m_requestRegs.requestId)
     {
-        // This is the first stage of the request process for a bitmap
-        const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
-        if (!pMemOrig)
-            return;
+        m_requestRegs.Clear();
 
-        UpdateFormatFromSettings();
+        UpdateFormatFromUI();
         UpdateUIElements();
-        m_requestIdVideoRegs = 0;
 
         // We should have registers now, so use them
         if (m_pLockAddressToVideoCheckBox->isChecked())
-            SetAddressFromVideo();
+            SetBitmapAddressFromVideoRegs();
 
-        RequestBitmapMemory();
+        // See if bitmap etc can now be requested
+        UpdateMemoryRequests();
     }
-    else if (commandId == m_requestIdBitmap)
+    else if (commandId == m_requestPalette.requestId)
     {
-        const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspector);
-        if (!pMemOrig)
-            return;
-
-        EffectiveData data;
-        GetEffectiveData(data);
-
-        Mode mode = data.mode;
-        int width = data.width;
-        int height = data.height;
-
-        // Uncompress
-        int required = data.requiredSize;
-
-        // Ensure we have the right size memory
-        if (pMemOrig->GetSize() < required)
-            return;
-
-        int bitmapSize = width * 16 * height;
-        uint8_t* pDestPixels = m_pImageWidget->AllocBitmap(bitmapSize);
-
-        if (mode == k4Bitplane)
-        {
-            for (int y = 0; y < height; ++y)
-            {
-                const uint8_t* pChunk = pMemOrig->GetData() + y * data.bytesPerLine;
-                for (int x = 0; x < width; ++x)
-                {
-                    int32_t pSrc[4];    // top 16 bits never used
-                    pSrc[3] = (pChunk[0] << 8) | pChunk[1];
-                    pSrc[2] = (pChunk[2] << 8) | pChunk[3];
-                    pSrc[1] = (pChunk[4] << 8) | pChunk[5];
-                    pSrc[0] = (pChunk[6] << 8) | pChunk[7];
-                    for (int pix = 15; pix >= 0; --pix)
-                    {
-                        uint8_t val;
-                        val  = (pSrc[0] & 1); val <<= 1;
-                        val |= (pSrc[1] & 1); val <<= 1;
-                        val |= (pSrc[2] & 1); val <<= 1;
-                        val |= (pSrc[3] & 1);
-
-                        pDestPixels[pix] = val;
-                        pSrc[0] >>= 1;
-                        pSrc[1] >>= 1;
-                        pSrc[2] >>= 1;
-                        pSrc[3] >>= 1;
-                    }
-                    pChunk += 8;
-                    pDestPixels += 16;
-                }
-            }
-        }
-        else if (mode == k3Bitplane)
-        {
-            for (int y = 0; y < height; ++y)
-            {
-                const uint8_t* pChunk = pMemOrig->GetData() + y * data.bytesPerLine;
-                for (int x = 0; x < width; ++x)
-                {
-                    int32_t pSrc[3];    // top 16 bits never used
-                    pSrc[2] = (pChunk[0] << 8) | pChunk[1];
-                    pSrc[1] = (pChunk[2] << 8) | pChunk[3];
-                    pSrc[0] = (pChunk[4] << 8) | pChunk[5];
-                    for (int pix = 15; pix >= 0; --pix)
-                    {
-                        uint8_t val;
-                        val  = (pSrc[0] & 1); val <<= 1;
-                        val |= (pSrc[1] & 1); val <<= 1;
-                        val |= (pSrc[2] & 1);
-
-                        pDestPixels[pix] = val;
-                        pSrc[0] >>= 1;
-                        pSrc[1] >>= 1;
-                        pSrc[2] >>= 1;
-                    }
-                    pChunk += 6;
-                    pDestPixels += 16;
-                }
-            }
-        }
-        else if (mode == k2Bitplane)
-        {
-            for (int y = 0; y < height; ++y)
-            {
-                const uint8_t* pChunk = pMemOrig->GetData() + y * data.bytesPerLine;
-                for (int x = 0; x < width; ++x)
-                {
-                    int32_t pSrc[2];
-                    pSrc[1] = (pChunk[0] << 8) | pChunk[1];
-                    pSrc[0] = (pChunk[2] << 8) | pChunk[3];
-                    for (int pix = 15; pix >= 0; --pix)
-                    {
-                        uint8_t val;
-                        val  = (pSrc[0] & 1); val <<= 1;
-                        val |= (pSrc[1] & 1);
-                        pDestPixels[pix] = val;
-                        pSrc[0] >>= 1;
-                        pSrc[1] >>= 1;
-                    }
-                    pChunk += 4;
-                    pDestPixels += 16;
-                }
-            }
-        }
-        else if (mode == k1Bitplane)
-        {
-            for (int y = 0; y < height; ++y)
-            {
-                const uint8_t* pChunk = pMemOrig->GetData() + y * data.bytesPerLine;
-                for (int x = 0; x < width; ++x)
-                {
-                    int32_t pSrc[1];
-                    pSrc[0] = (pChunk[0] << 8) | pChunk[1];
-                    for (int pix = 15; pix >= 0; --pix)
-                    {
-                        uint8_t val;
-                        val  = (pSrc[0] & 1);
-                        pDestPixels[pix] = val;
-                        pSrc[0] >>= 1;
-                    }
-                    pChunk += 2;
-                    pDestPixels += 16;
-                }
-            }
-        }
-
-        // Update image in the widget
-        UpdatePaletteFromSettings();
+        m_requestPalette.Clear();
+        UpdateMemoryRequests();
+    }
+    else if (commandId == m_requestBitmap.requestId)
+    {
+        m_requestBitmap.Clear();
+        UpdateMemoryRequests();
 
         // Clear the running mask, but only if we're really stopped
         if (!m_pTargetModel->IsRunning())
             m_pImageWidget->SetRunning(false);
-
-        m_pImageWidget->setPixmap(width, height);
-
-        m_requestIdBitmap = 0;
-        return;
     }
 }
 
-void GraphicsInspectorWidget::textEditChangedSlot()
+void GraphicsInspectorWidget::bitmapAddressChangedSlot()
 {
-    std::string expression = m_pAddressLineEdit->text().toStdString();
+    std::string expression = m_pBitmapAddressLineEdit->text().toStdString();
     uint32_t addr;
     if (!StringParsers::ParseExpression(expression.c_str(), addr,
                                         m_pTargetModel->GetSymbolTable(),
@@ -489,10 +398,28 @@ void GraphicsInspectorWidget::textEditChangedSlot()
     {
         return;
     }
-    m_address = addr;
+    m_bitmapAddress = addr;
     m_pLockAddressToVideoCheckBox->setChecked(false);
     UpdateUIElements();
-    RequestBitmapMemory();
+
+    m_requestBitmap.Dirty();
+    UpdateMemoryRequests();
+}
+
+void GraphicsInspectorWidget::paletteAddressChangedSlot()
+{
+    std::string expression = m_pPaletteAddressLineEdit->text().toStdString();
+    uint32_t addr;
+    if (!StringParsers::ParseExpression(expression.c_str(), addr,
+                                        m_pTargetModel->GetSymbolTable(),
+                                        m_pTargetModel->GetRegs()))
+    {
+        return;
+    }
+    // Re-request palette memory
+    m_paletteAddress = addr;
+    m_requestPalette.Dirty();
+    UpdateMemoryRequests();
 }
 
 void GraphicsInspectorWidget::lockAddressToVideoChangedSlot()
@@ -500,8 +427,10 @@ void GraphicsInspectorWidget::lockAddressToVideoChangedSlot()
     bool m_bLockToVideo = m_pLockAddressToVideoCheckBox->isChecked();
     if (m_bLockToVideo)
     {
-        SetAddressFromVideo();
-        RequestBitmapMemory();
+        // New address, so re-request bitmap memory
+        SetBitmapAddressFromVideoRegs();
+        m_requestBitmap.Dirty();
+        UpdateMemoryRequests();
     }
     UpdateUIElements();
 }
@@ -511,8 +440,9 @@ void GraphicsInspectorWidget::lockFormatToVideoChangedSlot()
     bool m_bLockToVideo = m_pLockFormatToVideoCheckBox->isChecked();
     if (m_bLockToVideo)
     {
-        UpdateFormatFromSettings();
-        RequestBitmapMemory();
+        UpdateFormatFromUI();
+        m_requestBitmap.Dirty();
+        UpdateMemoryRequests();
     }
     UpdateUIElements();
 }
@@ -521,48 +451,72 @@ void GraphicsInspectorWidget::modeChangedSlot(int index)
 {
     int modeInt = m_pModeComboBox->itemData(index).toInt();
     m_mode = static_cast<Mode>(modeInt);
-    RequestBitmapMemory();
+
+    // New mode can require different memory size, so re-request bitmap memory
+    m_requestBitmap.Dirty();
+    UpdateMemoryRequests();
 }
 
 void GraphicsInspectorWidget::paletteChangedSlot(int index)
 {
-    UpdatePaletteFromSettings();
+    int rawIdx = m_pPaletteComboBox->itemData(index).toInt();
+    m_paletteMode = static_cast<Palette>(rawIdx);
+
     // Ensure pixmap is updated
     m_pImageWidget->setPixmap(GetEffectiveWidth(), GetEffectiveHeight());
 
     UpdateUIElements();
+
+    // Only certain modes require palette memory re-request
+    if (m_paletteMode == kRegisters || m_paletteMode == kUserMemory)
+        m_requestPalette.Dirty();
+
+    // This will recalc the image immediately if no requests have been
+    // made
+    UpdateMemoryRequests();
 }
 
 void GraphicsInspectorWidget::otherMemoryChangedSlot(uint32_t address, uint32_t size)
 {
     // Do a re-request if our memory is touched
     uint32_t ourSize = GetEffectiveHeight() * GetEffectiveWidth() * BytesPerMode(m_mode);
-    if (Overlaps(m_address, ourSize, address, size))
-        RequestBitmapMemory();
+    if (Overlaps(m_bitmapAddress, ourSize, address, size))
+    {
+        m_requestBitmap.Dirty();
+        UpdateMemoryRequests();
+    }
 }
 
 void GraphicsInspectorWidget::runningRefreshTimerSlot()
 {
     if (m_pTargetModel->IsConnected() && m_pSession->GetSettings().m_liveRefresh)
-        StartMemoryRequests();
+    {
+        m_requestPalette.Dirty();
+        m_requestBitmap.Dirty();
+        m_requestRegs.Dirty();
+        UpdateMemoryRequests();
+    }
 }
 
 void GraphicsInspectorWidget::widthChangedSlot(int value)
 {
     m_width = value;
-    RequestBitmapMemory();
+    m_requestBitmap.Dirty();
+    UpdateMemoryRequests();
 }
 
 void GraphicsInspectorWidget::heightChangedSlot(int value)
 {
     m_height = value;
-    RequestBitmapMemory();
+    m_requestBitmap.Dirty();
+    UpdateMemoryRequests();
 }
 
 void GraphicsInspectorWidget::paddingChangedSlot(int value)
 {
     m_padding = value;
-    RequestBitmapMemory();
+    m_requestBitmap.Dirty();
+    UpdateMemoryRequests();
 }
 
 void GraphicsInspectorWidget::tooltipStringChangedSlot()
@@ -570,7 +524,7 @@ void GraphicsInspectorWidget::tooltipStringChangedSlot()
     m_pInfoLabel->setText(m_pImageWidget->GetString());
 }
 
-void GraphicsInspectorWidget::requestAddress(Session::WindowType type, int windowIndex, uint32_t address)
+void GraphicsInspectorWidget::RequestBitmapAddress(Session::WindowType type, int windowIndex, uint32_t address)
 {
     if (type != Session::WindowType::kGraphicsInspector)
         return;
@@ -578,41 +532,64 @@ void GraphicsInspectorWidget::requestAddress(Session::WindowType type, int windo
     (void) windowIndex;
 
     // Set the address and override video regs
-    m_address = address;
+    m_bitmapAddress = address;
     m_pLockAddressToVideoCheckBox->setChecked(false);
     UpdateUIElements();
-    RequestBitmapMemory();
+
+    m_requestBitmap.Dirty();
+    UpdateMemoryRequests();
 }
 
-void GraphicsInspectorWidget::StartMemoryRequests()
+void GraphicsInspectorWidget::UpdateMemoryRequests()
 {
-    m_requestIdVideoRegs = 0;
-
     // This is the main entry point for grabbing the data.
-    // Trigger a full refresh of registers
+    // Trigger a full refresh of registers. We need these to
+    // determine size/format in some cases.
     if (!m_pTargetModel->IsConnected())
         return;
 
-    m_requestIdVideoRegs = m_pDispatcher->ReadMemory(MemorySlot::kGraphicsInspectorVideoRegs, Regs::VID_REG_BASE, 0x70);
-}
-
-
-// Request enough memory based on m_rowCount and m_logicalAddr
-void GraphicsInspectorWidget::RequestBitmapMemory()
-{
-    m_requestIdBitmap = 0;
-    if (!m_pTargetModel->IsConnected())
+    if (!m_requestRegs.isDirty && !m_requestPalette.isDirty && !m_requestBitmap.isDirty)
+    {
+        // Everything is ready!
+        // Update the palette and bitmap ready for display
+        UpdateImage();
         return;
+    }
 
-    // Video data first. Once that has returned we request the necessary amount of memory
-    // Request video memory area
-    EffectiveData data;
-    GetEffectiveData(data);
-    m_requestIdBitmap = m_pDispatcher->ReadMemory(MemorySlot::kGraphicsInspector, m_address, data.requiredSize);
-    DisplayAddress();
+    if (m_requestRegs.isDirty || m_requestPalette.isDirty)
+    {
+        if (m_requestRegs.isDirty && m_requestRegs.requestId == 0)
+            m_requestRegs.requestId = m_pDispatcher->ReadMemory(MemorySlot::kGraphicsInspectorVideoRegs, Regs::VID_REG_BASE, 0x70);
+
+        if (m_requestPalette.isDirty && m_requestPalette.requestId == 0)
+        {
+            if (m_paletteMode == kRegisters)
+                m_requestPalette.requestId = m_pDispatcher->ReadMemory(MemorySlot::kGraphicsInspectorPalette, Regs::VID_PAL_0, 0x20);
+            else if (m_paletteMode == kUserMemory)
+                m_requestPalette.requestId = m_pDispatcher->ReadMemory(MemorySlot::kGraphicsInspectorPalette, m_paletteAddress, 0x20);
+            else
+                m_requestPalette.Clear();   // we don't need to fetch
+        }
+        return;
+    }
+
+    // We only get here if the other flags are clean
+    if (m_requestBitmap.isDirty)
+    {
+        if (m_requestBitmap.requestId == 0)
+        {
+            // Request video memory area
+            EffectiveData data;
+            GetEffectiveData(data);
+            m_requestBitmap.requestId = m_pDispatcher->ReadMemory(MemorySlot::kGraphicsInspector, m_bitmapAddress, data.requiredSize);
+            DisplayAddress();
+        }
+        return;
+    }
+    assert(0);
 }
 
-bool GraphicsInspectorWidget::SetAddressFromVideo()
+bool GraphicsInspectorWidget::SetBitmapAddressFromVideoRegs()
 {
     // Update to current video regs
     const Memory* pVideoRegs = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
@@ -622,7 +599,9 @@ bool GraphicsInspectorWidget::SetAddressFromVideo()
     uint32_t address;
     if (HardwareST::GetVideoBase(*pVideoRegs, m_pTargetModel->GetMachineType(), address))
     {
-        m_address = address;
+        m_bitmapAddress = address;
+        m_requestBitmap.Dirty();
+        UpdateMemoryRequests();
         return true;
     }
     return false;
@@ -630,22 +609,37 @@ bool GraphicsInspectorWidget::SetAddressFromVideo()
 
 void GraphicsInspectorWidget::DisplayAddress()
 {
-    m_pAddressLineEdit->setText(QString::asprintf("$%x", m_address));
+    m_pBitmapAddressLineEdit->setText(QString::asprintf("$%x", m_bitmapAddress));
+    m_pPaletteAddressLineEdit->setText(QString::asprintf("$%x", m_paletteAddress));
 }
 
-void GraphicsInspectorWidget::UpdatePaletteFromSettings()
+void GraphicsInspectorWidget::UpdateFormatFromUI()
+{
+    // Now we have the registers, we can now video dimensions.
+    int width = GetEffectiveWidth();
+    int height = GetEffectiveHeight();
+    Mode mode = GetEffectiveMode();
+
+    // Set these as current values, so that if we scroll around,
+    // they are not lost
+    m_width = width;
+    m_height = height;
+    m_mode = mode;
+    UpdateUIElements();
+}
+
+void GraphicsInspectorWidget::UpdateImage()
 {
     // Colours are ARGB
     m_pImageWidget->m_colours.clear();
-    int rawIdx = m_pPaletteComboBox->itemData(m_pPaletteComboBox->currentIndex()).toInt();
-    Palette pal = static_cast<Palette>(rawIdx);
 
     // Now update palette
-    switch (pal)
+    switch (m_paletteMode)
     {
         case kRegisters:
+        case kUserMemory:
         {
-            const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorVideoRegs);
+            const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspectorPalette);
             if (!pMemOrig)
                 return;
             static const uint32_t stToRgb[16] =
@@ -663,10 +657,10 @@ void GraphicsInspectorWidget::UpdatePaletteFromSettings()
             const uint32_t* pPalette = isST ? stToRgb : steToRgb;
             for (uint i = 0; i < 16; ++i)
             {
-                uint32_t addr = Regs::VID_PAL_0 + i*2;
-                uint32_t  r = pMemOrig->ReadAddressByte(addr + 0) & 0xf;
-                uint32_t  g = pMemOrig->ReadAddressByte(addr + 1) >> 4;
-                uint32_t  b = pMemOrig->ReadAddressByte(addr + 1) & 0xf;
+                uint32_t addr = i*2;
+                uint32_t  r = pMemOrig->Get(addr) & 0xf;
+                uint32_t  g = pMemOrig->Get(addr + 1) >> 4;
+                uint32_t  b = pMemOrig->Get(addr + 1) & 0xf;
 
                 uint32_t colour = 0xff000000U;
                 colour |= pPalette[r] << 16;
@@ -699,21 +693,133 @@ void GraphicsInspectorWidget::UpdatePaletteFromSettings()
             CreateBitplanePalette(m_pImageWidget->m_colours, 0x220000, 0x2200, 0x22, 0xbbbbbb);
             break;
     }
-}
 
-void GraphicsInspectorWidget::UpdateFormatFromSettings()
-{
-    // Now we have the registers, we can now video dimensions.
-    int width = GetEffectiveWidth();
-    int height = GetEffectiveHeight();
-    Mode mode = GetEffectiveMode();
+    const Memory* pMemOrig = m_pTargetModel->GetMemory(MemorySlot::kGraphicsInspector);
+    if (!pMemOrig)
+        return;
 
-    // Set these as current values, so that if we scroll around,
-    // they are not lost
-    m_width = width;
-    m_height = height;
-    m_mode = mode;
-    UpdateUIElements();
+    EffectiveData data;
+    GetEffectiveData(data);
+
+    Mode mode = data.mode;
+    int width = data.width;
+    int height = data.height;
+
+    // Uncompress
+    int required = data.requiredSize;
+
+    // Ensure we have the right size memory
+    if (pMemOrig->GetSize() < required)
+        return;
+
+    int bitmapSize = width * 16 * height;
+    uint8_t* pDestPixels = m_pImageWidget->AllocBitmap(bitmapSize);
+
+    if (mode == k4Bitplane)
+    {
+        for (int y = 0; y < height; ++y)
+        {
+            const uint8_t* pChunk = pMemOrig->GetData() + y * data.bytesPerLine;
+            for (int x = 0; x < width; ++x)
+            {
+                int32_t pSrc[4];    // top 16 bits never used
+                pSrc[3] = (pChunk[0] << 8) | pChunk[1];
+                pSrc[2] = (pChunk[2] << 8) | pChunk[3];
+                pSrc[1] = (pChunk[4] << 8) | pChunk[5];
+                pSrc[0] = (pChunk[6] << 8) | pChunk[7];
+                for (int pix = 15; pix >= 0; --pix)
+                {
+                    uint8_t val;
+                    val  = (pSrc[0] & 1); val <<= 1;
+                    val |= (pSrc[1] & 1); val <<= 1;
+                    val |= (pSrc[2] & 1); val <<= 1;
+                    val |= (pSrc[3] & 1);
+
+                    pDestPixels[pix] = val;
+                    pSrc[0] >>= 1;
+                    pSrc[1] >>= 1;
+                    pSrc[2] >>= 1;
+                    pSrc[3] >>= 1;
+                }
+                pChunk += 8;
+                pDestPixels += 16;
+            }
+        }
+    }
+    else if (mode == k3Bitplane)
+    {
+        for (int y = 0; y < height; ++y)
+        {
+            const uint8_t* pChunk = pMemOrig->GetData() + y * data.bytesPerLine;
+            for (int x = 0; x < width; ++x)
+            {
+                int32_t pSrc[3];    // top 16 bits never used
+                pSrc[2] = (pChunk[0] << 8) | pChunk[1];
+                pSrc[1] = (pChunk[2] << 8) | pChunk[3];
+                pSrc[0] = (pChunk[4] << 8) | pChunk[5];
+                for (int pix = 15; pix >= 0; --pix)
+                {
+                    uint8_t val;
+                    val  = (pSrc[0] & 1); val <<= 1;
+                    val |= (pSrc[1] & 1); val <<= 1;
+                    val |= (pSrc[2] & 1);
+
+                    pDestPixels[pix] = val;
+                    pSrc[0] >>= 1;
+                    pSrc[1] >>= 1;
+                    pSrc[2] >>= 1;
+                }
+                pChunk += 6;
+                pDestPixels += 16;
+            }
+        }
+    }
+    else if (mode == k2Bitplane)
+    {
+        for (int y = 0; y < height; ++y)
+        {
+            const uint8_t* pChunk = pMemOrig->GetData() + y * data.bytesPerLine;
+            for (int x = 0; x < width; ++x)
+            {
+                int32_t pSrc[2];
+                pSrc[1] = (pChunk[0] << 8) | pChunk[1];
+                pSrc[0] = (pChunk[2] << 8) | pChunk[3];
+                for (int pix = 15; pix >= 0; --pix)
+                {
+                    uint8_t val;
+                    val  = (pSrc[0] & 1); val <<= 1;
+                    val |= (pSrc[1] & 1);
+                    pDestPixels[pix] = val;
+                    pSrc[0] >>= 1;
+                    pSrc[1] >>= 1;
+                }
+                pChunk += 4;
+                pDestPixels += 16;
+            }
+        }
+    }
+    else if (mode == k1Bitplane)
+    {
+        for (int y = 0; y < height; ++y)
+        {
+            const uint8_t* pChunk = pMemOrig->GetData() + y * data.bytesPerLine;
+            for (int x = 0; x < width; ++x)
+            {
+                int32_t pSrc[1];
+                pSrc[0] = (pChunk[0] << 8) | pChunk[1];
+                for (int pix = 15; pix >= 0; --pix)
+                {
+                    uint8_t val;
+                    val  = (pSrc[0] & 1);
+                    pDestPixels[pix] = val;
+                    pSrc[0] >>= 1;
+                }
+                pChunk += 2;
+                pDestPixels += 16;
+            }
+        }
+    }
+    m_pImageWidget->setPixmap(width, height);
 }
 
 void GraphicsInspectorWidget::UpdateUIElements()
@@ -727,6 +833,8 @@ void GraphicsInspectorWidget::UpdateUIElements()
     m_pHeightSpinBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
     m_pPaddingSpinBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
     m_pModeComboBox->setEnabled(!m_pLockFormatToVideoCheckBox->isChecked());
+
+    m_pPaletteAddressLineEdit->setVisible(m_paletteMode == kUserMemory);
     DisplayAddress();
 }
 
