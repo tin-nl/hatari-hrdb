@@ -361,7 +361,8 @@ public:
 class HardwareFieldColourST : public HardwareField
 {
 public:
-    HardwareFieldColourST(uint32_t addr)
+    HardwareFieldColourST(uint32_t addr) :
+        m_qtColour(0xffffffff)
     {
         m_memAddress = addr;
     }
@@ -712,8 +713,9 @@ bool HardwareFieldColourST::GetBrush(QBrush &res)
 //-----------------------------------------------------------------------------
 // HardwareTreeModel
 //-----------------------------------------------------------------------------
-HardwareTreeModel::HardwareTreeModel(QObject *parent)
-    : QAbstractItemModel(parent)
+HardwareTreeModel::HardwareTreeModel(QObject *parent, TargetModel* pTargetModel)
+    : QAbstractItemModel(parent),
+      m_pTargetModel(pTargetModel)
 {
 }
 
@@ -760,13 +762,29 @@ QVariant HardwareTreeModel::data(const QModelIndex &index, int role) const
         return item->m_tooltip;
     }
 
-    if (role == Qt::BackgroundRole && index.column() == 1)
+    // Handle colours
+    if (m_pTargetModel->IsConnected() && index.column() == 1)
     {
-        // Returns QBrush
-        QBrush br;
-        if (item->GetBrush(br))
+        if (role == Qt::BackgroundRole)
         {
-            return br;
+            // Returns QBrush
+            QBrush br;
+            if (item->GetBrush(br))
+                return br;
+        }
+
+        if (role == Qt::ForegroundRole)
+        {
+            QBrush br;
+            if (item->GetBrush(br))
+            {
+                // Choose white or black with suitable contrast
+                if (br.color().red() > 160 || br.color().green() > 160)
+                    br.setColor(Qt::black);
+                else
+                    br.setColor(Qt::white);
+                return br;
+            }
         }
     }
 
@@ -911,7 +929,7 @@ HardwareWindow::HardwareWindow(QWidget *parent, Session* pSession) :
     setObjectName("Hardware");
 
     HardwareBase* m_pRoot = new HardwareBase();
-    m_pModel = new HardwareTreeModel(this);
+    m_pModel = new HardwareTreeModel(this, m_pTargetModel);
     m_pModel->rootItem = m_pRoot;
 
     HardwareHeader* pExpVec = new HardwareHeader("Vectors", "");
