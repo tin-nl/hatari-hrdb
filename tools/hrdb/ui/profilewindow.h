@@ -25,7 +25,7 @@ public:
         uint32_t        address;
         QString         text;
         uint32_t        instructionCount;
-        unsigned long   cycleCount;
+        uint64_t        cycleCount;
         float           cyclePercent;
     };
 
