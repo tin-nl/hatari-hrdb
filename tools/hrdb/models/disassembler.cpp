@@ -258,8 +258,11 @@ void print_movem_mask(uint16_t reg_mask, QTextStream& ref)
 }
 
 // ----------------------------------------------------------------------------
-void print(const operand& operand, uint32_t inst_address, QTextStream& ref)
+void print(const operand& operand, uint32_t inst_address, QTextStream& ref, bool bDisassHexNumerics = false)
 {
+    QTextStream &(*numericMode)(QTextStream&) = bDisassHexNumerics ? hex : dec;
+    QString numericPrefix = bDisassHexNumerics ? "$" : "";
+
     switch (operand.type)
     {
         case OpType::D_DIRECT:
@@ -278,10 +281,10 @@ void print(const operand& operand, uint32_t inst_address, QTextStream& ref)
             ref << "-(a" << operand.indirect_predec.reg << ")";
             return;
         case OpType::INDIRECT_DISP:
-            ref << operand.indirect_disp.disp << "(a" << operand.indirect_disp.reg << ")";
+            ref << numericMode << numericPrefix << operand.indirect_disp.disp << dec << "(a" << operand.indirect_disp.reg << ")";
             return;
         case OpType::INDIRECT_INDEX:
-            ref << operand.indirect_index.disp << "(a" << operand.indirect_index.a_reg <<
+            ref << numericMode << numericPrefix << operand.indirect_index.disp << dec << "(a" << operand.indirect_index.a_reg <<
                    ",d" << operand.indirect_index.d_reg <<
                    (operand.indirect_index.is_long ? ".l" : ".w") <<
                    ")";
@@ -336,7 +339,7 @@ void print(const operand& operand, uint32_t inst_address, QTextStream& ref)
 }
 
 // ----------------------------------------------------------------------------
-void Disassembler::print(const instruction& inst, /*const symbols& symbols, */ uint32_t inst_address, QTextStream& ref)
+void Disassembler::print(const instruction& inst, /*const symbols& symbols, */ uint32_t inst_address, QTextStream& ref, bool bDisassHexNumerics = false )
 {
     if (inst.opcode == Opcode::NONE)
     {
@@ -362,18 +365,18 @@ void Disassembler::print(const instruction& inst, /*const symbols& symbols, */ u
 
     if (inst.op0.type != OpType::INVALID)
     {
-        ::print(inst.op0, /*symbols,*/ inst_address, ref);
+        ::print(inst.op0, /*symbols,*/ inst_address, ref, bDisassHexNumerics);
     }
 
     if (inst.op1.type != OpType::INVALID)
     {
         ref << ",";
-        ::print(inst.op1, /*symbols,*/ inst_address, ref);
+        ::print(inst.op1, /*symbols,*/ inst_address, ref, bDisassHexNumerics);
     }
 }
 
 // ----------------------------------------------------------------------------
-void Disassembler::print_terse(const instruction& inst, /*const symbols& symbols, */ uint32_t inst_address, QTextStream& ref)
+void Disassembler::print_terse(const instruction& inst, /*const symbols& symbols, */ uint32_t inst_address, QTextStream& ref, bool bDisassHexNumerics = false)
 {
     if (inst.opcode == Opcode::NONE)
     {
@@ -399,13 +402,13 @@ void Disassembler::print_terse(const instruction& inst, /*const symbols& symbols
     if (inst.op0.type != OpType::INVALID)
     {
         ref << " ";
-        ::print(inst.op0, /*symbols,*/ inst_address, ref);
+        ::print(inst.op0, /*symbols,*/ inst_address, ref, bDisassHexNumerics);
     }
 
     if (inst.op1.type != OpType::INVALID)
     {
         ref << ",";
-        ::print(inst.op1, /*symbols,*/ inst_address, ref);
+        ::print(inst.op1, /*symbols,*/ inst_address, ref, bDisassHexNumerics);
     }
 }
 
