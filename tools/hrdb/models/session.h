@@ -34,6 +34,8 @@ public:
         QFont       m_font;
         // GRAPHICS INSPECTOR
         bool        m_bSquarePixels;
+        // DISASSEMBLY
+        bool        m_bDisassHexNumerics;
 
         // LIVE UPDATE
         bool        m_liveRefresh;

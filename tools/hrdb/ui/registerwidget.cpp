@@ -332,7 +332,7 @@ void RegisterWidget::PopulateRegisters()
         QTextStream ref(&disasmText);
 
         const instruction& inst = m_disasm.lines[0].inst;
-        Disassembler::print_terse(inst, m_disasm.lines[0].address, ref);
+        Disassembler::print_terse(inst, m_disasm.lines[0].address, ref,m_pSession->GetSettings().m_bDisassHexNumerics);
 
         bool branchTaken;
         if (DisAnalyse::isBranch(inst, m_currRegs, branchTaken))
