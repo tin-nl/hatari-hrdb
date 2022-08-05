@@ -889,7 +889,12 @@ bool Profile_CpuStart(void)
 
 	memset(&cpu_profile, 0, sizeof(cpu_profile));
 
-	/* Restore the saved values after the memset */
+	/* Restore the saved values after the memset.
+	If the cycle value is 0 this denotes the first ever call to CpuStart,
+	and since profiling has never been updated yet, we have to try to fix
+	the previous cycle counter as best we can. */
+	if (savePrevCycles == 0)
+		savePrevCycles = CyclesGlobalClockCounter;
 	cpu_profile.prev_cycles = savePrevCycles;
 	cpu_profile.prev_family = savePrevFamily;
 	cpu_profile.prev_pc = savePrevPC;
