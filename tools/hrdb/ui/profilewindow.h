@@ -11,6 +11,7 @@ class Session;
 class QLabel;
 class QPushButton;
 class QTextEdit;
+class QComboBox;
 
 //-----------------------------------------------------------------------------
 class ProfileTableModel : public QAbstractTableModel
@@ -55,6 +56,16 @@ public:
         return entries[row];
     }
 
+    void SetGrouping(Grouping g)
+    {
+        m_grouping = g;
+        rebuildEntries();
+    }
+
+    Grouping GetGrouping() const
+    {
+        return m_grouping;
+    }
 
 public slots:
     void profileChangedSlot();
@@ -119,6 +130,7 @@ private slots:
     void startStopChangedSlot();
     void profileChangedSlot();
     void settingsChangedSlot();
+    void groupingChangedSlot(int index);
 
     void startStopClicked();
     void resetClicked();
@@ -132,6 +144,7 @@ private:
 
     QPushButton*        m_pStartStopButton;
     QPushButton*        m_pClearButton;
+    QComboBox*          m_pGroupingComboBox;
 
     ProfileTableView*   m_pTableView;
     ProfileTableModel*  m_pTableModel;

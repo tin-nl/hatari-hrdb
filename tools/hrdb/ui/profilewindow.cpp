@@ -1,14 +1,15 @@
 #include "profilewindow.h"
 
 #include <iostream>
-#include <QLineEdit>
-#include <QVBoxLayout>
+#include <QComboBox>
+#include <QDebug>
 #include <QHeaderView>
 #include <QKeyEvent>
-#include <QSettings>
-#include <QDebug>
-#include <QPushButton>
+#include <QLineEdit>
 #include <QMenu>
+#include <QPushButton>
+#include <QSettings>
+#include <QVBoxLayout>
 
 #include "../transport/dispatcher.h"
 #include "../models/targetmodel.h"
@@ -299,6 +300,8 @@ ProfileWindow::ProfileWindow(QWidget *parent, Session* pSession) :
 
     m_pStartStopButton = new QPushButton("Start", this);
     m_pClearButton = new QPushButton("Clear", this);
+    m_pGroupingComboBox = new QComboBox(this);
+
     m_pTableModel = new ProfileTableModel(this, m_pTargetModel, m_pDispatcher);
     m_pTableView = new ProfileTableView(this, m_pTableModel, m_pSession);
     m_pTableView->setModel(m_pTableModel);
@@ -313,8 +316,14 @@ ProfileWindow::ProfileWindow(QWidget *parent, Session* pSession) :
 
     m_pTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeMode::ResizeToContents);
     m_pTableView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeMode::ResizeToContents);
+
+    m_pGroupingComboBox->addItem(tr("Symbols"), ProfileTableModel::Grouping::kGroupingSymbol);
+    m_pGroupingComboBox->addItem(tr("256 Bytes"), ProfileTableModel::Grouping::kGroupingAddress256);
+
     pTopLayout->addWidget(m_pStartStopButton);
     pTopLayout->addWidget(m_pClearButton);
+    pTopLayout->addWidget(m_pGroupingComboBox);
+
     pMainLayout->addWidget(pTopRegion);
     pMainLayout->addWidget(m_pTableView);
 
@@ -334,6 +343,7 @@ ProfileWindow::ProfileWindow(QWidget *parent, Session* pSession) :
 
     connect(m_pStartStopButton, &QAbstractButton::clicked,              this, &ProfileWindow::startStopClicked);
     connect(m_pClearButton,     &QAbstractButton::clicked,              this, &ProfileWindow::resetClicked);
+    connect(m_pGroupingComboBox,    SIGNAL(currentIndexChanged(int)),       SLOT(groupingChangedSlot(int)));
 
     // Refresh enable state
     connectChangedSlot();
@@ -357,6 +367,10 @@ void ProfileWindow::loadSettings()
     settings.beginGroup("Profile");
 
     restoreGeometry(settings.value("geometry").toByteArray());
+
+    ProfileTableModel::Grouping g = static_cast<ProfileTableModel::Grouping>(settings.value("grouping", QVariant((int)ProfileTableModel::Grouping::kGroupingSymbol)).toInt());
+    m_pGroupingComboBox->setCurrentIndex(g);
+    m_pTableModel->SetGrouping(g);
     settings.endGroup();
 }
 
@@ -366,6 +380,7 @@ void ProfileWindow::saveSettings()
     settings.beginGroup("Profile");
 
     settings.setValue("geometry", saveGeometry());
+    settings.setValue("grouping", static_cast<int>(m_pTableModel->GetGrouping()));
     settings.endGroup();
 }
 
@@ -414,4 +429,10 @@ void ProfileWindow::startStopClicked()
 void ProfileWindow::resetClicked()
 {
     m_pTargetModel->ProfileReset();
+}
+
+void ProfileWindow::groupingChangedSlot(int index)
+{
+    int modeInt = m_pGroupingComboBox->itemData(index).toInt();
+    m_pTableModel->SetGrouping(static_cast<ProfileTableModel::Grouping>(modeInt));
 }
