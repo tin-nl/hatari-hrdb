@@ -29,6 +29,15 @@ bool CompCyclesDesc(ProfileTableModel::Entry& m1, ProfileTableModel::Entry& m2)
     return m1.cycleCount > m2.cycleCount;
 }
 
+bool CompCyclePercentAsc(ProfileTableModel::Entry& m1, ProfileTableModel::Entry& m2)
+{
+    return m1.cyclePercent < m2.cyclePercent;
+}
+bool CompCyclePercentDesc(ProfileTableModel::Entry& m1, ProfileTableModel::Entry& m2)
+{
+    return m1.cyclePercent > m2.cyclePercent;
+}
+
 bool CompCountAsc(ProfileTableModel::Entry& m1, ProfileTableModel::Entry& m2)
 {
     return m1.instructionCount < m2.instructionCount;
@@ -91,6 +100,8 @@ QVariant ProfileTableModel::data(const QModelIndex &index, int role) const
             return ent.instructionCount;
         else if (index.column() == kColCycles)
             return QVariant(static_cast<qlonglong>(ent.cycleCount));
+        else if (index.column() == kColCyclePercent)
+            return QVariant(ent.cyclePercent);
     }
     if (role == Qt::TextAlignmentRole)
     {
@@ -114,6 +125,7 @@ QVariant ProfileTableModel::headerData(int section, Qt::Orientation orientation,
             case kColAddress:           return QString(tr("Name"));
             case kColInstructionCount:  return QString(tr("Instructions"));
             case kColCycles:            return QString(tr("Cycles"));
+            case kColCyclePercent:      return QString(tr("Cycle %"));
             }
         }
         if (role == Qt::TextAlignmentRole)
@@ -143,6 +155,10 @@ void ProfileTableModel::sort(int column, Qt::SortOrder order)
         std::sort(entries.begin(), entries.end(), order == Qt::SortOrder::AscendingOrder ? CompAddressAsc : CompAddressDesc);
         populateFromEntries();
         break;
+    case kColCyclePercent:
+        std::sort(entries.begin(), entries.end(), order == Qt::SortOrder::AscendingOrder ? CompCyclePercentAsc : CompCyclePercentDesc);
+        populateFromEntries();
+        break;
     }
     m_sortColumn = column;
     m_sortOrder = order;
@@ -169,7 +185,25 @@ void ProfileTableModel::rebuildEntries()
     const SymbolTable& symbols = m_pTargetModel->GetSymbolTable();
     Symbol result;
 
-    uint32_t bits = 8;
+    // Generate total cycles
+    uint64_t cycleTotal = 0;
+    for (const ProfileData::Pair ent : data.m_entries)
+        cycleTotal += ent.second.cycles;
+
+    // Protect against zero-divide
+    if (cycleTotal == 0)
+        cycleTotal = 1;
+
+    uint32_t bits;
+    switch (m_grouping)
+    {
+    case Grouping::kGroupingAddress64: bits = 6; break;
+    case Grouping::kGroupingAddress256: bits = 8; break;
+    case Grouping::kGroupingAddress1024: bits = 10; break;
+    case Grouping::kGroupingAddress4096: bits = 12; break;
+    default: bits = 0; break;
+    }
+
     uint32_t mask = 0xffffffff << bits;
     uint32_t rest = 0xffffffff ^ mask;
 
@@ -187,8 +221,9 @@ void ProfileTableModel::rebuildEntries()
             addr = result.address;
             label = QString::fromStdString(result.name);
         }
-        else if (m_grouping == kGroupingAddress256)
+        else
         {
+            // Group by bytes
             addr = ent.first & mask;
             label = QString::asprintf("$%08x-$%08x", addr, addr + rest);
         }
@@ -201,6 +236,7 @@ void ProfileTableModel::rebuildEntries()
             entry.text = label;
             entry.instructionCount = ent.second.count;
             entry.cycleCount = ent.second.cycles;
+            entry.cyclePercent = 0; // calculated at end
             map.insert(addr, entry);
         }
         else {
@@ -211,6 +247,8 @@ void ProfileTableModel::rebuildEntries()
     entries.clear();
     for (auto it : map)
     {
+        uint64_t scaledPercent = it.cycleCount * 1000 / cycleTotal;
+        it.cyclePercent = static_cast<float>(scaledPercent) / 10.f;
         entries.push_back(it);
     }
 
@@ -318,11 +356,16 @@ ProfileWindow::ProfileWindow(QWidget *parent, Session* pSession) :
     m_pTableView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeMode::ResizeToContents);
 
     m_pGroupingComboBox->addItem(tr("Symbols"), ProfileTableModel::Grouping::kGroupingSymbol);
+    m_pGroupingComboBox->addItem(tr("64 Bytes"), ProfileTableModel::Grouping::kGroupingAddress64);
     m_pGroupingComboBox->addItem(tr("256 Bytes"), ProfileTableModel::Grouping::kGroupingAddress256);
+    m_pGroupingComboBox->addItem(tr("1024 Bytes"), ProfileTableModel::Grouping::kGroupingAddress1024);
+    m_pGroupingComboBox->addItem(tr("4096 Bytes"), ProfileTableModel::Grouping::kGroupingAddress4096);
 
     pTopLayout->addWidget(m_pStartStopButton);
     pTopLayout->addWidget(m_pClearButton);
+    pTopLayout->addWidget(new QLabel(tr("Grouping:"), this));
     pTopLayout->addWidget(m_pGroupingComboBox);
+    pTopLayout->addStretch();
 
     pMainLayout->addWidget(pTopRegion);
     pMainLayout->addWidget(m_pTableView);
@@ -343,7 +386,7 @@ ProfileWindow::ProfileWindow(QWidget *parent, Session* pSession) :
 
     connect(m_pStartStopButton, &QAbstractButton::clicked,              this, &ProfileWindow::startStopClicked);
     connect(m_pClearButton,     &QAbstractButton::clicked,              this, &ProfileWindow::resetClicked);
-    connect(m_pGroupingComboBox,    SIGNAL(currentIndexChanged(int)),       SLOT(groupingChangedSlot(int)));
+    connect(m_pGroupingComboBox,SIGNAL(currentIndexChanged(int)),       SLOT(groupingChangedSlot(int)));
 
     // Refresh enable state
     connectChangedSlot();

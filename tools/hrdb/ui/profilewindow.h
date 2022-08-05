@@ -26,12 +26,14 @@ public:
         QString         text;
         uint32_t        instructionCount;
         unsigned long   cycleCount;
+        float           cyclePercent;
     };
 
     enum Column
     {
         kColAddress,
         kColCycles,
+        kColCyclePercent,
         kColInstructionCount,
         kColCount
     };
@@ -39,7 +41,10 @@ public:
     enum Grouping
     {
         kGroupingSymbol,
-        kGroupingAddress256
+        kGroupingAddress64,
+        kGroupingAddress256,
+        kGroupingAddress1024,
+        kGroupingAddress4096,
     };
 
     ProfileTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* pDispatcher);
