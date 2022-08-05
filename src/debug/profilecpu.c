@@ -833,6 +833,15 @@ void Profile_CpuSave(FILE *out)
 }
 
 /* ------------------ CPU profile control ----------------- */
+/**
+ * Clear the values that are now not cleared in Profile_CpuStart().
+ */
+void Profile_CpuInit(void)
+{
+	cpu_profile.prev_cycles = 0;
+	cpu_profile.prev_family = 0;
+	cpu_profile.prev_pc = 0;
+}
 
 /**
  * Initialize CPU profiling when necessary.  Return true if profiling.
@@ -840,6 +849,9 @@ void Profile_CpuSave(FILE *out)
 bool Profile_CpuStart(void)
 {
 	int size;
+	Uint64 savePrevCycles;
+	int savePrevFamily;
+	Uint32 savePrevPC;
 
 	Profile_FreeCallinfo(&(cpu_callinfo));
 	if (cpu_profile.sort_arr) {
@@ -854,7 +866,22 @@ bool Profile_CpuStart(void)
 		return false;
 	}
 	/* zero everything */
+
+	/* hrdb mod: rather than completely losing all state, we remember
+	  the previous CPU instruction and time, so that when restarting
+	  cycles and instruction counts do not lose some information.
+	  This particularly happens for user breaks from the VBL. */
+	savePrevCycles = cpu_profile.prev_cycles;
+	savePrevFamily = cpu_profile.prev_family;
+	savePrevPC = cpu_profile.prev_pc;
+
 	memset(&cpu_profile, 0, sizeof(cpu_profile));
+
+	/* Restore the saved values after the memset */
+	cpu_profile.prev_cycles = savePrevCycles;
+	cpu_profile.prev_family = savePrevFamily;
+	cpu_profile.prev_pc = savePrevPC;
+
 	memset(&cpu_warnings, 0, sizeof(cpu_warnings));
 	cpu_warnings.multireturn = MAX_MULTI_RETURN;
 
@@ -882,9 +909,8 @@ bool Profile_CpuStart(void)
 	CpuInstruction.I_Cache_miss = 0;
 	CpuInstruction.D_Cache_miss = 0;
 
-	cpu_profile.prev_cycles = CyclesGlobalClockCounter;
-	cpu_profile.prev_family = OpcodeFamily;
-	cpu_profile.prev_pc = M68000_GetPC();
+	/* hrdb mod: prev_cycles etc were initialised here but this is no longer needed */
+
 	if (ConfigureParams.System.bAddressSpace24) {
 		cpu_profile.prev_pc &= 0xffffff;
 	}
@@ -1252,6 +1278,18 @@ void Profile_CpuUpdate(void)
 #endif
 }
 
+/**
+ * Update CPU cycle and count statistics for PC address
+ * when profile accumulation not active
+ * This gets called after instruction has executed and PC
+ * has advanced to next instruction.
+ */
+void Profile_CpuUpdateInactive()
+{
+	cpu_profile.prev_cycles = CyclesGlobalClockCounter;
+	cpu_profile.prev_family = OpcodeFamily;
+	cpu_profile.prev_pc = M68000_GetPC();
+}
 
 /**
  * Helper for accounting CPU profile area item.
