@@ -852,6 +852,8 @@ void Profile_CpuInit(void)
 {
 	cpu_profile.prev_cycles = 0;
 	cpu_profile.prev_family = 0;
+	// hrdb: prev_pc == 0 is used as a sentinel in CpuUpdate now to throw
+	// away the first bogus update result
 	cpu_profile.prev_pc = 0;
 }
 
@@ -889,12 +891,7 @@ bool Profile_CpuStart(void)
 
 	memset(&cpu_profile, 0, sizeof(cpu_profile));
 
-	/* Restore the saved values after the memset.
-	If the cycle value is 0 this denotes the first ever call to CpuStart,
-	and since profiling has never been updated yet, we have to try to fix
-	the previous cycle counter as best we can. */
-	if (savePrevCycles == 0)
-		savePrevCycles = CyclesGlobalClockCounter;
+	/* Restore the saved values after the memset. */
 	cpu_profile.prev_cycles = savePrevCycles;
 	cpu_profile.prev_family = savePrevFamily;
 	cpu_profile.prev_pc = savePrevPC;
@@ -1169,7 +1166,20 @@ void Profile_CpuUpdate(void)
 	cpu_profile.prev_pc = pc = M68000_GetPC();
 	if (ConfigureParams.System.bAddressSpace24) {
 		cpu_profile.prev_pc &= 0xffffff;
+
 	}
+
+	/* Special case: the first ever update will have no "previous PC" set correctly,
+	since profile update never runs until debugger is enabled. So don't include in
+	accumulated results. */
+	if (!prev_pc)
+	{
+		//cpuprofile.prev_pc is updated already
+		cpu_profile.prev_cycles = CyclesGlobalClockCounter;
+		cpu_profile.prev_family = OpcodeFamily;
+		return;
+	}
+
 	if (unlikely(profile_loop.fp)) {
 		if (pc < prev_pc) {
 			if (pc == cpu_profile.loop_start && prev_pc == cpu_profile.loop_end) {
