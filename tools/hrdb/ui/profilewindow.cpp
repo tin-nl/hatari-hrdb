@@ -425,14 +425,12 @@ void ProfileWindow::connectChangedSlot()
 {
     bool enable = m_pTargetModel->IsConnected() && !m_pTargetModel->IsRunning();
     m_pStartStopButton->setEnabled(enable);
-    m_pClearButton->setEnabled(enable);
 }
 
 void ProfileWindow::startStopChangedSlot()
 {
     bool enable = m_pTargetModel->IsConnected() && !m_pTargetModel->IsRunning();
     m_pStartStopButton->setEnabled(enable);
-    m_pClearButton->setEnabled(enable);
 }
 
 void ProfileWindow::startStopDelayeSlot(int running)
@@ -472,6 +470,7 @@ void ProfileWindow::startStopClicked()
 void ProfileWindow::resetClicked()
 {
     m_pTargetModel->ProfileReset();
+    m_pTableModel->recalc();
 }
 
 void ProfileWindow::groupingChangedSlot(int index)
