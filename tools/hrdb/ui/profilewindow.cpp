@@ -65,8 +65,11 @@ ProfileTableModel::ProfileTableModel(QObject *parent, TargetModel *pTargetModel,
     m_sortOrder(Qt::DescendingOrder),
     m_grouping(kGroupingSymbol)
 {
-    connect(m_pTargetModel, &TargetModel::profileChangedSignal,     this, &ProfileTableModel::profileChangedSlot);
-    connect(m_pTargetModel, &TargetModel::symbolTableChangedSignal, this, &ProfileTableModel::symbolChangedSlot);
+}
+
+void ProfileTableModel::recalc()
+{
+    rebuildEntries();
 }
 
 //-----------------------------------------------------------------------------
@@ -145,35 +148,20 @@ void ProfileTableModel::sort(int column, Qt::SortOrder order)
     {
     case kColCycles:
         std::sort(entries.begin(), entries.end(), order == Qt::SortOrder::AscendingOrder ? CompCyclesAsc : CompCyclesDesc);
-        populateFromEntries();
         break;
     case kColInstructionCount:
         std::sort(entries.begin(), entries.end(), order == Qt::SortOrder::AscendingOrder ? CompCyclesAsc : CompCyclesDesc);
-        populateFromEntries();
         break;
     case kColAddress:
         std::sort(entries.begin(), entries.end(), order == Qt::SortOrder::AscendingOrder ? CompAddressAsc : CompAddressDesc);
-        populateFromEntries();
         break;
     case kColCyclePercent:
         std::sort(entries.begin(), entries.end(), order == Qt::SortOrder::AscendingOrder ? CompCyclePercentAsc : CompCyclePercentDesc);
-        populateFromEntries();
         break;
     }
     m_sortColumn = column;
     m_sortOrder = order;
-}
-
-//-----------------------------------------------------------------------------
-void ProfileTableModel::profileChangedSlot()
-{
-    rebuildEntries();
-}
-
-//-----------------------------------------------------------------------------
-void ProfileTableModel::symbolChangedSlot()
-{
-    rebuildEntries();
+    populateFromEntries();
 }
 
 //-----------------------------------------------------------------------------
@@ -223,14 +211,19 @@ void ProfileTableModel::rebuildEntries()
         }
         else
         {
-            // Group by bytes
+            // Group by bytes, rounding down the bits
             addr = ent.first & mask;
-            label = QString::asprintf("$%08x-$%08x", addr, addr + rest);
         }
 
         QMap<uint32_t, Entry>::iterator it = map.find(addr);
         if (it == map.end())
         {
+            // New entry, so create a label here
+            if (m_grouping == kGroupingSymbol)
+                label = QString::fromStdString(result.name);
+            else
+                label = QString::asprintf("$%08x-$%08x", addr, addr + rest);
+
             Entry entry;
             entry.address = addr;
             entry.text = label;
@@ -253,7 +246,7 @@ void ProfileTableModel::rebuildEntries()
     }
 
     sort(m_sortColumn, m_sortOrder);
-    populateFromEntries();
+    // Don't need to "populate", that's called in sort()
 }
 
 //-----------------------------------------------------------------------------
@@ -381,6 +374,7 @@ ProfileWindow::ProfileWindow(QWidget *parent, Session* pSession) :
 
     connect(m_pTargetModel,     &TargetModel::connectChangedSignal,     this, &ProfileWindow::connectChangedSlot);
     connect(m_pTargetModel,     &TargetModel::startStopChangedSignal,   this, &ProfileWindow::startStopChangedSlot);
+    connect(m_pTargetModel,     &TargetModel::startStopChangedSignalDelayed,   this, &ProfileWindow::startStopDelayeSlot);
     connect(m_pTargetModel,     &TargetModel::profileChangedSignal,     this, &ProfileWindow::profileChangedSlot);
     connect(m_pSession,         &Session::settingsChanged,              this, &ProfileWindow::settingsChangedSlot);
 
@@ -411,7 +405,7 @@ void ProfileWindow::loadSettings()
 
     restoreGeometry(settings.value("geometry").toByteArray());
 
-    ProfileTableModel::Grouping g = static_cast<ProfileTableModel::Grouping>(settings.value("grouping", QVariant((int)ProfileTableModel::Grouping::kGroupingSymbol)).toInt());
+    ProfileTableModel::Grouping g = static_cast<ProfileTableModel::Grouping>(settings.value("grouping", QVariant((int)ProfileTableModel::Grouping::kGroupingAddress256)).toInt());
     m_pGroupingComboBox->setCurrentIndex(g);
     m_pTableModel->SetGrouping(g);
     settings.endGroup();
@@ -439,6 +433,12 @@ void ProfileWindow::startStopChangedSlot()
     bool enable = m_pTargetModel->IsConnected() && !m_pTargetModel->IsRunning();
     m_pStartStopButton->setEnabled(enable);
     m_pClearButton->setEnabled(enable);
+}
+
+void ProfileWindow::startStopDelayeSlot(int running)
+{
+    if (m_pTargetModel->IsConnected() && !running)
+        m_pTableModel->recalc();
 }
 
 void ProfileWindow::profileChangedSlot()

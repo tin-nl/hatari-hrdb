@@ -49,6 +49,8 @@ public:
 
     ProfileTableModel(QObject * parent, TargetModel* pTargetModel, Dispatcher* pDispatcher);
 
+    void recalc();
+
     // "When subclassing QAbstractTableModel, you must implement rowCount(), columnCount(), and data()."
     virtual int rowCount(const QModelIndex &parent) const override;
     virtual int columnCount(const QModelIndex &parent) const override;
@@ -71,10 +73,6 @@ public:
     {
         return m_grouping;
     }
-
-public slots:
-    void profileChangedSlot();
-    void symbolChangedSlot();
 
 private:
 
@@ -133,6 +131,7 @@ public:
 private slots:
     void connectChangedSlot();
     void startStopChangedSlot();
+    void startStopDelayeSlot(int running);
     void profileChangedSlot();
     void settingsChangedSlot();
     void groupingChangedSlot(int index);
