@@ -28,7 +28,8 @@ TargetModel::TargetModel() :
 	QObject(),
     m_bConnected(false),
     m_bRunning(true),
-    m_bProfileEnabled(0)
+    m_bProfileEnabled(0),
+    m_ffwd(false)
 {
     for (int i = 0; i < MemorySlot::kMemorySlotCount; ++i)
         m_pMemory[i] = nullptr;
@@ -73,12 +74,13 @@ void TargetModel::SetConnected(int connected)
     emit connectChangedSignal();
 }
 
-void TargetModel::SetStatus(bool running, uint32_t pc)
+void TargetModel::SetStatus(bool running, uint32_t pc, bool ffwd)
 {
     m_bRunning = running;
     m_startStopPc = pc;
+    m_ffwd = ffwd;
     m_changedFlags.SetChanged(TargetChangedFlags::kPC);
-    emit startStopChangedSignal();
+    emit startStopChangedSignal();      // This should really be statusChanged or something
 
     m_pDelayedUpdateTimer->stop();
     m_pRunningRefreshTimer->stop();

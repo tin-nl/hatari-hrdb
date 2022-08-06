@@ -85,6 +85,7 @@ private:
     void ConnectTriggered();
     void DisconnectTriggered();
     void WarmResetTriggered();
+    void FastForwardTriggered();
 
     // Exception Menu
     void ExceptionsDialogTriggered();
@@ -154,6 +155,8 @@ private:
     QAction* m_pConnectAct;
     QAction* m_pDisconnectAct;
     QAction* m_pWarmResetAct;
+    QAction* m_pFastForwardAct;
+
     QAction* m_pExitAct;
 
     QAction* m_pExceptionsAct;

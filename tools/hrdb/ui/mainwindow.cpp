@@ -397,7 +397,11 @@ void MainWindow::WarmResetTriggered()
     // Restart if in break mode
     if (!m_pTargetModel->IsRunning())
         m_pDispatcher->Run();
+}
 
+void MainWindow::FastForwardTriggered()
+{
+    m_pDispatcher->SetFastForward(m_pFastForwardAct->isChecked());
 }
 
 void MainWindow::ExceptionsDialogTriggered()
@@ -464,8 +468,9 @@ void MainWindow::updateButtonEnable()
     m_pDisconnectAct->setEnabled(isConnected);
     m_pWarmResetAct->setEnabled(isConnected);
     m_pExceptionsAct->setEnabled(isConnected);
+    m_pFastForwardAct->setEnabled(isConnected);
+    m_pFastForwardAct->setChecked(m_pTargetModel->IsFastForward());
 }
-
 
 void MainWindow::loadSettings()
 {
@@ -629,6 +634,11 @@ void MainWindow::createActions()
     m_pWarmResetAct->setStatusTip(tr("Warm-Reset the machine"));
     connect(m_pWarmResetAct, &QAction::triggered, this, &MainWindow::WarmResetTriggered);
 
+    m_pFastForwardAct = new QAction(tr("Fast-Forward"), this);
+    m_pFastForwardAct->setStatusTip(tr("Control Fast-Forward mode"));
+    m_pFastForwardAct->setCheckable(true);
+    connect(m_pFastForwardAct, &QAction::toggled, this, &MainWindow::FastForwardTriggered);
+
     m_pExitAct = new QAction(tr("E&xit"), this);
     m_pExitAct->setShortcuts(QKeySequence::Quit);
     m_pExitAct->setStatusTip(tr("Exit the application"));
@@ -717,6 +727,7 @@ void MainWindow::createToolBar()
     pToolbar->addAction(m_pLaunchAct);
     pToolbar->addSeparator();
     pToolbar->addAction(m_pWarmResetAct);
+    pToolbar->addAction(m_pFastForwardAct);
 
     this->addToolBar(Qt::ToolBarArea::TopToolBarArea, pToolbar);
 }
@@ -730,6 +741,7 @@ void MainWindow::createMenus()
     m_pFileMenu->addAction(m_pConnectAct);
     m_pFileMenu->addAction(m_pDisconnectAct);
     m_pFileMenu->addAction(m_pWarmResetAct);
+    m_pFileMenu->addAction(m_pFastForwardAct);
     m_pFileMenu->addSeparator();
     m_pFileMenu->addAction(m_pExitAct);
 

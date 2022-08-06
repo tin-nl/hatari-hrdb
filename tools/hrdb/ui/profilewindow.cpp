@@ -464,7 +464,7 @@ void ProfileWindow::startStopClicked()
     if (!m_pTargetModel->IsConnected())
         return;
 
-    m_pDispatcher->SetProfileEnable(m_pTargetModel->IsProfileEnabled());
+    m_pDispatcher->SetProfileEnable(!m_pTargetModel->IsProfileEnabled());
 }
 
 void ProfileWindow::resetClicked()
