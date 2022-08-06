@@ -8,8 +8,10 @@
 class QTcpSocket;
 class QTimer;
 class QTemporaryFile;
+class QFileSystemWatcher;
 class Dispatcher;
 class TargetModel;
+class FileWatcher;
 
 #define VERSION_STRING      "0.006 (Feb 2022)"
 
@@ -53,6 +55,7 @@ public:
     QTcpSocket*     m_pTcpSocket;
     QTemporaryFile* m_pStartupFile;
     QTemporaryFile* m_pLoggingFile;
+    FileWatcher*    m_pFileWatcher;
 
     // Connection data
     Dispatcher*     m_pDispatcher;
@@ -68,6 +71,8 @@ public:
 
     void loadSettings();
     void saveSettings();
+
+    void resetEmulator();
 
 signals:
     void settingsChanged();
