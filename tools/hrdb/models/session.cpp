@@ -5,10 +5,12 @@
 
 #include "targetmodel.h"
 #include "../transport/dispatcher.h"
+#include "../models/filewatcher.h"
 
 Session::Session() :
     QObject(),
-    m_autoConnect(true)
+    m_autoConnect(true),
+    m_pFileWatcher(nullptr)
 {
     m_pStartupFile = new QTemporaryFile(this);
     m_pLoggingFile = new QTemporaryFile(this);
@@ -38,6 +40,7 @@ Session::~Session()
     m_pLoggingFile->close();
     delete m_pTcpSocket;
     delete m_pTimer;
+    delete m_pFileWatcher;
 }
 
 void Session::Connect()
@@ -114,3 +117,9 @@ void Session::connectTimerCallback()
     }
 }
 
+void Session::resetEmulator()
+{
+    m_pDispatcher->ResetWarm();
+    if (!m_pTargetModel->IsRunning())
+        m_pDispatcher->Run();
+}
