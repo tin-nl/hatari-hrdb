@@ -214,7 +214,7 @@ GraphicsInspectorWidget::GraphicsInspectorWidget(QWidget *parent,
     connect(m_pLockFormatToVideoCheckBox,   &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockFormatToVideoChangedSlot);
     connect(m_pLockAddressToVideoCheckBox,  &QCheckBox::stateChanged,     this, &GraphicsInspectorWidget::lockAddressToVideoChangedSlot);
 
-    connect(m_pModeComboBox,    SIGNAL(currentIndexChanged(int)),         SLOT(modeChangedSlot(int)));
+    connect(m_pModeComboBox,    SIGNAL(activated(int)),                   SLOT(modeChangedSlot(int)));  // this is user-changed
     connect(m_pPaletteComboBox, SIGNAL(currentIndexChanged(int)),         SLOT(paletteChangedSlot(int)));
     connect(m_pWidthSpinBox,    SIGNAL(valueChanged(int)),                SLOT(widthChangedSlot(int)));
     connect(m_pHeightSpinBox,   SIGNAL(valueChanged(int)),                SLOT(heightChangedSlot(int)));
@@ -250,16 +250,12 @@ void GraphicsInspectorWidget::loadSettings()
     m_height = settings.value("height", QVariant(200)).toInt();
     m_padding = settings.value("padding", QVariant(0)).toInt();
     m_mode = static_cast<Mode>(settings.value("mode", QVariant((int)Mode::k4Bitplane)).toInt());
-    m_pModeComboBox->setCurrentIndex(m_mode);
-
-    m_pWidthSpinBox->setValue(m_width);
-    m_pHeightSpinBox->setValue(m_height);
-    m_pPaddingSpinBox->setValue(m_padding);
     m_pLockAddressToVideoCheckBox->setChecked(settings.value("lockAddress", QVariant(true)).toBool());
     m_pLockFormatToVideoCheckBox->setChecked(settings.value("lockFormat", QVariant(true)).toBool());
 
     int palette = settings.value("palette", QVariant((int)Palette::kGreyscale)).toInt();
     m_pPaletteComboBox->setCurrentIndex(palette);
+    UpdateUIElements();
     settings.endGroup();
 }
 

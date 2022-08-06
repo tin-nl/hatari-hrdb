@@ -57,9 +57,9 @@ private:
     enum Mode
     {
         k4Bitplane,
+        k3Bitplane,
         k2Bitplane,
-        k1Bitplane,
-        k3Bitplane      // NOTE: this is in the wrong order to preserve Settings serialisation
+        k1Bitplane
     };
 
     enum Palette
