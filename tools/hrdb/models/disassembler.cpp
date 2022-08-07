@@ -481,10 +481,12 @@ bool Disassembler::calc_fixed_ea(const operand &operand, bool useRegs, const Reg
         return true;
     case OpType::PC_DISP_INDEX:
     {
-        if (!useRegs)
-            return false;
         // This generates the n(pc) part
         calc_relative_address(operand, inst_address, ea);
+        if (!useRegs)
+            return true;            // Just display the base address for EA
+
+        // Add the register value if we know it
         uint32_t d_reg = regs.GetDReg(operand.pc_disp_index.d_reg);
         if (operand.pc_disp_index.is_long)
             ea += d_reg;
