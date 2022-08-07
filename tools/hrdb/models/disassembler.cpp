@@ -211,6 +211,24 @@ QString to_abs_word(uint16_t val)
     return tmp;
 }
 
+// Format a value as signed decimal or hexadecimal.
+// Handles the nasty "-$5" case
+QString to_signed(int32_t val, bool isHex)
+{
+    QString tmp;
+    if (isHex)
+    {
+        if (val >= 0)
+            return QString::asprintf("$%x", val);
+        else
+            return QString::asprintf("-$%x", -val);
+    }
+    else
+    {
+        return QString::asprintf("%d", val);
+    }
+}
+
 void print_movem_mask(uint16_t reg_mask, QTextStream& ref)
 {
     int num_ranges = 0;
@@ -260,9 +278,6 @@ void print_movem_mask(uint16_t reg_mask, QTextStream& ref)
 // ----------------------------------------------------------------------------
 void print(const operand& operand, uint32_t inst_address, QTextStream& ref, bool bDisassHexNumerics = false)
 {
-    QTextStream &(*numericMode)(QTextStream&) = bDisassHexNumerics ? Qt::hex : Qt::dec;
-    QString numericPrefix = bDisassHexNumerics ? "$" : "";
-
     switch (operand.type)
     {
         case OpType::D_DIRECT:
@@ -281,10 +296,10 @@ void print(const operand& operand, uint32_t inst_address, QTextStream& ref, bool
             ref << "-(a" << operand.indirect_predec.reg << ")";
             return;
         case OpType::INDIRECT_DISP:
-            ref << numericMode << numericPrefix << operand.indirect_disp.disp << Qt::dec << "(a" << operand.indirect_disp.reg << ")";
+            ref << to_signed(operand.indirect_disp.disp, bDisassHexNumerics) << "(a" << operand.indirect_disp.reg << ")";
             return;
         case OpType::INDIRECT_INDEX:
-            ref << numericMode << numericPrefix << operand.indirect_index.disp << Qt::dec << "(a" << operand.indirect_index.a_reg <<
+            ref << to_signed(operand.indirect_index.disp, bDisassHexNumerics) << "(a" << operand.indirect_index.a_reg <<
                    ",d" << operand.indirect_index.d_reg <<
                    (operand.indirect_index.is_long ? ".l" : ".w") <<
                    ")";
