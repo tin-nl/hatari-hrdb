@@ -260,7 +260,7 @@ void print_movem_mask(uint16_t reg_mask, QTextStream& ref)
 // ----------------------------------------------------------------------------
 void print(const operand& operand, uint32_t inst_address, QTextStream& ref, bool bDisassHexNumerics = false)
 {
-    QTextStream &(*numericMode)(QTextStream&) = bDisassHexNumerics ? hex : dec;
+    QTextStream &(*numericMode)(QTextStream&) = bDisassHexNumerics ? Qt::hex : Qt::dec;
     QString numericPrefix = bDisassHexNumerics ? "$" : "";
 
     switch (operand.type)
@@ -281,10 +281,10 @@ void print(const operand& operand, uint32_t inst_address, QTextStream& ref, bool
             ref << "-(a" << operand.indirect_predec.reg << ")";
             return;
         case OpType::INDIRECT_DISP:
-            ref << numericMode << numericPrefix << operand.indirect_disp.disp << dec << "(a" << operand.indirect_disp.reg << ")";
+            ref << numericMode << numericPrefix << operand.indirect_disp.disp << Qt::dec << "(a" << operand.indirect_disp.reg << ")";
             return;
         case OpType::INDIRECT_INDEX:
-            ref << numericMode << numericPrefix << operand.indirect_index.disp << dec << "(a" << operand.indirect_index.a_reg <<
+            ref << numericMode << numericPrefix << operand.indirect_index.disp << Qt::dec << "(a" << operand.indirect_index.a_reg <<
                    ",d" << operand.indirect_index.d_reg <<
                    (operand.indirect_index.is_long ? ".l" : ".w") <<
                    ")";
