@@ -73,8 +73,8 @@ RunDialog::RunDialog(QWidget *parent, Session* pSession) :
     m_pExecutableTextEdit = new QLineEdit("hatari", this);
     m_pArgsTextEdit = new QLineEdit("", this);
     m_pPrgTextEdit = new QLineEdit("", this);
-	m_pWorkingDirectoryTextEdit = new QLineEdit("", this);
-	m_pWatcherFilesTextEdit = new QLineEdit(this);
+    m_pWorkingDirectoryTextEdit = new QLineEdit("", this);
+    m_pWatcherFilesTextEdit = new QLineEdit(this);
     m_pWatcherFilesTextEdit->setPlaceholderText("<watch run programm/image>");
 
     m_pBreakModeCombo = new QComboBox(this);
@@ -131,9 +131,9 @@ RunDialog::RunDialog(QWidget *parent, Session* pSession) :
     connect(pExeButton, &QPushButton::clicked, this, &RunDialog::exeClicked);
     connect(pPrgButton, &QPushButton::clicked, this, &RunDialog::prgClicked);
     connect(pWDButton, &QPushButton::clicked, this, &RunDialog::workingDirectoryClicked);
-	connect(pWatcherButton, &QPushButton::clicked, this, &RunDialog::watcherFilesClicked);
-	connect(m_pWatcherFilesTextEdit, &QLineEdit::textChanged, this, &RunDialog::watcherTextChanged);
-	connect(m_pWatcherCheckBox, &QCheckBox::stateChanged, this, &RunDialog::watcherActiveChanged);
+    connect(pWatcherButton, &QPushButton::clicked, this, &RunDialog::watcherFilesClicked);
+    connect(m_pWatcherFilesTextEdit, &QLineEdit::textChanged, this, &RunDialog::watcherTextChanged);
+    connect(m_pWatcherCheckBox, &QCheckBox::stateChanged, this, &RunDialog::watcherActiveChanged);
     connect(pOkButton, &QPushButton::clicked, this, &RunDialog::okClicked);
     connect(pCancelButton, &QPushButton::clicked, this, &RunDialog::reject);
     loadSettings();

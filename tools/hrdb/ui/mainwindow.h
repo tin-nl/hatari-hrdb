@@ -2,9 +2,9 @@
 #define MAINWINDOW_H
 
 /*
-	Main GUI Window.
+    Main GUI Window.
 
-	Currently everything is controlled and routed through here.
+    Currently everything is controlled and routed through here.
 */
 
 #include <QMainWindow>
@@ -52,7 +52,7 @@ protected:
 
 private slots:
     void connectChangedSlot();
-	void startStopChangedSlot();
+    void startStopChangedSlot();
     void memoryChangedSlot(int slot, uint64_t commandId);
     void runningRefreshTimerSlot();
     void flushSlot(const TargetChangedFlags& flags, uint64_t commandId);
@@ -91,7 +91,7 @@ private:
     void ExceptionsDialogTriggered();
     void PrefsDialogTriggered();
 
-	// Populaters
+    // Populaters
     void PopulateRunningSquare();
     void updateButtonEnable();
 
@@ -101,10 +101,10 @@ private:
 
     // Our UI widgets
     QWidget*        m_pRunningSquare;
-    QPushButton*	m_pStartStopButton;
-    QPushButton*	m_pStepIntoButton;
-    QPushButton*	m_pStepOverButton;
-    QPushButton*	m_pRunToButton;
+    QPushButton*    m_pStartStopButton;
+    QPushButton*    m_pStepIntoButton;
+    QPushButton*    m_pStepOverButton;
+    QPushButton*    m_pRunToButton;
     QComboBox*      m_pRunToCombo;
 
     RegisterWidget* m_pRegisterWidget;
@@ -125,7 +125,7 @@ private:
 
     // Low-level data
     Session&                    m_session;
-    Dispatcher*             	m_pDispatcher;
+    Dispatcher*                 m_pDispatcher;
     TargetModel*                m_pTargetModel;
 
     // Target data -- used for single-stepping
