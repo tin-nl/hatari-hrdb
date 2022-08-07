@@ -87,7 +87,7 @@ MainWindow::MainWindow(Session& session, QWidget *parent)
 
     m_pGraphicsInspector = new GraphicsInspectorWidget(this, &m_session);
     m_pGraphicsInspector->setWindowTitle("Graphics Inspector (Alt+G)");
-    m_pBreakpointsWidget = new BreakpointsWindow(this, m_pTargetModel, m_pDispatcher);
+    m_pBreakpointsWidget = new BreakpointsWindow(this, &m_session);
     m_pBreakpointsWidget->setWindowTitle("Breakpoints (Alt+B)");
     m_pConsoleWindow = new ConsoleWindow(this, &m_session);
 
