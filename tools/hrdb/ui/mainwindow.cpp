@@ -160,7 +160,7 @@ MainWindow::MainWindow(Session& session, QWidget *parent)
     // Wire up menu appearance
     connect(m_pWindowMenu, &QMenu::aboutToShow, this, &MainWindow::updateWindowMenu);
 
-	// Keyboard shortcuts
+    // Keyboard shortcuts
     new QShortcut(QKeySequence("Ctrl+R"),         this, SLOT(startStopClicked()));
     new QShortcut(QKeySequence("Esc"),            this, SLOT(breakPressed()));
     new QShortcut(QKeySequence("S"),              this, SLOT(singleStepClicked()));
@@ -180,7 +180,7 @@ MainWindow::MainWindow(Session& session, QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-	delete m_pDispatcher;
+    delete m_pDispatcher;
     delete m_pTargetModel;
 }
 
@@ -201,7 +201,7 @@ void MainWindow::startStopChangedSlot()
     if (!isRunning)
     {
         // STOPPED
-		// TODO this is where all windows should put in requests for data
+        // TODO this is where all windows should put in requests for data
         // The Main Window does this and other windows feed from it.
         // NOTE: we assume here that PC is already updated (normally this
         // is done with a notification at the stop)
@@ -267,7 +267,7 @@ void MainWindow::startStopClicked()
 
     if (m_pTargetModel->IsRunning())
         m_pDispatcher->Break();
-	else
+    else
         m_pDispatcher->Run();
 }
 

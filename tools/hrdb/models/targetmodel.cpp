@@ -25,7 +25,7 @@ void TargetChangedFlags::Clear()
 }
 
 TargetModel::TargetModel() :
-	QObject(),
+    QObject(),
     m_bConnected(false),
     m_bRunning(true),
     m_bProfileEnabled(0),
@@ -104,7 +104,7 @@ void TargetModel::SetConfig(uint32_t machineType, uint32_t cpuLevel)
 
 void TargetModel::SetRegisters(const Registers& regs, uint64_t commandId)
 {
-	m_regs = regs;
+    m_regs = regs;
     m_changedFlags.SetChanged(TargetChangedFlags::kRegs);
     emit registersChangedSignal(commandId);
 }
