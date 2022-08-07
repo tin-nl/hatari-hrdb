@@ -48,9 +48,19 @@ MainWindow::MainWindow(Session& session, QWidget *parent)
     m_pRunningSquare->setFixedSize(10, 25);
     m_pRunningSquare->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
     m_pStartStopButton = new QPushButton("Break", this);
-    m_pStepIntoButton = new QPushButton("Step", this);
-    m_pStepOverButton = new QPushButton("Next", this);
-    m_pRunToButton = new QPushButton("Run Until:", this);
+    m_pStepIntoButton = new QPushButton("(S)tep", this);
+    m_pStepOverButton = new QPushButton("(N)ext", this);
+
+    m_pStartStopButton->setToolTip("Ctrl+R: Run/Stop, Esc: Stop");
+    m_pStepIntoButton->setToolTip("S: Execute one instruction.\n"
+            "Jumps into subroutines.\n"
+            "Shift+S: skip instruction.");
+    m_pStepOverButton->setToolTip("N: Stop at next instruction in memory.\n"
+            "Jumps over subroutines and through backwards loops.");
+
+    m_pRunToButton = new QPushButton("Run (U)ntil:", this);
+    m_pRunToButton->setToolTip("U: Run until specified condition");
+
     m_pRunToCombo = new QComboBox(this);
     m_pRunToCombo->insertItem(0, "RTS");
     m_pRunToCombo->insertItem(1, "RTE");
@@ -233,7 +243,7 @@ void MainWindow::runningRefreshTimerSlot()
     }
 }
 
-void MainWindow::flushSlot(const TargetChangedFlags& flags, uint64_t commandId)
+void MainWindow::flushSlot(const TargetChangedFlags& /*flags*/, uint64_t commandId)
 {
     if (commandId == m_liveRegisterReadRequest)
     {
@@ -458,7 +468,6 @@ void MainWindow::updateButtonEnable()
     // Buttons...
     m_pStartStopButton->setEnabled(isConnected);
     m_pStartStopButton->setText(isRunning ? "Break" : "Run");
-
     m_pStepIntoButton->setEnabled(isConnected && !isRunning);
     m_pStepOverButton->setEnabled(isConnected && !isRunning);
     m_pRunToButton->setEnabled(isConnected && !isRunning);
