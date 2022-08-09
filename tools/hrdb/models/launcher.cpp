@@ -1,4 +1,3 @@
-#pragma once
 #include "launcher.h"
 #include <QTemporaryFile>
 #include <QTextStream>
