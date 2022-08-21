@@ -402,7 +402,9 @@ void MainWindow::DisconnectTriggered()
 void MainWindow::WarmResetTriggered()
 {
     m_pDispatcher->ResetWarm();
-    // TODO: ideally we should clear out the symbol tables here
+    // This will re-request from Hatari, which should return
+    // an empty symbol table.
+    m_pDispatcher->ReadSymbols();
 
     // Restart if in break mode
     if (!m_pTargetModel->IsRunning())
