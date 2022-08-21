@@ -45,20 +45,16 @@ bool LaunchHatari(const LaunchSettings& settings, const Session* pSession)
     if (otherArgsText.size() != 0)
         args = otherArgsText.split(" ");
 
-    if (pSession->m_pFileWatcher)
-        pSession->m_pFileWatcher->clear(); //remove all watched files
-
     if (settings.m_watcherActive)
     {
-        if (!pSession->m_pFileWatcher)
-        {
-            //@FIXME:nope.
-            ((Session*)pSession)->m_pFileWatcher=new FileWatcher(pSession);
-        }
+        FileWatcher* pFileWatcher=((Session*)pSession)->createFileWatcherInstance();
+        if (pFileWatcher)
+            pFileWatcher->clear(); //remove all watched files
+
         if(settings.m_watcherFiles.length()>0)
-            pSession->m_pFileWatcher->m_pFileSystemWatcher->addPaths(settings.m_watcherFiles.split(","));
+            pFileWatcher->addPaths(settings.m_watcherFiles.split(","));
         else
-            pSession->m_pFileWatcher->m_pFileSystemWatcher->addPath(settings.m_prgFilename);
+            pFileWatcher->addPath(settings.m_prgFilename);
     }
 
     // First make a temp file for breakpoints etc

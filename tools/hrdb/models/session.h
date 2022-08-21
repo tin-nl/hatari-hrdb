@@ -76,6 +76,8 @@ public:
 
     void resetEmulator();
 
+    FileWatcher* createFileWatcherInstance();
+
 signals:
     void settingsChanged();
 

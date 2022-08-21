@@ -19,6 +19,10 @@ public:
     QFileSystemWatcher* m_pFileSystemWatcher;
 
     void clear();
+
+    void addPaths(const QStringList &files);
+
+    void addPath(const QString &file);
 };
 
 #endif // FILEWATCHER_H

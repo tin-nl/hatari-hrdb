@@ -19,7 +19,20 @@ FileWatcher::~FileWatcher()
 
 void FileWatcher::clear()
 {
-    m_pFileSystemWatcher->removePaths(m_pFileSystemWatcher->directories());
+    if(m_pFileSystemWatcher)
+        m_pFileSystemWatcher->removePaths(m_pFileSystemWatcher->directories());
+}
+
+void FileWatcher::addPaths(const QStringList &files)
+{
+    if(m_pFileSystemWatcher)
+        m_pFileSystemWatcher->addPaths(files);
+}
+
+void FileWatcher::addPath(const QString &file)
+{
+    if(m_pFileSystemWatcher)
+        m_pFileSystemWatcher->addPath(file);
 }
 
 void FileWatcher::handleFileChanged(QString path)
