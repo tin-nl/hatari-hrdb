@@ -73,7 +73,10 @@ RunDialog::RunDialog(QWidget *parent, Session* pSession) :
     m_pExecutableTextEdit = new QLineEdit("hatari", this);
     m_pArgsTextEdit = new QLineEdit("", this);
     m_pPrgTextEdit = new QLineEdit("", this);
-    m_pWorkingDirectoryTextEdit = new QLineEdit("", this);
+	m_pWorkingDirectoryTextEdit = new QLineEdit("", this);
+	m_pWatcherFilesTextEdit = new QLineEdit(this);
+    m_pWatcherFilesTextEdit->setPlaceholderText("<watch run programm/image>");
+
     m_pWatcherFilesTextEdit = new QLineEdit(this);
     m_pWatcherFilesTextEdit->setPlaceholderText("<watch run programm/image>");
 
