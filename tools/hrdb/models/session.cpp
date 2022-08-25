@@ -9,8 +9,8 @@
 
 Session::Session() :
     QObject(),
-    m_autoConnect(true),
-    m_pFileWatcher(nullptr)
+    m_pFileWatcher(nullptr),
+    m_autoConnect(true)
 {
     m_pStartupFile = new QTemporaryFile(this);
     m_pLoggingFile = new QTemporaryFile(this);
