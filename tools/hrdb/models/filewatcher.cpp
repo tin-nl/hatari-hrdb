@@ -38,5 +38,5 @@ void FileWatcher::addPath(const QString &file)
 void FileWatcher::handleFileChanged(QString /*path*/)
 {
     //@FIXME:nope.
-    ((Session*)m_pSession)->resetEmulator();
+    ((Session*)m_pSession)->resetWarm();
 }

@@ -117,12 +117,15 @@ void Session::connectTimerCallback()
     }
 }
 
-void Session::resetEmulator()
+void Session::resetWarm()
 {
     m_pDispatcher->ResetWarm();
-     // This will re-request from Hatari, which should return
+
+    // This will re-request from Hatari, which should return
     // an empty symbol table.
     m_pDispatcher->ReadSymbols();
+
+    // Restart if in break mode
     if (!m_pTargetModel->IsRunning())
         m_pDispatcher->Run();
 }

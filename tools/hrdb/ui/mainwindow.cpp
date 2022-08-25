@@ -401,14 +401,9 @@ void MainWindow::DisconnectTriggered()
 
 void MainWindow::WarmResetTriggered()
 {
-    m_pDispatcher->ResetWarm();
-    // This will re-request from Hatari, which should return
-    // an empty symbol table.
-    m_pDispatcher->ReadSymbols();
-
-    // Restart if in break mode
-    if (!m_pTargetModel->IsRunning())
-        m_pDispatcher->Run();
+    // Use the shared session call for this, which handles
+    // things like symbol loading
+    m_session.resetWarm();
 }
 
 void MainWindow::FastForwardTriggered()

@@ -74,7 +74,7 @@ public:
     void loadSettings();
     void saveSettings();
 
-    void resetEmulator();
+    void resetWarm();
 
     FileWatcher* createFileWatcherInstance();
 
