@@ -729,6 +729,7 @@ void MainWindow::createActions()
 void MainWindow::createToolBar()
 {
     QToolBar* pToolbar = new QToolBar(this);
+    pToolbar->setObjectName("MainToolbar");
     pToolbar->addAction(m_pQuickLaunchAct);
     pToolbar->addAction(m_pLaunchAct);
     pToolbar->addSeparator();
