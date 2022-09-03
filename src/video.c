@@ -3013,7 +3013,9 @@ if ( CycInt_From_Opcode )		/* TEMP : to update CYCLES_COUNTER_VIDEO during an op
 
 	if (Config_IsMachineFalcon())
 	{
+#ifdef ENABLE_FALCON
 		VIDEL_VideoRasterHBL();
+#endif
 	}
 	else if (Config_IsMachineTT())
 	{
@@ -4234,9 +4236,11 @@ static void Video_ClearOnVBL(void)
 
 	Video_ResetShifterTimings();
 
+#ifdef ENABLE_FALCON
         if (Config_IsMachineFalcon() && !bUseVDIRes)
 		VIDEL_RestartVideoCounter();
 	else
+#endif	
 		Video_RestartVideoCounter();
 
 	pSTScreen = pFrameBuffer->pSTScreen;
@@ -4392,17 +4396,21 @@ static void Video_DrawScreen(void)
 		{
 			Video_UpdateTTPalette(VDIPlanes);
 		}
+#ifdef ENABLE_FALCON
 		else if (Config_IsMachineFalcon())
 		{
 			VIDEL_UpdateColors();
 		}
+#endif
 		Screen_GenDraw(VideoBase, VDIWidth, VDIHeight, VDIPlanes,
 		               VDIWidth * VDIPlanes / 16, 0, 0, 0, 0);
 	}
+#ifdef ENABLE_FALCON
 	else if (Config_IsMachineFalcon())
 	{
 		VIDEL_renderScreen();
 	}
+#endif
 	else if (Config_IsMachineTT())
 	{
 		Video_RenderTTScreen();

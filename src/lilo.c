@@ -371,7 +371,9 @@ static bool lilo_load(void)
 			static char symstr[] = "symbols";
 			char *cmd[] = { symstr, symbols_s, offstr, NULL };
 			sprintf(offstr, "0x%x", kernel_offset);
+#ifdef ENABLE_DEBUGGER
 			Symbols_Command(3, cmd);
+#endif
 		}
 	} else {
 		Log_AlertDlg(LOG_FATAL, "LILO: error setting up kernel!");

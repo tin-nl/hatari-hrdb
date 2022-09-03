@@ -78,12 +78,14 @@ static bool XBios_Dbmsg(Uint32 Params)
 		fprintf(stderr, "-> \"%s\"\n", txt);
 	}
 
+#ifdef ENABLE_DEBUGGER
 	/* not just a message? */
 	if (msgnum != 0xF000)
 	{
 		fprintf(stderr, "-> HALT\n");
 		DebugUI(REASON_PROGRAM);
 	}
+#endif	
 
 	/* return value != function opcode, to indicate it's implemented */
 	Regs[REG_D0] = 0;

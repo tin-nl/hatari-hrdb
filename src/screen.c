@@ -685,10 +685,12 @@ static void Screen_ChangeResolution(bool bForceChange)
 	{
 		Screen_SetGenConvSize(VDIWidth, VDIHeight, hbpp, bForceChange);
 	}
+#ifdef ENABLE_FALCON
 	else if (Config_IsMachineFalcon())
 	{
 		Videl_ScreenModeChanged(bForceChange);
 	}
+#endif
 	else if (Config_IsMachineTT())
 	{
 		int width, height, bpp;
@@ -848,10 +850,12 @@ static void Screen_Refresh(void)
 		Screen_GenDraw(VideoBase, VDIWidth, VDIHeight, VDIPlanes,
 		               VDIWidth * VDIPlanes / 16, 0, 0, 0, 0);
 	}
+#ifdef ENABLE_FALCON
 	else if (Config_IsMachineFalcon())
 	{
 		VIDEL_renderScreen();
 	}
+#endif
 	else if (Config_IsMachineTT())
 	{
 		Video_RenderTTScreen();

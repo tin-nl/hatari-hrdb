@@ -359,10 +359,14 @@ void MemorySnapShot_Capture_Do(void)
 		Video_MemorySnapShot_Capture(true);
 		Blitter_MemorySnapShot_Capture(true);
 		DmaSnd_MemorySnapShot_Capture(true);
+#ifdef ENABLE_FALCON
 		Crossbar_MemorySnapShot_Capture(true);
 		VIDEL_MemorySnapShot_Capture(true);
 		DSP_MemorySnapShot_Capture(true);
+#endif
+#ifdef ENABLE_DEBUGGER
 		DebugUI_MemorySnapShot_Capture(Temp_FileName, true);
+#endif
 		IoMem_MemorySnapShot_Capture(true);
 		ScreenConv_MemorySnapShot_Capture(true);
 		SCC_MemorySnapShot_Capture(true);
@@ -452,10 +456,14 @@ void MemorySnapShot_Restore_Do(void)
 		Video_MemorySnapShot_Capture(false);
 		Blitter_MemorySnapShot_Capture(false);
 		DmaSnd_MemorySnapShot_Capture(false);
+#ifdef ENABLE_FALCON
 		Crossbar_MemorySnapShot_Capture(false);
 		VIDEL_MemorySnapShot_Capture(false);
 		DSP_MemorySnapShot_Capture(false);
+#endif
+#ifdef ENABLE_DEBUGGER
 		DebugUI_MemorySnapShot_Capture(Temp_FileName, false);
+#endif
 		IoMem_MemorySnapShot_Capture(false);
 		ScreenConv_MemorySnapShot_Capture(false);
 		SCC_MemorySnapShot_Capture(false);

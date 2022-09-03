@@ -369,10 +369,12 @@ static void Blitter_FlushCycles(void)
 // 		CALL_VAR(PendingInterruptFunction);
 	CycInt_Process();
 
+#ifdef ENABLE_FALCON
 	/* Run DSP while blitter owns the bus */
 	if (bDspEnabled) {
 		DSP_Run(2 * BlitterVars.op_cycles);
 	}
+#endif
 
 	BlitterVars.pass_cycles += BlitterVars.op_cycles;
 	BlitterVars.op_cycles = 0;

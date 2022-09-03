@@ -1710,6 +1710,7 @@ static int Sound_GenerateSamples(Uint64 CPU_Clock)
 
 	if (Config_IsMachineFalcon())
 	{
+#ifdef ENABLE_FALCON
 		while ( ( ( YM_Buffer_250_pos_write - YM_Buffer_250_pos_read ) & YM_BUFFER_250_SIZE_MASK ) >= ym_margin )
 		{
 			AudioMixBuffer[idx][0] = AudioMixBuffer[idx][1] = Subsonic_IIR_HPF_Left( YM2149_NextSample_250() );
@@ -1719,6 +1720,7 @@ static int Sound_GenerateSamples(Uint64 CPU_Clock)
 		/* If Falcon emulation, crossbar does the job */
 		if ( Sample_Nbr > 0 )
 			Crossbar_GenerateSamples(AudioMixBuffer_pos_write, Sample_Nbr);
+#endif
 	}
 
 	else if (!Config_IsMachineST())

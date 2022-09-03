@@ -328,12 +328,14 @@ uae_u32 REGPARAM3 OpCode_VDI(uae_u32 opcode)
  */
 uae_u32 REGPARAM3 OpCode_NatFeat_ID(uae_u32 opcode)
 {
+#ifdef ENABLE_DEBUGGER
 	Uint32 stack = Regs[REG_A7] + SIZE_LONG;	/* skip return address */
 
 	if (NatFeat_ID(stack, &(Regs[REG_D0])))
 	{
 		CpuDoNOP ();
 	}
+#endif	
 	return 4 * CYCLE_UNIT / 2;
 }
 
@@ -342,6 +344,7 @@ uae_u32 REGPARAM3 OpCode_NatFeat_ID(uae_u32 opcode)
  */
 uae_u32 REGPARAM3 OpCode_NatFeat_Call(uae_u32 opcode)
 {
+#ifdef ENABLE_DEBUGGER
 	Uint32 stack = Regs[REG_A7] + SIZE_LONG;	/* skip return address */
 	Uint16 SR = M68000_GetSR();
 	bool super;
@@ -351,6 +354,7 @@ uae_u32 REGPARAM3 OpCode_NatFeat_Call(uae_u32 opcode)
 	{
 		CpuDoNOP ();
 	}
+#endif
 	return 4 * CYCLE_UNIT / 2;
 }
 

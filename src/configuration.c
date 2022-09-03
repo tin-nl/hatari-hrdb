@@ -539,7 +539,9 @@ void Configuration_SetDefault(void)
 	ConfigureParams.Debugger.bDisasmUAE = true;
 	ConfigureParams.Debugger.bSymbolsAutoLoad = true;
 	ConfigureParams.Debugger.bMatchAllSymbols = false;
+	#ifdef ENABLE_DEBUGGER
 	ConfigureParams.Debugger.nDisasmOptions = Disasm_GetOptions();
+	#endif
 	if ( ConfigureParams.Debugger.bDisasmUAE )
 		disasm_init();
 
@@ -871,9 +873,11 @@ void Configuration_Apply(bool bReset)
 	YmVolumeMixing = ConfigureParams.Sound.YmVolumeMixing;
 	Sound_SetYmVolumeMixing();
 
+#ifdef ENABLE_FALCON
 	/* Falcon : update clocks values if sound freq changed  */
 	if ( Config_IsMachineFalcon() )
 		Crossbar_Recalculate_Clocks_Cycles();
+#endif
 
 	/* Check/constrain CPU settings and change corresponding
 	 * cpu_model/cpu_compatible/cpu_cycle_exact/... variables
@@ -929,9 +933,11 @@ void Configuration_Apply(bool bReset)
 	FDC_Drive_Set_NumberOfHeads ( 0 , ConfigureParams.DiskImage.DriveA_NumberOfHeads );
 	FDC_Drive_Set_NumberOfHeads ( 1 , ConfigureParams.DiskImage.DriveB_NumberOfHeads );
 
+#ifdef ENABLE_DEBUGGER
 	/* Update disassembler */
 	Disasm_SetCPUType(ConfigureParams.System.nCpuLevel, ConfigureParams.System.n_FPUType,
 	                  ConfigureParams.System.bMMU);
+#endif
 
 #if ENABLE_DSP_EMU
 	/* Enable DSP ? */

@@ -212,6 +212,7 @@ static void ShortCut_BossKey(void)
  */
 static void ShortCut_Debug(void)
 {
+#ifdef ENABLE_DEBUGGER
 	int running;
 
 	/* Call the debugger */
@@ -219,6 +220,7 @@ static void ShortCut_Debug(void)
 	DebugUI(REASON_USER);
 	if (running)
 		Main_UnPauseEmulation();
+#endif
 }
 
 

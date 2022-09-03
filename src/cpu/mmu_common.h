@@ -111,7 +111,11 @@ typedef int m68k_exception;
 // take care of 2 kinds of alignment, bus size and page
 static ALWAYS_INLINE bool is_unaligned_page(uaecptr addr, int size)
 {
+#ifndef CPUEMU_68000_ONLY
     return unlikely((addr & (size - 1)) && (addr ^ (addr + size - 1)) & regs.mmu_page_size);
+#else
+    return false;
+#endif    
 }
 static ALWAYS_INLINE bool is_unaligned_bus(uaecptr addr, int size)
 {

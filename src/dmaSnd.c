@@ -1034,13 +1034,15 @@ void DmaSnd_InterruptHandler_Microwire(void)
 	Uint16	cmd;
 	int	cmd_len;
 
+#ifdef ENABLE_FALCON
 	/* If emulated computer is the Falcon, let's the crossbar Microwire code do the job. */
 	if (Config_IsMachineFalcon())
 	{
 		Crossbar_InterruptHandler_Microwire();
 		return;
 	}
-	
+#endif
+
 	/* How many cycle was this sound interrupt delayed (>= 0) */
 	microwire.pendingCyclesOver += -INT_CONVERT_FROM_INTERNAL ( PendingInterruptCount , INT_CPU_CYCLE );
 

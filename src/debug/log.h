@@ -44,7 +44,6 @@
 extern int ExceptionDebugMask;
 extern const char* Log_SetExceptionDebugMask(const char *OptionsStr);
 
-
 /* Logging
  * -------
  * Is always enabled as it's information that can be useful
@@ -71,6 +70,8 @@ typedef enum
 #define __attribute__(foo)
 #endif
 
+#ifdef ENABLE_DEBUGGER
+
 extern void Log_Default(void);
 extern void Log_SetLevels(void);
 extern int Log_Init(void);
@@ -84,10 +85,11 @@ extern LOGTYPE Log_ParseOptions(const char *OptionStr);
 extern const char* Log_SetTraceOptions(const char *OptionsStr);
 extern char *Log_MatchTrace(const char *text, int state);
 
+#endif 
+
 #ifndef __GNUC__
 #undef __attribute__
 #endif
-
 
 
 /* Tracing
@@ -312,11 +314,31 @@ extern Uint64 LogTraceFlags;
 
 #endif		/* ENABLE_TRACING */
 
+#ifdef ENABLE_DEBUGGER
 /* Always defined in full to avoid compiler warnings about unused variables.
  * In code it's used in such a way that it will be optimized away when tracing
  * is disabled.
  */
 #define LOG_TRACE_PRINT(...)	fprintf(TraceFile , __VA_ARGS__)
+#else
 
+#define Log_Printf(...) 
+#define LOG_TRACE(level, ...)	{}
+
+#define LOG_TRACE_LEVEL( level )	(0)
+extern FILE *TraceFile;
+extern Uint64 LogTraceFlags;
+#define LOG_TRACE_PRINT(...)	fprintf(TraceFile , __VA_ARGS__)
+extern int ExceptionDebugMask;
+#define Log_AlertDlg(...)
+#define Log_Init(...) (true)
+#define Log_UnInit(...)
+#define Log_Default(...)
+#define Log_SetLevels(...)
+#define Log_SetExceptionDebugMask(...) (0)
+#define Log_SetTraceOptions(...) (0)
+#define Log_ParseOptions(...) (0)
+
+#endif 		/* ENABLE_DEBUGGER */
 
 #endif		/* HATARI_LOG_H */

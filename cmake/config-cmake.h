@@ -110,3 +110,5 @@
 
 /* Define to 1 if the capstone library with m68k support is available */
 #cmakedefine HAVE_CAPSTONE_M68K 1
+
+#cmakedefine CPUEMU_68000_ONLY

@@ -2081,6 +2081,7 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 			break;
 #endif
 		case OPT_DEBUG:
+		#ifdef ENABLE_DEBUG
 			if (ExceptionDebugMask)
 			{
 				ExceptionDebugMask = EXCEPT_NONE;
@@ -2091,10 +2092,12 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 				ExceptionDebugMask = ConfigureParams.Debugger.nExceptionDebugMask;
 				Log_Printf(LOG_INFO, "Exception debugging enabled (0x%x).\n", ExceptionDebugMask);
 			}
+		#endif	
 			break;
 
 		case OPT_EXCEPTIONS:
 			i += 1;
+		#ifdef ENABLE_DEBUG
 			/* sets ConfigureParams.Debugger.nExceptionDebugMask */
 			errstr = Log_SetExceptionDebugMask(argv[i]);
 			if (errstr)
@@ -2114,6 +2117,7 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 				Log_Printf(LOG_INFO, "Exception debugging changed (0x%x -> 0x%x).\n",
 				        oldmask, ExceptionDebugMask);
 			}
+		#endif	
 			break;
 
 		case OPT_LILO: {
@@ -2145,12 +2149,14 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 
 		case OPT_CONOUT:
 			i += 1;
+#ifdef ENABLE_DEBUGGER
 			dev = atoi(argv[i]);
 			if (!Console_SetDevice(dev))
 			{
 				return Opt_ShowError(OPT_CONOUT, argv[i], "Invalid console device vector number");
 			}
 			Log_Printf(LOG_DEBUG, "Xcounout device %d vector redirection enabled.\n", dev);
+#endif			
 			break;
 
 		case OPT_NATFEATS:
@@ -2160,6 +2166,7 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 
 		case OPT_DISASM:
 			i += 1;
+#ifdef ENABLE_DEBUGGER
 			errstr = Disasm_ParseOption(argv[i]);
 			if (errstr)
 			{
@@ -2170,6 +2177,7 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 				}
 				return Opt_ShowError(OPT_DISASM, argv[i], errstr);
 			}
+#endif
 			break;
 
 		case OPT_TRACE:
@@ -2220,7 +2228,9 @@ bool Opt_ParseParameters(int argc, const char * const argv[])
 
 		case OPT_PARSE:
 			i += 1;
+#ifdef ENABLE_DEBUGGER
 			ok = DebugUI_AddParseFile(argv[i]);
+#endif
 			break;
 
 		case OPT_SAVECONFIG:

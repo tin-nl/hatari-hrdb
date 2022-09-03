@@ -616,8 +616,10 @@ void Joy_StePadButtons_DIPSwitches_ReadWord(void)
 	/* On MegaSTE and Falcon, add the state of the 8 DIP Switches in upper byte */
 	if ( Config_IsMachineMegaSTE() )
 		DIP = IoMemTabMegaSTE_DIPSwitches_Read();
+#ifdef ENABLE_FALCON
 	else if ( Config_IsMachineFalcon() )
 		DIP = IoMemTabFalcon_DIPSwitches_Read();
+#endif
 	else
 		DIP = 0xff;				/* STE, No DIP switches */
 	nData |= ( DIP << 8 );

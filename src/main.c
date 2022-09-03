@@ -740,7 +740,9 @@ static void Main_Init(void)
 	SCC_Init();
 	Midi_Init();
 	Control_CheckUpdates();       /* enable window embedding? */
+	#ifdef ENABLE_FALCON
 	Videl_Init();
+	#endif
 	Screen_Init();
 	Main_SetTitle(NULL);
 
@@ -749,7 +751,9 @@ static void Main_Init(void)
 	ACIA_Init( ACIA_Array , MachineClocks.ACIA_Freq , MachineClocks.ACIA_Freq );
 	IKBD_Init();			/* After ACIA_Init */
 
+	#ifdef ENABLE_FALCON
 	DSP_Init();
+	#endif
 	Floppy_Init();
 	M68000_Init();                /* Init CPU emulation */
 	Audio_Init();
@@ -781,12 +785,16 @@ static void Main_Init(void)
 	}
 
 	IoMem_Init();
+	#ifdef ENABLE_FALCON
 	NvRam_Init();
+	#endif
 	Sound_Init();
 	Rtc_Init();
 
 	/* done as last, needs CPU & DSP running... */
+	#ifdef ENABLE_FALCON
 	DebugUI_Init();
+	#endif
 }
 
 
@@ -805,7 +813,9 @@ static void Main_UnInit(void)
 	RS232_UnInit();
 	Printer_UnInit();
 	IoMem_UnInit();
+	#ifdef ENABLE_FALCON
 	NvRam_UnInit();
+	#endif
 	GemDOS_UnInitDrives();
 	Ide_UnInit();
 	Joy_UnInit();
@@ -813,7 +823,9 @@ static void Main_UnInit(void)
 		Sound_EndRecording();
 	Audio_UnInit();
 	SDLGui_UnInit();
+	#ifdef ENABLE_FALCON
 	DSP_UnInit();
+	#endif
 	Screen_UnInit();
 	Exit680x0();
 
@@ -826,7 +838,9 @@ static void Main_UnInit(void)
 	Log_UnInit();
 
 	Paths_UnInit();
+	#ifdef ENABLE_FALCON
 	DebugUI_UnInit();
+	#endif
 }
 
 

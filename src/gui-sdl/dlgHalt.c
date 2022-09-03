@@ -86,7 +86,9 @@ void Dialog_HaltDlg(void)
 	case DLGHALT_DEBUG:
 		/* Call the debugger, restore screen so user sees what's on it */
 		SDL_UpdateRect(sdlscrn, 0,0, 0,0);
+#ifdef ENABLE_DEBUGGER
 		DebugUI(REASON_CPU_EXCEPTION);
+#endif
 		break;
 	case DLGHALT_QUIT:
 	case SDLGUI_QUIT:

@@ -418,6 +418,7 @@ static bool AES_StoreVars(Uint32 TablePtr)
  */
 void AES_Info(FILE *fp, Uint32 bShowOpcodes)
 {
+#ifdef ENABLE_DEBUGGER
 	Uint16 opcode;
 	
 	if (bShowOpcodes)
@@ -483,6 +484,7 @@ void AES_Info(FILE *fp, Uint32 bShowOpcodes)
 	fprintf(fp, "- Addrout: 0x%08x, %d longs\n",
 		AES.Addrout, STMemory_ReadWord(AES.Control+2*4));
 	fflush(fp);
+#endif	
 }
 
 
@@ -821,6 +823,7 @@ static bool VDI_StoreVars(Uint32 TablePtr)
  */
 void VDI_Info(FILE *fp, Uint32 bShowOpcodes)
 {
+#ifdef ENABLE_DEBUGGER
 	Uint16 opcode;
 	const char *extra_info;
 
@@ -895,6 +898,7 @@ void VDI_Info(FILE *fp, Uint32 bShowOpcodes)
 	fprintf(fp, "- Intout:  0x%08x, %d words\n",
 		VDI.Intout, STMemory_ReadWord(VDI.Control+2*4));
 	fflush(fp);
+#endif	
 }
 
 

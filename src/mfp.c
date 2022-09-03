@@ -1833,6 +1833,7 @@ Uint8    MFP_Main_Compute_GPIP7 ( void )
 {
 	Uint8	Bit;
 
+#ifdef ENABLE_FALCON
 	if (Config_IsMachineFalcon())
 	{
 		if (Crossbar_Get_SNDINT_Line())
@@ -1845,6 +1846,7 @@ Uint8    MFP_Main_Compute_GPIP7 ( void )
 			Bit ^= 1;
 	}
 	else
+#endif
 	{
 		if (!Video_Get_MONO_Line())
 			Bit  = 1;		/* Color monitor : set bit 7 */

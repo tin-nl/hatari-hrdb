@@ -833,10 +833,12 @@ int	DMA_MaskAddressHigh ( void )
  */
 void	M68000_ChangeCpuFreq ( void )
 {
+#ifdef ENABLE_FALCON
 	if ( Config_IsMachineFalcon() )
 	{
 		Crossbar_Recalculate_Clocks_Cycles();
 	}
+#endif
 }
 
 

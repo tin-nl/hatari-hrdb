@@ -99,8 +99,13 @@ static void (* const pIntHandlerFunctions[MAX_INTERRUPTS])(void) =
 	IKBD_InterruptHandler_ResetTimer,
 	IKBD_InterruptHandler_AutoSend,
 	DmaSnd_InterruptHandler_Microwire, /* Used for both STE and Falcon Microwire emulation */
+#ifdef ENABLE_FALCON	
 	Crossbar_InterruptHandler_25Mhz,
 	Crossbar_InterruptHandler_32Mhz,
+#else
+	NULL,
+	NULL,
+#endif	
 	FDC_InterruptHandler_Update,
 	Blitter_InterruptHandler,
 	Midi_InterruptHandler_Update,

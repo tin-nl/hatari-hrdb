@@ -9975,13 +9975,13 @@ static void generate_cpu (int id, int mode)
 		using_indirect = using_ce || using_ce020 || using_prefetch_020 || id >= 50;
 
 	if (generate_stbl) {
-		if ((id > 0 && id < 6) || (id >= 20 && id < 40) || (id > 40 && id < 46) || (id > 50 && id < 56))
+		if ((id > 0 && id < 5) || (id >= 20 && id < 40) || (id > 40 && id < 45) || (id > 50 && id < 55))
 			fprintf(stblfile, "#ifndef CPUEMU_68000_ONLY\n");
 		fprintf(stblfile, "const struct cputbl op_smalltbl_%d%s[] = {\n", postfix, extra);
 	}
 	generate_func (extra);
 	if (generate_stbl) {
-		if ((id > 0 && id < 6) || (id >= 20 && id < 40) || (id > 40 && id < 46) || (id > 50 && id < 56))
+		if ((id > 0 && id < 5) || (id >= 20 && id < 40) || (id > 40 && id < 45) || (id > 50 && id < 55))
 			fprintf(stblfile, "#endif /* CPUEMU_68000_ONLY */\n");
 		if (postfix2 >= 0)
 			fprintf(stblfile, "#endif /* CPUEMU_%d%s */\n", postfix2, extraup);

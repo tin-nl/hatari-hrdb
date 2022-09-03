@@ -284,10 +284,14 @@ void IoMem_Init(void)
 		pInterceptAccessFuncs = IoMemTable_STE;
 		break;
 	 case MACHINE_TT:
+#ifdef ENABLE_FALCON
 		pInterceptAccessFuncs = IoMemTable_TT;
+#endif		
 		break;
 	 case MACHINE_FALCON:
+#ifdef ENABLE_FALCON
 		pInterceptAccessFuncs = IoMemTable_Falcon;
+#endif		
 		break;
 	 default:
 		abort(); /* bug */
@@ -328,6 +332,7 @@ void IoMem_Init(void)
 	if (Config_IsMachineTT() || Config_IsMachineMegaSTE())
 		VME_SetAccess(pInterceptReadTable, pInterceptWriteTable);
 
+#ifdef ENABLE_FALCON
 	/* Set registers for Falcon */
 	if (Config_IsMachineFalcon())
 	{
@@ -353,6 +358,7 @@ void IoMem_Init(void)
 					       pInterceptWriteTable);
 		}
 	}
+#endif
 
 	/* Disable blitter? */
 	if (!ConfigureParams.System.bBlitter && ConfigureParams.System.nMachineType == MACHINE_ST)

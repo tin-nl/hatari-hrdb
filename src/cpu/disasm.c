@@ -301,7 +301,11 @@ skip:
 		if (debugmem_get_symbol(addr + i, name, sizeof(name) / sizeof(TCHAR))) {
 #else
 		const char *name;
+#ifdef ENABLE_DEBUGGER
 		if ((name = Symbols_GetByCpuAddress(addr + i, SYMTYPE_TEXT))) {
+#else
+		if(false) {
+#endif
 #endif
 			_stprintf(buffer + _tcslen(buffer), _T(" %s"), name);
 		}
@@ -2432,6 +2436,7 @@ uae_u32 m68k_disasm_2(TCHAR *buf, int bufsize, uaecptr pc, uae_u16 *bufpc, int b
 			}
 		}
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_DEBUGGER
 		/* outputting only single disassembly line, and there's profile info? */
 		if (Profile_CpuAddr_HasData(oldpc)) {
 # define PROFILE_OUTPUT_COLUMN 68
@@ -2448,6 +2453,7 @@ uae_u32 m68k_disasm_2(TCHAR *buf, int bufsize, uaecptr pc, uae_u16 *bufpc, int b
 			bufsize -= count;
 			buf += count;
 		}
+#endif
 #endif
 		buf = buf_out (buf, &bufsize, _T("\n"));
 

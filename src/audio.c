@@ -238,8 +238,10 @@ void Audio_SetOutputAudioFreq(int nNewFrequency)
 
 		if (Config_IsMachineFalcon())
 		{
+	#ifdef ENABLE_FALCON
 			/* Compute Ratio between host computer sound frequency and Hatari's sound frequency. */
 			Crossbar_Compute_Ratio();
+	#endif
 		}
 		else if (!Config_IsMachineST())
 		{

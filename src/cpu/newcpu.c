@@ -1876,6 +1876,7 @@ static const struct cputbl *cputbls[6][8] =
 {
 	// 68000
 	{ op_smalltbl_5, op_smalltbl_45, op_smalltbl_55, op_smalltbl_12, op_smalltbl_14, NULL, NULL, NULL },
+#ifndef CPUEMU_68000_ONLY
 	// 68010
 	{ op_smalltbl_4, op_smalltbl_44, op_smalltbl_54, op_smalltbl_11, op_smalltbl_13, NULL, NULL, NULL },
 	// 68020
@@ -1886,6 +1887,7 @@ static const struct cputbl *cputbls[6][8] =
 	{ op_smalltbl_1, op_smalltbl_41, op_smalltbl_51, op_smalltbl_25, op_smalltbl_25, op_smalltbl_31, op_smalltbl_31, op_smalltbl_31 },
 	// 68060
 	{ op_smalltbl_0, op_smalltbl_40, op_smalltbl_50, op_smalltbl_24, op_smalltbl_24, op_smalltbl_33, op_smalltbl_33, op_smalltbl_33 }
+#endif	
 };
 
 #ifdef JIT
@@ -1959,7 +1961,7 @@ static void build_cpufunctbl (void)
 		cpudatatbl[opcode].disp020[1] = tbl[i].disp020[1];
 		cpudatatbl[opcode].branch = tbl[i].branch;
 	}
-
+#ifndef CPUEMU_68000_ONLY
 	/* hack fpu to 68000/68010 mode */
 	if (currprefs.fpu_model && currprefs.cpu_model < 68020) {
 		tbl = op_smalltbl_3;
@@ -1973,7 +1975,7 @@ static void build_cpufunctbl (void)
 			}
 		}
 	}
-
+#endif
 	opcnt = 0;
 	for (opcode = 0; opcode < 65536; opcode++) {
 		cpuop_func *f;
@@ -2072,8 +2074,10 @@ static void build_cpufunctbl (void)
 #endif
 	m68k_interrupt_delay = false;
 	if (currprefs.cpu_cycle_exact) {
+#ifndef CPUEMU_68000_ONLY 		
 		if (tbl == op_smalltbl_14 || tbl == op_smalltbl_13 || tbl == op_smalltbl_21 || tbl == op_smalltbl_23)
 			m68k_interrupt_delay = true;
+#endif			
 	} else if (currprefs.cpu_compatible) {
 		if (currprefs.cpu_model <= 68010 && currprefs.m68k_speed == 0) {
 			m68k_interrupt_delay = true;
@@ -2599,12 +2603,14 @@ static void exception_check_trace (int nr)
 static void exception_debug (int nr)
 {
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_DEBUGGER
 	if (unlikely(ExceptionDebugMask & EXCEPT_NOHANDLER) && STMemory_ReadLong(regs.vbr + 4*nr) == 0) {
 		fprintf(stderr,"Uninitialized exception handler #%i!\n", nr);
 		DebugUI(REASON_CPU_EXCEPTION);
 	} else {
 		DebugUI_Exceptions(nr, M68K_GETPC);
 	}
+#endif	
 #else
 #ifdef DEBUGGER
 	if (!exception_debugging)
@@ -2797,12 +2803,13 @@ static int iack_cycle(int nr)
 	if ( nr == 30 )								/* MFP or DSP */
         {
 		vector = -1;
+#ifdef ENABLE_FALCON
 		if (bDspEnabled)						/* Check DSP first */
 		{
 			/* TODO : For DSP, we just get the vector, we don't add IACK cycles */
 			vector = DSP_ProcessIACK ();
 		}
-
+#endif
 		if ( vector < 0 )						/* No DSP, check MFP */
 		{
 			if (cycle_exact)
@@ -2828,8 +2835,10 @@ static int iack_cycle(int nr)
 			/* If a DSP IRQ is pending, we don't clear level 6 pending bit, else the DSP IRQ */
 			/* will never be processed. If there's no DSP IRQ, we clear level 6 pending bit now */
 			/* and if there's a lower MFP pending int, level 6 will be set again at the next instruction */
+#ifdef ENABLE_FALCON
 			if ( DSP_GetHREQ() == 0 )
 				pendingInterrupts &= ~( 1 << 6 );
+#endif
 		}
 	}
 	else if ( ( nr == 26 ) || ( nr == 28 ) )				/* HBL / VBL */
@@ -5057,8 +5066,10 @@ static int do_specialties (int cycles)
 //fprintf ( stderr , "dospec3 %d %d spcflags=%x ipl=%x ipl_pin=%x intmask=%x\n" , m68k_interrupt_delay,time_for_interrupt() , regs.spcflags , regs.ipl , regs.ipl_pin, regs.intmask );
 
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_FALCON
 	if (regs.spcflags & SPCFLAG_DEBUGGER)
 		DebugCpu_Check();
+#endif
 #endif
 
 	if (regs.spcflags & SPCFLAG_BRK) {
@@ -6129,12 +6140,13 @@ static void m68k_run_mmu060 (void)
 					}
 				}
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_FALCON
 				/* Run DSP 56k code if necessary */
 				if (bDspEnabled) {
 					DSP_Run(2 * cpu_cycles * 2 / CYCLE_UNIT);
 //					DSP_Run ( DSP_CPU_FREQ_RATIO * ( CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter ) );
 				}
-
+#endif
 				if ( savestate_state == STATE_SAVE )
 					save_state ( NULL , NULL );
 #endif
@@ -6227,12 +6239,13 @@ static void m68k_run_mmu040 (void)
 				}
 
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_FALCON
 				/* Run DSP 56k code if necessary */
 				if (bDspEnabled) {
 					DSP_Run(2 * cpu_cycles * 2 / CYCLE_UNIT);
 //					DSP_Run ( DSP_CPU_FREQ_RATIO * ( CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter ) );
 				}
-
+#endif
 				if ( savestate_state == STATE_SAVE )
 					save_state ( NULL , NULL );
 #endif
@@ -6392,11 +6405,13 @@ insretry:
 						}
 					}
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_FALCON
 					/* Run DSP 56k code if necessary */
 					if (bDspEnabled) {
 						DSP_Run(2 * cpu_cycles * 2 / CYCLE_UNIT);
 //						DSP_Run ( DSP_CPU_FREQ_RATIO * ( CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter ) );
 					}
+#endif
 #endif
 
 				} else {
@@ -6430,6 +6445,7 @@ insretry:
 					}
 
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_FALCON
 					/* Run DSP 56k code if necessary */
 					if (bDspEnabled) {
 //fprintf ( stderr, "dsp cyc_2ce %d\n" , currcycle );
@@ -6437,6 +6453,7 @@ insretry:
 //fprintf ( stderr, "dsp cyc_2ce %d - %d\n" , currcycle * 2 / CYCLE_UNIT , (CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter) );
 //						DSP_Run ( DSP_CPU_FREQ_RATIO * ( CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter ) );
 					}
+#endif
 #endif
 				}
 
@@ -6554,12 +6571,13 @@ static void m68k_run_3ce (void)
 				}
 
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_FALCON
 				/* Run DSP 56k code if necessary */
 				if (bDspEnabled) {
 					DSP_Run( dsp_cycles );
 //					DSP_Run ( DSP_CPU_FREQ_RATIO * ( CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter ) );
 				}
-
+#endif
 				if ( savestate_state == STATE_SAVE )
 					save_state ( NULL , NULL );
 #endif
@@ -6649,12 +6667,13 @@ static void m68k_run_3p(void)
 				}
 
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_FALCON
 				/* Run DSP 56k code if necessary */
 				if (bDspEnabled) {
 					DSP_Run( dsp_cycles );
 //					DSP_Run ( DSP_CPU_FREQ_RATIO * ( CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter ) );
 				}
-
+#endif
 				if ( savestate_state == STATE_SAVE )
 					save_state ( NULL , NULL );
 #endif
@@ -6847,6 +6866,7 @@ fprintf ( stderr , "cache valid %d tag1 %x lws1 %x ctag %x data %x mem=%x\n" , c
 				}
 
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_FALCON
 				/* Run DSP 56k code if necessary */
 				if (bDspEnabled) {
 //fprintf ( stderr, "dsp cyc_2ce %d\n" , currcycle );
@@ -6854,7 +6874,7 @@ fprintf ( stderr , "cache valid %d tag1 %x lws1 %x ctag %x data %x mem=%x\n" , c
 //fprintf ( stderr, "dsp cyc_2ce %d - %d\n" , currcycle * 2 / CYCLE_UNIT , (CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter) );
 //					DSP_Run ( DSP_CPU_FREQ_RATIO * ( CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter ) );
 				}
-
+#endif
 				if ( savestate_state == STATE_SAVE )
 					save_state ( NULL , NULL );
 #endif
@@ -7044,6 +7064,7 @@ cont:
 				ipl_fetch_now();
 
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_FALCON
 				/* Run DSP 56k code if necessary */
 				if (bDspEnabled) {
 //if ( DSP_CPU_FREQ_RATIO * ( (CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter) << nCpuFreqShift )  - 2 * cpu_cycles * 2 / CYCLE_UNIT >= 8 )
@@ -7051,7 +7072,7 @@ cont:
 					DSP_Run( dsp_cycles );
 //					DSP_Run ( DSP_CPU_FREQ_RATIO * ( CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter ) );
 				}
-
+#endif
 				if ( savestate_state == STATE_SAVE )
 					save_state ( NULL , NULL );
 #endif
@@ -7174,12 +7195,13 @@ static void m68k_run_2_000(void)
 				}
 
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_FALCON
 				/* Run DSP 56k code if necessary */
 				if (bDspEnabled) {
 					DSP_Run(2 * cpu_cycles * 2 / CYCLE_UNIT);
 //					DSP_Run ( DSP_CPU_FREQ_RATIO * ( CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter ) );
 				}
-
+#endif
 				if ( savestate_state == STATE_SAVE )
 					save_state ( NULL , NULL );
 #endif
@@ -7265,12 +7287,13 @@ static void m68k_run_2_020(void)
 				}
 
 #ifdef WINUAE_FOR_HATARI
+#ifdef ENABLE_FALCON
 				/* Run DSP 56k code if necessary */
 				if (bDspEnabled) {
 					DSP_Run(2 * cpu_cycles * 2 / CYCLE_UNIT);
 //					DSP_Run ( DSP_CPU_FREQ_RATIO * ( CyclesGlobalClockCounter - DSP_CyclesGlobalClockCounter ) );
 				}
-
+#endif
 				if ( savestate_state == STATE_SAVE )
 					save_state ( NULL , NULL );
 #endif

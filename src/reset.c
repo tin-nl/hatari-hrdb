@@ -73,7 +73,9 @@ static int Reset_ST(bool bCold)
 	MFP_Reset_All();              /* Setup MFPs */
 	Video_Reset();                /* Reset video */
 	VDI_Reset();                  /* Reset internal VDI variables */
+#ifdef ENABLE_FALCON
 	NvRam_Reset();                /* reset NvRAM (video) settings */
+#endif
 
 	GemDOS_Reset();               /* Reset GEMDOS emulation */
 	if (bCold)
@@ -90,12 +92,14 @@ static int Reset_ST(bool bCold)
 	{
 		VME_Reset();
 	}
+#ifdef ENABLE_FALCON
 	if (Config_IsMachineFalcon())
 	{
 		DSP_Reset();                  /* Reset the DSP */
 		Crossbar_Reset(bCold);        /* Reset Crossbar sound */
 	}
 	else
+#endif
 		DmaSnd_Reset(bCold);          /* Reset DMA sound */
 
 	Blitter_Reset();			/* Reset Blitter */
@@ -104,15 +108,19 @@ static int Reset_ST(bool bCold)
 	ACIA_Reset( ACIA_Array );     /* ACIA */
 	IKBD_Reset(bCold);            /* Keyboard (after ACIA) */
 	SCC_Reset();
+#ifdef ENABLE_FALCON
 	if (Config_IsMachineFalcon() && !bUseVDIRes)
 		VIDEL_reset();
 	else
+#endif
 		Screen_Reset();		/* Reset screen */
 
 	M68000_Reset(bCold);		/* Reset CPU */
 
+#ifdef ENABLE_DEBUGGER
 	DebugCpu_SetDebugging();      /* Re-set debugging flag if needed */
 	DebugDsp_SetDebugging();
+#endif
 
 	Midi_Reset();
 

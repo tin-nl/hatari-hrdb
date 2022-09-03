@@ -580,7 +580,9 @@ void GemDOS_Reset(void)
 	/* Reset */
 	act_pd = 0;
 	CurrentDrive = nBootDrive;
+#ifdef ENABLE_DEBUGGER
 	Symbols_RemoveCurrentProgram();
+#endif
 	INF_CreateOverride();
 }
 
@@ -2863,7 +2865,9 @@ static int GemDOS_Pexec(Uint32 Params)
 		Regs[REG_D0] = GEMDOS_EPLFMT;
 		return true;
 	}
+#ifdef ENABLE_DEBUGGER
 	Symbols_ChangeCurrentProgram(sFileName);
+#endif
 
 	/* Prepare stack to run "create basepage": */
 	Regs[REG_A7] -= 16;
@@ -3314,7 +3318,9 @@ static bool GemDOS_Pterm0(Uint32 Params)
 	LOG_TRACE(TRACE_OS_GEMDOS|TRACE_OS_BASE, "GEMDOS 0x00 Pterm0() at PC 0x%X\n",
 		  CallingPC);
 	GemDOS_TerminateClose();
+#ifdef ENABLE_DEBUGGER
 	Symbols_RemoveCurrentProgram();
+#endif
 
 	if (!bUseTos)
 	{
@@ -3350,7 +3356,9 @@ static bool GemDOS_Pterm(Uint32 Params)
 		  nExitVal, CallingPC);
 
 	GemDOS_TerminateClose();
+#ifdef ENABLE_DEBUGGER
 	Symbols_RemoveCurrentProgram();
+#endif
 
 	if (!bUseTos)
 	{
@@ -3915,7 +3923,9 @@ void GemDOS_Info(FILE *fp, Uint32 bShowOpcodes)
 		fputs("- None.\n", fp);
 
 	fputs("\n", fp);
+#ifdef ENABLE_DEBUGGER
 	Symbols_ShowCurrentProgramPath(fp);
+#endif
 }
 
 /**
